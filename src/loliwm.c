@@ -63,7 +63,9 @@ main(int argc, char **argv)
 {
    (void)argc, (void)argv;
 
-   initialize();
+   if (!initialize())
+      return EXIT_FAILURE;
+
    setup_keys();
    run();
    terminate();
