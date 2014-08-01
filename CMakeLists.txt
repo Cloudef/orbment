@@ -2,7 +2,11 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 PROJECT(loliwm)
 SET(LOLIWM_NAME "loliwm")
 SET(LOLIWM_DESCRIPTION "Simple tiling compositor for wayland")
+SET(LOLIWM_VERSION "0.0.1")
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${loliwm_SOURCE_DIR}/CMake)
+
+# Includes
+INCLUDE(subproject)
 
 # Warnings
 IF (MSVC)
