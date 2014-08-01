@@ -13,6 +13,7 @@
 find_path(WLC_INCLUDE_DIR NAMES wlc.h)
 find_library(WLC_LIBRARY NAMES wlc)
 
+include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(wlc DEFAULT_MSG WLC_LIBRARY WLC_INCLUDE_DIR)
 
 if (WLC_FOUND)
