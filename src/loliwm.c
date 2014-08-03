@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
+#include <unistd.h>
 #include <assert.h>
 
 #include <wlc.h>
@@ -10,11 +11,30 @@ static struct {
    struct wlc_compositor *compositor;
 } loliwm;
 
+static void
+view_created(struct wlc_compositor *compositor, struct wlc_view *view)
+{
+   (void)compositor;
+
+   static int c = 0;
+   wlc_view_set_state(view, &(uint32_t){ WLC_MAXIMIZED }, 1);
+   wlc_view_resize(view, 400, 480);
+   wlc_view_position(view, (c ? 400 : 0), 0);
+   c = !c;
+}
 
 static bool
 button_press(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t button, enum wlc_button_state state)
 {
    (void)button;
+
+   if (state == WLC_BUTTON_STATE_PRESSED && button == 273) {
+      // TEMPORARY UGLY
+      if (fork() == 0) {
+         system("weston-terminal");
+         _exit(0);
+      }
+   }
 
    if (state == WLC_BUTTON_STATE_RELEASED)
       wlc_compositor_keyboard_focus(compositor, view);
@@ -39,7 +59,7 @@ initialize(void)
 
    struct wlc_interface interface = {
       .view = {
-         .created = NULL,
+         .created = view_created,
          .destroyed = NULL,
       },
 
