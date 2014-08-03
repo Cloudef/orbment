@@ -17,7 +17,7 @@ view_created(struct wlc_compositor *compositor, struct wlc_view *view)
    (void)compositor;
 
    static int c = 0;
-   wlc_view_set_state(view, &(uint32_t){ WLC_MAXIMIZED }, 1);
+   wlc_view_set_state(view, (uint32_t[]){ WLC_MAXIMIZED }, 1);
    wlc_view_resize(view, 400, 480);
    wlc_view_position(view, (c ? 400 : 0), 0);
    c = !c;
