@@ -14,7 +14,7 @@ static struct {
 static bool
 button_press(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t button, enum wlc_button_state state)
 {
-   (void)button, (void)state;
+   (void)button;
 
    if (state == WLC_BUTTON_STATE_RELEASED)
       wlc_compositor_keyboard_focus(compositor, view);
