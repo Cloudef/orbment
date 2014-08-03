@@ -10,23 +10,16 @@ static struct {
    struct wlc_compositor *compositor;
 } loliwm;
 
-#if 0
-static
-void quit(void *data, uint32_t time, uint32_t value, uint32_t state)
+
+static bool
+button_press(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t button, enum wlc_button_state state)
 {
-   (void)data, (void)time, (void)value;
+   (void)button, (void)state;
 
-   if (state != WL_KEYBOARD_KEY_STATE_PRESSED)
-      return;
+   if (state == WLC_BUTTON_STATE_RELEASED)
+      wlc_compositor_keyboard_focus(compositor, view);
 
-   if (loliwm.compositor.display)
-      wl_display_terminate(loliwm.compositor.display);
-}
-#endif
-
-static void
-setup_keys(void)
-{
+   return true;
 }
 
 static void
@@ -44,6 +37,23 @@ initialize(void)
    if (!(loliwm.compositor = wlc_compositor_new()))
       goto fail;
 
+   struct wlc_interface interface = {
+      .view = {
+         .created = NULL,
+         .destroyed = NULL,
+      },
+
+      .pointer = {
+         .button = button_press,
+         .motion = NULL,
+      },
+
+      .keyboard = {
+         .key = NULL,
+      },
+   };
+
+   wlc_compositor_inject(loliwm.compositor, &interface);
    return true;
 
 fail:
@@ -66,7 +76,6 @@ main(int argc, char **argv)
    if (!initialize())
       return EXIT_FAILURE;
 
-   setup_keys();
    run();
    terminate();
    return EXIT_SUCCESS;
