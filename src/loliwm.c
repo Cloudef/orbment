@@ -52,7 +52,7 @@ static void
 view_created(struct wlc_compositor *compositor, struct wlc_view *view)
 {
    (void)compositor;
-   wl_list_insert((wl_list_length(&loliwm.views) > 0 ? loliwm.views.prev : &loliwm.views), wlc_view_get_link(view));
+   wl_list_insert(loliwm.views.prev, wlc_view_get_link(view));
    set_active(view);
    relayout();
 }
@@ -68,7 +68,7 @@ view_destroyed(struct wlc_compositor *compositor, struct wlc_view *view)
       loliwm.active = NULL;
 
       struct wlc_view *v;
-      if (wl_list_length(&loliwm.views) > 0 && (v = wlc_view_from_link(loliwm.views.prev))) {
+      if (!wl_list_empty(&loliwm.views) && (v = wlc_view_from_link(loliwm.views.prev))) {
          wlc_compositor_keyboard_focus(compositor, v);
          set_active(v);
       }
@@ -78,17 +78,11 @@ view_destroyed(struct wlc_compositor *compositor, struct wlc_view *view)
 }
 
 static bool
-button_press(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t button, enum wlc_button_state state)
+pointer_button(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t button, enum wlc_button_state state)
 {
    (void)button;
 
-   if (state == WLC_BUTTON_STATE_RELEASED && button == 273) {
-      // TEMPORARY UGLY
-      if (fork() == 0) {
-         system("weston-terminal");
-         _exit(0);
-      }
-   } else if (state == WLC_BUTTON_STATE_RELEASED) {
+   if (state == WLC_BUTTON_STATE_RELEASED) {
       wlc_compositor_keyboard_focus(compositor, view);
       set_active(view);
    }
@@ -100,6 +94,43 @@ static void
 keyboard_init(struct wlc_compositor *compositor, struct wlc_view *view)
 {
    wlc_compositor_keyboard_focus(compositor, view);
+}
+
+static bool
+keyboard_key(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t leds, uint32_t mods, uint32_t key, enum wlc_key_state state)
+{
+   (void)leds;
+
+   bool pass = true;
+   if (mods & WLC_BIT_MOD_ALT) {
+      if (view && key == 38) {
+         if (state == WLC_KEY_STATE_RELEASED) {
+            struct wlc_view *v;
+            struct wl_list *l = wlc_view_get_link(view)->next;
+            if ((v = wlc_view_from_link((l == &loliwm.views ? l->next : l)))) {
+               wlc_compositor_keyboard_focus(compositor, v);
+               set_active(v);
+            }
+         }
+         pass = false;
+      } else if (key == 28) {
+         if (state == WLC_KEY_STATE_RELEASED) {
+            // TEMPORARY UGLY
+            if (fork() == 0) {
+               system("weston-terminal");
+               _exit(0);
+            }
+         }
+         pass = false;
+      } else if (view && key == 16) {
+         if (state == WLC_KEY_STATE_RELEASED)
+            wlc_view_close(view);
+         pass = false;
+      }
+   }
+
+   printf("KEY: %u\n", key);
+   return pass;
 }
 
 static void
@@ -124,13 +155,13 @@ initialize(void)
       },
 
       .pointer = {
-         .button = button_press,
+         .button = pointer_button,
          .motion = NULL,
       },
 
       .keyboard = {
          .init = keyboard_init,
-         .key = NULL,
+         .key = keyboard_key,
       },
    };
 
