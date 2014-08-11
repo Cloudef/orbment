@@ -57,6 +57,7 @@ view_created(struct wlc_compositor *compositor, struct wlc_view *view)
    wl_list_insert(loliwm.views.prev, wlc_view_get_link(view));
    set_active(view);
    relayout();
+   printf("NEW VIEW: %p\n", view);
 }
 
 static void
@@ -77,6 +78,7 @@ view_destroyed(struct wlc_compositor *compositor, struct wlc_view *view)
    }
 
    relayout();
+   printf("VIEW DESTROYED: %p\n", view);
 }
 
 static bool
@@ -96,6 +98,7 @@ static void
 keyboard_init(struct wlc_compositor *compositor, struct wlc_view *view)
 {
    wlc_compositor_keyboard_focus(compositor, view);
+   printf("KEYBOARD INIT: %p\n", view);
 }
 
 static bool
