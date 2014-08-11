@@ -42,8 +42,10 @@ set_active(struct wlc_view *view)
    if (loliwm.active)
       wlc_view_set_active(loliwm.active, false);
 
-   if (view)
+   if (view) {
       wlc_view_set_active(view, true);
+      wlc_view_bring_to_front(view);
+   }
 
    loliwm.active = view;
 }
@@ -82,7 +84,7 @@ pointer_button(struct wlc_compositor *compositor, struct wlc_view *view, uint32_
 {
    (void)button;
 
-   if (state == WLC_BUTTON_STATE_RELEASED) {
+   if (state == WLC_BUTTON_STATE_PRESSED) {
       wlc_compositor_keyboard_focus(compositor, view);
       set_active(view);
    }
