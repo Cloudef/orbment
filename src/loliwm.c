@@ -22,7 +22,7 @@ relayout(void)
    uint32_t count = wl_list_length(&loliwm.views);
    uint32_t y = 0, height = 480 / (count > 1 ? count - 1 : 1);
    wlc_view_for_each(v, &loliwm.views) {
-      wlc_view_set_state(v, (uint32_t[]){ WLC_MAXIMIZED }, 1);
+      wlc_view_set_maximized(v, true);
       wlc_view_resize(v, (count > 1 ? 400 : 800), (toggle ? height : 480));
       wlc_view_position(v, (toggle ? 400 : 0), y);
 
@@ -79,6 +79,14 @@ view_destroyed(struct wlc_compositor *compositor, struct wlc_view *view)
 
    relayout();
    printf("VIEW DESTROYED: %p\n", view);
+}
+
+static void
+view_move(struct wlc_compositor *compositor, struct wlc_view *view, float x, float y)
+{
+   (void)compositor;
+   wlc_view_position(view, x, y);
+   wlc_view_set_maximized(view, false);
 }
 
 static bool
@@ -157,6 +165,7 @@ initialize(void)
       .view = {
          .created = view_created,
          .destroyed = view_destroyed,
+         .move = view_move,
       },
 
       .pointer = {
