@@ -12,6 +12,7 @@ static struct {
    struct wlc_compositor *compositor;
    struct wlc_view *active;
    struct wl_list views;
+   uint32_t width, height;
 } loliwm;
 
 static void
@@ -20,11 +21,11 @@ relayout(void)
    struct wlc_view *v;
    bool toggle = false;
    uint32_t count = wl_list_length(&loliwm.views);
-   uint32_t y = 0, height = 480 / (count > 1 ? count - 1 : 1);
+   uint32_t y = 0, height = loliwm.height / (count > 1 ? count - 1 : 1);
    wlc_view_for_each(v, &loliwm.views) {
       wlc_view_set_maximized(v, true);
-      wlc_view_resize(v, (count > 1 ? 400 : 800), (toggle ? height : 480));
-      wlc_view_position(v, (toggle ? 400 : 0), y);
+      wlc_view_resize(v, (count > 1 ? loliwm.width / 2 : loliwm.width), (toggle ? height : loliwm.height));
+      wlc_view_position(v, (toggle ? loliwm.width / 2 : 0), y);
 
       if (toggle)
          y += height;
@@ -82,7 +83,7 @@ view_destroyed(struct wlc_compositor *compositor, struct wlc_view *view)
 }
 
 static void
-view_move(struct wlc_compositor *compositor, struct wlc_view *view, float x, float y)
+view_move(struct wlc_compositor *compositor, struct wlc_view *view, int32_t x, int32_t y)
 {
    (void)compositor;
    wlc_view_position(view, x, y);
@@ -147,6 +148,15 @@ keyboard_key(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t 
 }
 
 static void
+resolution_notify(struct wlc_compositor *compositor, uint32_t width, uint32_t height)
+{
+   (void)compositor;
+   loliwm.width = width;
+   loliwm.height = height;
+   relayout();
+}
+
+static void
 terminate(void)
 {
    if (loliwm.compositor)
@@ -176,6 +186,10 @@ initialize(void)
       .keyboard = {
          .init = keyboard_init,
          .key = keyboard_key,
+      },
+
+      .output = {
+         .resolution = resolution_notify,
       },
    };
 
