@@ -142,7 +142,7 @@ keyboard_key(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t 
       }
    }
 
-   printf("KEY: %u\n", key);
+   printf("(%p) KEY: %u\n", view, key);
    return pass;
 }
 
