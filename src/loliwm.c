@@ -214,6 +214,9 @@ main(int argc, char **argv)
 {
    (void)argc, (void)argv;
 
+   if (!wlc_init())
+      return EXIT_FAILURE;
+
    if (!initialize())
       return EXIT_FAILURE;
 
