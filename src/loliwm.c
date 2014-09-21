@@ -193,8 +193,8 @@ initialize(void)
       },
    };
 
-   wlc_compositor_inject(loliwm.compositor, &interface);
    wl_list_init(&loliwm.views);
+   wlc_compositor_inject(loliwm.compositor, &interface);
    return true;
 
 fail:
