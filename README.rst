@@ -1,3 +1,8 @@
+.. image:: http://cloudef.pw/armpit/loliwm-mpv.png
+
+LOLIWM
+______
+
 Basic information about what you can currently do in loliwm.
 
 KEYBINDS
@@ -19,6 +24,16 @@ You can set your prefered keyboard layout using ``XKB_DEFAULT_LAYOUT``.
 .. code:: sh
 
     XKB_DEFAULT_LAYOUT=gb loliwm
+
+RUNNING ON TTY
+--------------
+
+Running on TTY works right now.
+However wlc does not yet set TTY to non interactive mode, so you may get stuck with some fancy ANSI escape.
+(Similarly you can also quit loliwm with ``ctrl-c``)
+
+You also need to suid the loliwm binary to whichever group or user has rights to /dev/input.
+This is so wlc can spawn child process at start that gives rights for libinput to read from these raw input devices.
 
 BUILDING
 --------
@@ -58,17 +73,3 @@ You can build bootstrapped version of ``loliwm`` with the following steps.
 
 For proper packaging ``wlc`` and ``loliwm`` should be built separately.
 ...instructions later...
-
-RUNNING ON TTY
---------------
-
-Running on TTY works right now.
-However wlc does not yet set TTY to non interactive mode, so you may get stuck with some fancy ANSI escape.
-(Similarly you can also quit loliwm with ``ctrl-c``)
-
-You also need to suid the loliwm binary to whichever group or user has rights to /dev/input.
-This is so wlc can spawn child process at start that gives rights for libinput to read from these raw input devices.
-
-SCREENSHOT
-__________
-.. image:: http://cloudef.pw/armpit/loliwm-mpv.png
