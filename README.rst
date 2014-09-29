@@ -14,8 +14,7 @@ KEYBINDS
 KEYBOARD LAYOUT
 ---------------
 
-If you're using ``loliwm`` from an X11 session you can set your prefered
-keyboard layout using ``XKB_DEFAULT_LAYOUT``.
+You can set your prefered keyboard layout using ``XKB_DEFAULT_LAYOUT``.
 
 .. code:: sh
 
@@ -34,6 +33,8 @@ And the following depends:
 - pixman
 - wayland (most likely from git)
 - libxkbcommon
+- udev
+- libinput
 
 You will also need these for building, but they are optional runtime:
 
@@ -54,6 +55,17 @@ You can build bootstrapped version of ``loliwm`` with the following steps.
 
     # You can now run
     ./src/loliwm
+
+RUNNING ON TTY
+--------------
+
+Running on TTY works right now.
+However wlc does not yet set TTY to non interactive mode, so you may get stuck with some fancy ANSI escape.
+(Similarly you can also quit loliwm with ``ctrl-c``)
+
+You also need to suid the loliwm binary to whichever group or user has rights to /dev/input.
+This is so wlc can spawn child process at start that gives rights for libinput to read from these raw input devices.
+
 
 For proper packaging ``wlc`` and ``loliwm`` should be built separately.
 ...instructions later...
