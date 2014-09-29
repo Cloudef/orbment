@@ -56,6 +56,9 @@ You can build bootstrapped version of ``loliwm`` with the following steps.
     # You can now run
     ./src/loliwm
 
+For proper packaging ``wlc`` and ``loliwm`` should be built separately.
+...instructions later...
+
 RUNNING ON TTY
 --------------
 
@@ -66,6 +69,6 @@ However wlc does not yet set TTY to non interactive mode, so you may get stuck w
 You also need to suid the loliwm binary to whichever group or user has rights to /dev/input.
 This is so wlc can spawn child process at start that gives rights for libinput to read from these raw input devices.
 
-
-For proper packaging ``wlc`` and ``loliwm`` should be built separately.
-...instructions later...
+SCREENSHOT
+__________
+.. image:: http://cloudef.pw/armpit/loliwm-mpv.png
