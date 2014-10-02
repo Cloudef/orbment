@@ -110,6 +110,21 @@ keyboard_init(struct wlc_compositor *compositor, struct wlc_view *view)
    printf("KEYBOARD INIT: %p\n", view);
 }
 
+static void
+focus_next(struct wlc_compositor *compositor, struct wlc_view *view)
+{
+   struct wl_list *l = wlc_view_get_link(view)->next;
+   if (!l || wl_list_empty(&loliwm.views) || (l == &loliwm.views && !(l = l->next)))
+      return;
+
+   struct wlc_view *v;
+   if (!(v = wlc_view_from_link(l)))
+      return;
+
+   wlc_compositor_keyboard_focus(compositor, v);
+   set_active(v);
+}
+
 static bool
 keyboard_key(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t leds, uint32_t mods, uint32_t key, enum wlc_key_state state)
 {
@@ -118,14 +133,8 @@ keyboard_key(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t 
    bool pass = true;
    if (mods & WLC_BIT_MOD_ALT) {
       if (view && key == 38) {
-         if (state == WLC_KEY_STATE_RELEASED) {
-            struct wlc_view *v;
-            struct wl_list *l = wlc_view_get_link(view)->next;
-            if ((v = wlc_view_from_link((l == &loliwm.views ? l->next : l)))) {
-               wlc_compositor_keyboard_focus(compositor, v);
-               set_active(v);
-            }
-         }
+         if (state == WLC_KEY_STATE_RELEASED)
+            focus_next(compositor, view);
          pass = false;
       } else if (key == 28) {
          if (state == WLC_KEY_STATE_RELEASED) {
