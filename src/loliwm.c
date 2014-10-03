@@ -152,6 +152,11 @@ keyboard_key(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t 
       }
    }
 
+   if (mods & WLC_BIT_MOD_CTRL && key == 16) {
+      if (state == WLC_KEY_STATE_RELEASED)
+         exit(EXIT_SUCCESS);
+   }
+
    printf("(%p) KEY: %u\n", view, key);
    return pass;
 }
