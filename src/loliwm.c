@@ -35,6 +35,18 @@ relayout(void)
 }
 
 static void
+cycle(void)
+{
+   if (wl_list_empty(&loliwm.views))
+      return;
+
+   struct wl_list *prev = loliwm.views.prev;
+   wl_list_remove(loliwm.views.prev);
+   wl_list_insert(&loliwm.views, prev);
+   relayout();
+}
+
+static void
 set_active(struct wlc_view *view)
 {
    if (loliwm.active == view)
@@ -148,6 +160,10 @@ keyboard_key(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t 
       } else if (view && key == 16) {
          if (state == WLC_KEY_STATE_RELEASED)
             wlc_view_close(view);
+         pass = false;
+      } else if (key == 35) {
+         if (state == WLC_KEY_STATE_RELEASED)
+            cycle();
          pass = false;
       }
    }
