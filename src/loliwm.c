@@ -10,19 +10,28 @@
 
 static struct {
    struct wlc_compositor *compositor;
+   struct wlc_output *output;
    struct wlc_view *active;
    struct wl_list views;
    uint32_t width, height;
 } loliwm;
 
 static void
-relayout(void)
+relayout(struct wlc_output *output)
 {
    struct wlc_view *v;
    bool toggle = false;
-   uint32_t count = wl_list_length(&loliwm.views);
+
+   uint32_t count = 0;
+   wlc_view_for_each(v, &loliwm.views)
+      if (wlc_view_get_output(v) == output)
+         ++count;
+
    uint32_t y = 0, height = loliwm.height / (count > 1 ? count - 1 : 1);
    wlc_view_for_each(v, &loliwm.views) {
+      if (wlc_view_get_output(v) != output)
+         continue;
+
       wlc_view_set_maximized(v, true);
       wlc_view_resize(v, (count > 1 ? loliwm.width / 2 : loliwm.width), (toggle ? height : loliwm.height));
       wlc_view_position(v, (toggle ? loliwm.width / 2 : 0), y);
@@ -43,7 +52,7 @@ cycle(void)
    struct wl_list *prev = loliwm.views.prev;
    wl_list_remove(loliwm.views.prev);
    wl_list_insert(&loliwm.views, prev);
-   relayout();
+   relayout(loliwm.output);
 }
 
 static void
@@ -69,7 +78,7 @@ view_created(struct wlc_compositor *compositor, struct wlc_view *view)
    (void)compositor;
    wl_list_insert(loliwm.views.prev, wlc_view_get_link(view));
    set_active(view);
-   relayout();
+   relayout(wlc_view_get_output(view));
    printf("NEW VIEW: %p\n", view);
 }
 
@@ -90,7 +99,7 @@ view_destroyed(struct wlc_compositor *compositor, struct wlc_view *view)
       }
    }
 
-   relayout();
+   relayout(wlc_view_get_output(view));
    printf("VIEW DESTROYED: %p\n", view);
 }
 
@@ -178,12 +187,19 @@ keyboard_key(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t 
 }
 
 static void
-resolution_notify(struct wlc_compositor *compositor, uint32_t width, uint32_t height)
+resolution_notify(struct wlc_compositor *compositor, struct wlc_output *output, uint32_t width, uint32_t height)
 {
-   (void)compositor;
+   (void)compositor, (void)output;
    loliwm.width = width;
    loliwm.height = height;
-   relayout();
+   relayout(output);
+}
+
+static void
+output_notify(struct wlc_compositor *compositor, struct wlc_output *output)
+{
+   (void)compositor;
+   loliwm.output = output;
 }
 
 static void
@@ -198,9 +214,6 @@ terminate(void)
 static bool
 initialize(void)
 {
-   if (!(loliwm.compositor = wlc_compositor_new()))
-      goto fail;
-
    struct wlc_interface interface = {
       .view = {
          .created = view_created,
@@ -219,12 +232,16 @@ initialize(void)
       },
 
       .output = {
+         .activated = output_notify,
          .resolution = resolution_notify,
       },
    };
 
    wl_list_init(&loliwm.views);
-   wlc_compositor_inject(loliwm.compositor, &interface);
+
+   if (!(loliwm.compositor = wlc_compositor_new(&interface)))
+      goto fail;
+
    return true;
 
 fail:
