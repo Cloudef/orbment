@@ -10,7 +10,6 @@
 
 static struct {
    struct wlc_compositor *compositor;
-   struct wlc_output *output;
    struct wlc_view *active;
 } loliwm;
 
@@ -42,9 +41,9 @@ relayout(struct wlc_output *output)
 }
 
 static void
-cycle(void)
+cycle(struct wlc_compositor *compositor)
 {
-   struct wl_list *l = wlc_output_get_userdata(loliwm.output);
+   struct wl_list *l = wlc_output_get_userdata(wlc_compositor_get_focused_output(compositor));
    if (wl_list_empty(l))
       return;
 
@@ -52,7 +51,7 @@ cycle(void)
    wl_list_remove(l->prev);
    wl_list_insert(l, p);
 
-   relayout(loliwm.output);
+   relayout(wlc_compositor_get_focused_output(compositor));
 }
 
 static void
@@ -151,7 +150,7 @@ keyboard_init(struct wlc_compositor *compositor, struct wlc_view *view)
 }
 
 static void
-focus_next(struct wlc_compositor *compositor, struct wlc_view *view)
+focus_next_view(struct wlc_compositor *compositor, struct wlc_view *view)
 {
    struct wl_list *l = wlc_view_get_user_link(view)->next;
    struct wl_list *views = wlc_output_get_userdata(wlc_view_get_output(view));
@@ -166,6 +165,22 @@ focus_next(struct wlc_compositor *compositor, struct wlc_view *view)
    set_active(v);
 }
 
+static void
+focus_next_output(struct wlc_compositor *compositor)
+{
+   struct wlc_output *active = wlc_compositor_get_focused_output(compositor);
+   struct wl_list *l = wlc_output_get_link(active)->next;
+   struct wl_list *outputs = wlc_compositor_get_outputs(compositor);
+   if (!l || wl_list_empty(outputs) || (l == outputs && !(l = l->next)))
+      return;
+
+   struct wlc_output *o;
+   if (!(o = wlc_output_from_link(l)))
+      return;
+
+   wlc_compositor_output_focus(compositor, o);
+}
+
 static bool
 keyboard_key(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t leds, uint32_t mods, uint32_t key, enum wlc_key_state state)
 {
@@ -173,9 +188,9 @@ keyboard_key(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t 
 
    bool pass = true;
    if (mods & WLC_BIT_MOD_ALT) {
-      if (view && key == 38) {
+      if (view && key == 16) {
          if (state == WLC_KEY_STATE_RELEASED)
-            focus_next(compositor, view);
+            wlc_view_close(view);
          pass = false;
       } else if (key == 28) {
          if (state == WLC_KEY_STATE_RELEASED) {
@@ -186,13 +201,17 @@ keyboard_key(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t 
             }
          }
          pass = false;
-      } else if (view && key == 16) {
-         if (state == WLC_KEY_STATE_RELEASED)
-            wlc_view_close(view);
-         pass = false;
       } else if (key == 35) {
          if (state == WLC_KEY_STATE_RELEASED)
-            cycle();
+            cycle(compositor);
+         pass = false;
+      } else if (key == 37) {
+         if (state == WLC_KEY_STATE_RELEASED)
+            focus_next_output(compositor);
+         pass = false;
+      } else if (view && key == 38) {
+         if (state == WLC_KEY_STATE_RELEASED)
+            focus_next_view(compositor, view);
          pass = false;
       }
    }
@@ -211,13 +230,6 @@ resolution_notify(struct wlc_compositor *compositor, struct wlc_output *output, 
 {
    (void)compositor, (void)output, (void)width, (void)height;
    relayout(output);
-}
-
-static void
-output_notify(struct wlc_compositor *compositor, struct wlc_output *output)
-{
-   (void)compositor;
-   loliwm.output = output;
 }
 
 static void
@@ -241,7 +253,6 @@ initialize(void)
 
       .pointer = {
          .button = pointer_button,
-         .motion = NULL,
       },
 
       .keyboard = {
@@ -250,7 +261,6 @@ initialize(void)
       },
 
       .output = {
-         .activated = output_notify,
          .resolution = resolution_notify,
       },
    };
