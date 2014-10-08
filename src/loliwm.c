@@ -12,29 +12,27 @@ static struct {
    struct wlc_compositor *compositor;
    struct wlc_output *output;
    struct wlc_view *active;
-   struct wl_list views;
-   uint32_t width, height;
 } loliwm;
 
 static void
 relayout(struct wlc_output *output)
 {
-   struct wlc_view *v;
+   struct wl_list *views;
+   if (!(views = wlc_output_get_userdata(output)))
+      return;
+
+   uint32_t rwidth, rheight;
+   wlc_output_get_resolution(output, &rwidth, &rheight);
+
+   uint32_t count = wl_list_length(views);
+   uint32_t y = 0, height = rheight / (count > 1 ? count - 1 : 1);
+
    bool toggle = false;
-
-   uint32_t count = 0;
-   wlc_view_for_each(v, &loliwm.views)
-      if (wlc_view_get_output(v) == output)
-         ++count;
-
-   uint32_t y = 0, height = loliwm.height / (count > 1 ? count - 1 : 1);
-   wlc_view_for_each(v, &loliwm.views) {
-      if (wlc_view_get_output(v) != output)
-         continue;
-
+   struct wlc_view *v;
+   wlc_view_for_each_user(v, views) {
       wlc_view_set_maximized(v, true);
-      wlc_view_resize(v, (count > 1 ? loliwm.width / 2 : loliwm.width), (toggle ? height : loliwm.height));
-      wlc_view_position(v, (toggle ? loliwm.width / 2 : 0), y);
+      wlc_view_resize(v, (count > 1 ? rwidth / 2 : rwidth), (toggle ? height : rheight));
+      wlc_view_position(v, (toggle ? rwidth / 2 : 0), y);
 
       if (toggle)
          y += height;
@@ -46,12 +44,14 @@ relayout(struct wlc_output *output)
 static void
 cycle(void)
 {
-   if (wl_list_empty(&loliwm.views))
+   struct wl_list *l = wlc_output_get_userdata(loliwm.output);
+   if (wl_list_empty(l))
       return;
 
-   struct wl_list *prev = loliwm.views.prev;
-   wl_list_remove(loliwm.views.prev);
-   wl_list_insert(&loliwm.views, prev);
+   struct wl_list *p = l->prev;
+   wl_list_remove(l->prev);
+   wl_list_insert(l, p);
+
    relayout(loliwm.output);
 }
 
@@ -72,14 +72,26 @@ set_active(struct wlc_view *view)
    loliwm.active = view;
 }
 
-static void
+static bool
 view_created(struct wlc_compositor *compositor, struct wlc_view *view)
 {
    (void)compositor;
-   wl_list_insert(loliwm.views.prev, wlc_view_get_link(view));
+
+   struct wl_list *views;
+   struct wlc_output *output = wlc_view_get_output(view);
+   if (!(views = wlc_output_get_userdata(output))) {
+      if (!(views = calloc(1, sizeof(struct wl_list))))
+         return false;
+
+      wl_list_init(views);
+      wlc_output_set_userdata(output, views);
+   }
+
+   wl_list_insert(views->prev, wlc_view_get_user_link(view));
    set_active(view);
-   relayout(wlc_view_get_output(view));
+   relayout(output);
    printf("NEW VIEW: %p\n", view);
+   return true;
 }
 
 static void
@@ -87,19 +99,26 @@ view_destroyed(struct wlc_compositor *compositor, struct wlc_view *view)
 {
    (void)compositor;
 
-   wl_list_remove(wlc_view_get_link(view));
+   struct wl_list *views = wlc_output_get_userdata(wlc_view_get_output(view));
+   wl_list_remove(wlc_view_get_user_link(view));
 
    if (loliwm.active == view) {
       loliwm.active = NULL;
 
       struct wlc_view *v;
-      if (!wl_list_empty(&loliwm.views) && (v = wlc_view_from_link(loliwm.views.prev))) {
+      if (!wl_list_empty(views) && (v = wlc_view_from_user_link(views->prev))) {
          wlc_compositor_keyboard_focus(compositor, v);
          set_active(v);
       }
    }
 
    relayout(wlc_view_get_output(view));
+
+   if (wl_list_empty(views)) {
+      free(views);
+      wlc_output_set_userdata(wlc_view_get_output(view), NULL);
+   }
+
    printf("VIEW DESTROYED: %p\n", view);
 }
 
@@ -134,12 +153,13 @@ keyboard_init(struct wlc_compositor *compositor, struct wlc_view *view)
 static void
 focus_next(struct wlc_compositor *compositor, struct wlc_view *view)
 {
-   struct wl_list *l = wlc_view_get_link(view)->next;
-   if (!l || wl_list_empty(&loliwm.views) || (l == &loliwm.views && !(l = l->next)))
+   struct wl_list *l = wlc_view_get_user_link(view)->next;
+   struct wl_list *views = wlc_output_get_userdata(wlc_view_get_output(view));
+   if (!l || wl_list_empty(views) || (l == views && !(l = l->next)))
       return;
 
    struct wlc_view *v;
-   if (!(v = wlc_view_from_link(l)))
+   if (!(v = wlc_view_from_user_link(l)))
       return;
 
    wlc_compositor_keyboard_focus(compositor, v);
@@ -189,9 +209,7 @@ keyboard_key(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t 
 static void
 resolution_notify(struct wlc_compositor *compositor, struct wlc_output *output, uint32_t width, uint32_t height)
 {
-   (void)compositor, (void)output;
-   loliwm.width = width;
-   loliwm.height = height;
+   (void)compositor, (void)output, (void)width, (void)height;
    relayout(output);
 }
 
@@ -236,8 +254,6 @@ initialize(void)
          .resolution = resolution_notify,
       },
    };
-
-   wl_list_init(&loliwm.views);
 
    if (!(loliwm.compositor = wlc_compositor_new(&interface)))
       goto fail;
