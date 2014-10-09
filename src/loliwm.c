@@ -233,6 +233,17 @@ resolution_notify(struct wlc_compositor *compositor, struct wlc_output *output, 
 }
 
 static void
+output_notify(struct wlc_compositor *compositor, struct wlc_output *output)
+{
+   struct wl_list *views = wlc_output_get_views(output);
+
+   if (!wl_list_empty(views)) {
+      wlc_compositor_keyboard_focus(compositor, wlc_view_from_link(views->prev));
+      set_active(wlc_view_from_link(views->prev));
+   }
+}
+
+static void
 terminate(void)
 {
    if (loliwm.compositor)
@@ -261,6 +272,7 @@ initialize(void)
       },
 
       .output = {
+         .activated = output_notify,
          .resolution = resolution_notify,
       },
    };
