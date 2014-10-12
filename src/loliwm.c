@@ -23,12 +23,22 @@ relayout(struct wlc_output *output)
    uint32_t rwidth, rheight;
    wlc_output_get_resolution(output, &rwidth, &rheight);
 
-   uint32_t count = wl_list_length(views);
-   uint32_t y = 0, height = rheight / (count > 1 ? count - 1 : 1);
+   struct wlc_view *v;
+   uint32_t count = 0;
+   wlc_view_for_each_user(v, views) {
+      if (!(wlc_view_get_state(v) & WLC_BIT_FULLSCREEN))
+         ++count;
+   }
 
    bool toggle = false;
-   struct wlc_view *v;
+   uint32_t y = 0, height = rheight / (count > 1 ? count - 1 : 1);
    wlc_view_for_each_user(v, views) {
+      if ((wlc_view_get_state(v) & WLC_BIT_FULLSCREEN)) {
+         wlc_view_resize(v, rwidth, rheight);
+         wlc_view_position(v, 0, 0);
+         continue;
+      }
+
       wlc_view_set_maximized(v, true);
       wlc_view_resize(v, (count > 1 ? rwidth / 2 : rwidth), (toggle ? height : rheight));
       wlc_view_position(v, (toggle ? rwidth / 2 : 0), y);
@@ -64,6 +74,19 @@ set_active(struct wlc_view *view)
       wlc_view_set_active(loliwm.active, false);
 
    if (view) {
+      struct wlc_view *v;
+      struct wl_list *views = wlc_output_get_views(wlc_view_get_output(view));
+      wlc_view_for_each_reverse(v, views) {
+         if ((wlc_view_get_state(v) & WLC_BIT_FULLSCREEN)) {
+            // Bring the first topmost found fullscreen wlc_view to front.
+            // This way we get a "peek" effect when we cycle other views.
+            // Meaning the active view is always over fullscreen view,
+            // but fullscreen view is on top of the other views.
+            wlc_view_bring_to_front(v);
+            break;
+         }
+      }
+
       wlc_view_set_active(view, true);
       wlc_view_bring_to_front(view);
    }
