@@ -235,7 +235,9 @@ keyboard_key(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t 
          if (state == WLC_KEY_STATE_RELEASED) {
             // TEMPORARY UGLY
             if (fork() == 0) {
-               execlp("weston-terminal", "weston-terminal", NULL);
+               const char *terminal = getenv("TERMINAL");
+               terminal = (terminal ? terminal : "weston-terminal");
+               execlp(terminal, terminal, NULL);
                _exit(0);
             }
          }
