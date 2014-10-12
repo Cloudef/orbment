@@ -13,6 +13,10 @@ KEYBINDS
 +----------------+-------------------------------+
 | ``alt-l``      | Rotates focus through clients |
 +----------------+-------------------------------+
+| ``alt-k``      | Rotates focus through outputs |
++----------------+-------------------------------+
+| ``alt-j``      | Rotates focus through spaces  |
++----------------+-------------------------------+
 | ``alt-h``      | Cycles clients                |
 +----------------+-------------------------------+
 | ``alt-q``      | Closes focused client         |
