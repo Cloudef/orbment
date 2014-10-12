@@ -244,7 +244,7 @@ keyboard_key(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t 
          if (state == WLC_KEY_STATE_RELEASED)
             cycle(compositor);
          pass = false;
-      } else if (view && key == 36) {
+      } else if (key == 36) {
          if (state == WLC_KEY_STATE_RELEASED)
             focus_next_space(compositor);
          pass = false;
