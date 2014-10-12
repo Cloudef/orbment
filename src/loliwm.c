@@ -55,7 +55,7 @@ static void
 cycle(struct wlc_compositor *compositor)
 {
    struct wl_list *l = wlc_space_get_userdata(wlc_compositor_get_focused_space(compositor));
-   if (wl_list_empty(l))
+   if (!l || wl_list_empty(l))
       return;
 
    struct wl_list *p = l->prev;
