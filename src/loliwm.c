@@ -369,11 +369,11 @@ void run(void)
 }
 
 int
-main(int argc, char **argv)
+main(int argc, char *argv[])
 {
    (void)argc, (void)argv;
 
-   if (!wlc_init())
+   if (!wlc_init(argc, argv))
       return EXIT_FAILURE;
 
    if (!initialize())
