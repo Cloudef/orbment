@@ -161,7 +161,7 @@ view_created(struct wlc_compositor *compositor, struct wlc_view *view)
    wl_list_insert(views->prev, wlc_view_get_user_link(view));
    set_active(view);
    relayout(space);
-   printf("NEW VIEW: %p\n", view);
+   wlc_log(WLC_LOG_INFO, "new view: %p", view);
    return true;
 }
 
@@ -188,7 +188,7 @@ view_destroyed(struct wlc_compositor *compositor, struct wlc_view *view)
       wlc_space_set_userdata(wlc_view_get_space(view), NULL);
    }
 
-   printf("VIEW DESTROYED: %p\n", view);
+   wlc_log(WLC_LOG_INFO, "view destroyed: %p", view);
 }
 
 static void
@@ -217,7 +217,6 @@ keyboard_init(struct wlc_compositor *compositor, struct wlc_view *view)
 {
    (void)compositor;
    wlc_compositor_focus_view(compositor, view);
-   printf("KEYBOARD INIT: %p\n", view);
 }
 
 static bool
@@ -266,7 +265,9 @@ keyboard_key(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t 
          exit(EXIT_SUCCESS);
    }
 
-   printf("(%p) KEY: %u\n", view, key);
+   if (!pass)
+      wlc_log(WLC_LOG_INFO, "(%p) KEY: %u", view, key);
+
    return pass;
 }
 
@@ -364,7 +365,7 @@ fail:
 static
 void run(void)
 {
-   fprintf(stdout, "-!- loliwm started\n");
+   wlc_log(WLC_LOG_INFO, "loliwm started");
    wlc_compositor_run(loliwm.compositor);
 }
 
