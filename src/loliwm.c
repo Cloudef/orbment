@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <signal.h>
 #include <string.h>
 #include <unistd.h>
 #include <assert.h>
@@ -373,6 +374,14 @@ int
 main(int argc, char *argv[])
 {
    (void)argc, (void)argv;
+
+   struct sigaction action = {
+      .sa_handler = SIG_DFL,
+      .sa_flags = SA_NOCLDWAIT
+   };
+
+   // do not care about childs
+   sigaction(SIGCHLD, &action, NULL);
 
    if (!wlc_init(argc, argv))
       return EXIT_FAILURE;
