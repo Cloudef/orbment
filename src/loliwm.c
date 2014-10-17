@@ -237,7 +237,7 @@ keyboard_key(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t 
                const char *terminal = getenv("TERMINAL");
                terminal = (terminal ? terminal : "weston-terminal");
                execlp(terminal, terminal, NULL);
-               _exit(0);
+               _exit(EXIT_SUCCESS);
             }
          }
          pass = false;
