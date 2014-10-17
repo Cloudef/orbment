@@ -41,7 +41,7 @@ relayout(struct wlc_space *space)
          continue;
       }
 
-      wlc_view_set_maximized(v, true);
+      wlc_view_set_state(v, WLC_BIT_MAXIMIZED, true);
       wlc_view_resize(v, (count > 1 ? rwidth / 2 : rwidth), (toggle ? height : rheight));
       wlc_view_position(v, (toggle ? rwidth / 2 : 0), y);
 
@@ -73,7 +73,7 @@ set_active(struct wlc_view *view)
       return;
 
    if (loliwm.active)
-      wlc_view_set_active(loliwm.active, false);
+      wlc_view_set_state(loliwm.active, WLC_BIT_ACTIVATED, false);
 
    if (view) {
       struct wlc_view *v;
@@ -89,7 +89,7 @@ set_active(struct wlc_view *view)
          }
       }
 
-      wlc_view_set_active(view, true);
+      wlc_view_set_state(view, WLC_BIT_ACTIVATED, true);
       wlc_view_bring_to_front(view);
    }
 
@@ -193,11 +193,31 @@ view_destroyed(struct wlc_compositor *compositor, struct wlc_view *view)
 }
 
 static void
-view_move(struct wlc_compositor *compositor, struct wlc_view *view, int32_t x, int32_t y)
+view_geometry_request(struct wlc_compositor *compositor, struct wlc_view *view, int32_t x, int32_t y, uint32_t w, uint32_t h)
 {
    (void)compositor;
    wlc_view_position(view, x, y);
-   wlc_view_set_maximized(view, false);
+   wlc_view_resize(view, w, h);
+   wlc_view_set_state(view, WLC_BIT_MAXIMIZED, false);
+}
+
+static void
+view_state_request(struct wlc_compositor *compositor, struct wlc_view *view, const enum wlc_view_bit state, const bool toggle)
+{
+   (void)compositor;
+   wlc_view_set_state(view, state, toggle);
+
+   wlc_log(WLC_LOG_INFO, "STATE: %d (%d)", state, toggle);
+   switch (state) {
+      case WLC_BIT_MAXIMIZED:
+         if (toggle)
+            relayout(wlc_view_get_space(view));
+      break;
+      case WLC_BIT_FULLSCREEN:
+         relayout(wlc_view_get_space(view));
+      break;
+      default:break;
+   }
 }
 
 static bool
@@ -307,11 +327,11 @@ space_notify(struct wlc_compositor *compositor, struct wlc_space *space)
    }
 }
 
-static void
+static bool
 output_created(struct wlc_compositor *compositor, struct wlc_output *output)
 {
    (void)compositor;
-   wlc_space_add(output); // add second space
+   return wlc_space_add(output); // add second space
 }
 
 static void
@@ -330,7 +350,11 @@ initialize(void)
       .view = {
          .created = view_created,
          .destroyed = view_destroyed,
-         .move = view_move,
+
+         .request = {
+            .geometry = view_geometry_request,
+            .state = view_state_request,
+         },
       },
 
       .pointer = {
