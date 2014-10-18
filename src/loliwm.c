@@ -90,6 +90,7 @@ set_active(struct wlc_view *view)
          }
       }
 
+      wlc_compositor_focus_view(loliwm.compositor, view);
       wlc_view_set_state(view, WLC_BIT_ACTIVATED, true);
       wlc_view_bring_to_front(view);
    }
@@ -245,7 +246,8 @@ static void
 keyboard_init(struct wlc_compositor *compositor, struct wlc_view *view)
 {
    (void)compositor;
-   wlc_compositor_focus_view(compositor, view);
+   puts("ASD");
+   // wlc_compositor_focus_view(compositor, view);
 }
 
 static bool
