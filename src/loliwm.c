@@ -266,7 +266,7 @@ keyboard_key(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t 
                terminal = (terminal ? terminal : "weston-terminal");
                setsid();
                freopen("/dev/null", "w", stdout);
-               freopen("/dev/null", "", stderr);
+               freopen("/dev/null", "w", stderr);
                execlp(terminal, terminal, NULL);
                _exit(EXIT_SUCCESS);
             }
