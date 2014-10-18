@@ -114,17 +114,18 @@ focus_next_view(struct wlc_compositor *compositor, struct wlc_view *view)
 }
 
 static void
-focus_next_space(struct wlc_compositor *compositor)
+focus_space(struct wlc_compositor *compositor, int index)
 {
    struct wlc_space *active = wlc_compositor_get_focused_space(compositor);
-   struct wl_list *l = wlc_space_get_link(active)->next;
    struct wl_list *spaces = wlc_output_get_spaces(wlc_space_get_output(active));
-   if (!l || wl_list_empty(spaces) || (l == spaces && !(l = l->next)))
-      return;
 
+   int i = 0;
    struct wlc_space *s;
-   if (!(s = wlc_space_from_link(l)))
-      return;
+   wlc_space_for_each(s, spaces) {
+      if (index == i)
+         break;
+      ++i;
+   }
 
    wlc_output_focus_space(wlc_space_get_output(s), s);
 }
@@ -276,9 +277,9 @@ keyboard_key(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t 
          if (state == WLC_KEY_STATE_RELEASED)
             cycle(compositor);
          pass = false;
-      } else if (key == 36) {
+      } else if (key >= 2 && key <= 11) {
          if (state == WLC_KEY_STATE_RELEASED)
-            focus_next_space(compositor);
+            focus_space(compositor, key - 2);
          pass = false;
       } else if (key == 37) {
          if (state == WLC_KEY_STATE_RELEASED)
@@ -341,7 +342,13 @@ static bool
 output_created(struct wlc_compositor *compositor, struct wlc_output *output)
 {
    (void)compositor;
-   return wlc_space_add(output); // add second space
+
+   // Add some spaces
+   for (int i = 1; i < 10; ++i)
+      if (!wlc_space_add(output))
+         return false;
+
+   return true;
 }
 
 static void
