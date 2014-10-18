@@ -296,7 +296,7 @@ keyboard_key(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t 
          exit(EXIT_SUCCESS);
    }
 
-   if (!pass)
+   if (pass)
       wlc_log(WLC_LOG_INFO, "(%p) KEY: %u", view, key);
 
    return pass;
