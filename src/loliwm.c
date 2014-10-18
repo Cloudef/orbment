@@ -68,7 +68,7 @@ cycle(struct wlc_compositor *compositor)
 }
 
 static void
-set_active(struct wlc_view *view)
+set_active(struct wlc_compositor *compositor, struct wlc_view *view)
 {
    if (loliwm.active == view)
       return;
@@ -90,11 +90,11 @@ set_active(struct wlc_view *view)
          }
       }
 
-      wlc_compositor_focus_view(loliwm.compositor, view);
       wlc_view_set_state(view, WLC_BIT_ACTIVATED, true);
       wlc_view_bring_to_front(view);
    }
 
+   wlc_compositor_focus_view(compositor, view);
    loliwm.active = view;
 }
 
@@ -110,8 +110,7 @@ focus_next_view(struct wlc_compositor *compositor, struct wlc_view *view)
    if (!(v = wlc_view_from_user_link(l)))
       return;
 
-   wlc_compositor_focus_view(compositor, v);
-   set_active(v);
+   set_active(compositor, v);
 }
 
 static void
@@ -162,7 +161,7 @@ view_created(struct wlc_compositor *compositor, struct wlc_view *view, struct wl
    }
 
    wl_list_insert(views->prev, wlc_view_get_user_link(view));
-   set_active(view);
+   set_active(compositor, view);
    relayout(space);
    wlc_log(WLC_LOG_INFO, "new view: %p", view);
    return true;
@@ -178,10 +177,8 @@ view_destroyed(struct wlc_compositor *compositor, struct wlc_view *view)
       loliwm.active = NULL;
 
       struct wlc_view *v;
-      if (!wl_list_empty(views) && (v = wlc_view_from_user_link(views->prev))) {
-         wlc_compositor_focus_view(compositor, v);
-         set_active(v);
-      }
+      if (!wl_list_empty(views) && (v = wlc_view_from_user_link(views->prev)))
+         set_active(compositor, v);
    }
 
    relayout(wlc_view_get_space(view));
@@ -234,20 +231,10 @@ pointer_button(struct wlc_compositor *compositor, struct wlc_view *view, uint32_
 {
    (void)button;
 
-   if (state == WLC_BUTTON_STATE_PRESSED) {
-      wlc_compositor_focus_view(compositor, view);
-      set_active(view);
-   }
+   if (state == WLC_BUTTON_STATE_PRESSED)
+      set_active(compositor, view);
 
    return true;
-}
-
-static void
-keyboard_init(struct wlc_compositor *compositor, struct wlc_view *view)
-{
-   (void)compositor;
-   puts("ASD");
-   // wlc_compositor_focus_view(compositor, view);
 }
 
 static bool
@@ -318,11 +305,9 @@ output_notify(struct wlc_compositor *compositor, struct wlc_output *output)
    struct wl_list *views = wlc_space_get_views(wlc_output_get_active_space(output));
 
    if (!wl_list_empty(views)) {
-      wlc_compositor_focus_view(compositor, wlc_view_from_link(views->prev));
-      set_active(wlc_view_from_link(views->prev));
+      set_active(compositor, wlc_view_from_link(views->prev));
    } else {
-      wlc_compositor_focus_view(compositor, NULL);
-      set_active(NULL);
+      set_active(compositor, NULL);
    }
 }
 
@@ -332,11 +317,9 @@ space_notify(struct wlc_compositor *compositor, struct wlc_space *space)
    struct wl_list *views = wlc_space_get_views(space);
 
    if (!wl_list_empty(views)) {
-      wlc_compositor_focus_view(compositor, wlc_view_from_link(views->prev));
-      set_active(wlc_view_from_link(views->prev));
+      set_active(compositor, wlc_view_from_link(views->prev));
    } else {
-      wlc_compositor_focus_view(compositor, NULL);
-      set_active(NULL);
+      set_active(compositor, NULL);
    }
 }
 
@@ -382,7 +365,6 @@ initialize(void)
       },
 
       .keyboard = {
-         .init = keyboard_init,
          .key = keyboard_key,
       },
 
