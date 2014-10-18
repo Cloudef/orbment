@@ -145,12 +145,11 @@ focus_next_output(struct wlc_compositor *compositor)
 }
 
 static bool
-view_created(struct wlc_compositor *compositor, struct wlc_view *view)
+view_created(struct wlc_compositor *compositor, struct wlc_view *view, struct wlc_space *space)
 {
    (void)compositor;
 
    struct wl_list *views;
-   struct wlc_space *space = wlc_view_get_space(view);
    if (!(views = wlc_space_get_userdata(space))) {
       if (!(views = calloc(1, sizeof(struct wl_list))))
          return false;
@@ -190,6 +189,13 @@ view_destroyed(struct wlc_compositor *compositor, struct wlc_view *view)
    }
 
    wlc_log(WLC_LOG_INFO, "view destroyed: %p", view);
+}
+
+static void
+view_will_move_to_space(struct wlc_compositor *compositor, struct wlc_view *view, struct wlc_space *space)
+{
+   (void)space;
+   view_created(compositor, view, space);
 }
 
 static void
@@ -350,6 +356,7 @@ initialize(void)
       .view = {
          .created = view_created,
          .destroyed = view_destroyed,
+         .will_move_to_space = view_will_move_to_space,
 
          .request = {
             .geometry = view_geometry_request,
