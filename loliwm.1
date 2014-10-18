@@ -1,0 +1,41 @@
+.TH loliwm 1 "October 18" loliwm
+.SH NAME
+loliwm \- Dynamic wayland compositor.
+.SH SYNOPSIS
+\fBloliwm\fP [options]
+.SH DESCRIPTION
+\fBloliwm\fP is a dynamic window manager and compositor for Wayland.
+.SH OPTIONS
+.IP "\fB\-\-log \fR[\fIFILE\fR]"
+File in which the logging output is captured.
+.IP \fB\-\-shm\fR
+Force EGL clients to fallback to shm.
+.SH KEYBINDINGS
+.IP \fBAlt\-Return\fR
+Opens the terminal defined in \fBTERMINAL\fP or \fBweston-terminal\fP
+otherwise.
+.IP \fBalt\-l\fR
+Rotates focus through clients.
+.IP \fBalt\-k\fR
+Rotates focus through available outputs.
+.IP \fBalt\-[1..n]\fR
+Selects the \fInth\fP workspace, currently limited to 10.
+.IP \fBalt-h\fR
+Cycles the focused client.
+.IP \fBalt-q\fR
+Closes the focused client.
+.IP \fBctrl-q\fR
+Quits \fBloliwm\fR
+.SH ENVIRONMENT
+.IP \fBTERMINAL\fR
+\fBloliwm\fP will currently honor this environment variable if set otherwise it
+will use \fBweston-terminal\fP.
+.IP \fBXKB_DEFAULT_LAYOUT\fR
+Sets the keyboard layout such as \fBgb\fP for UK layout.
+.IP \fBXKB_DEFAULT_OPTIONS\fR
+Sets the keyboard options such as \fBcompose:ralt,ctrl:nocaps\fP.
+.IP \fBXKB_DEFAULT_LAYOUT\fR
+.IP \fBXKB_DEFAULT_LAYOUT\fR
+.SH AUTHORS
+.IP "Jari Vetoniemi <http://cloudef.pw/>"
+
