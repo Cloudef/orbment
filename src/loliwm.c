@@ -263,6 +263,9 @@ keyboard_key(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t 
             if (fork() == 0) {
                const char *terminal = getenv("TERMINAL");
                terminal = (terminal ? terminal : "weston-terminal");
+               setsid();
+               freopen("/dev/null", "w", stdout);
+               freopen("/dev/null", "", stderr);
                execlp(terminal, terminal, NULL);
                _exit(EXIT_SUCCESS);
             }
