@@ -15,6 +15,12 @@ static struct {
    struct wlc_view *active;
 } loliwm;
 
+static bool
+is_tiled(struct wlc_view *view)
+{
+   return !(wlc_view_get_state(view) & WLC_BIT_FULLSCREEN) && !wlc_view_get_parent(view);
+}
+
 static void
 relayout(struct wlc_space *space)
 {
@@ -28,10 +34,8 @@ relayout(struct wlc_space *space)
 
    struct wlc_view *v;
    uint32_t count = 0;
-   wlc_view_for_each_user(v, views) {
-      if (!(wlc_view_get_state(v) & WLC_BIT_FULLSCREEN))
-         ++count;
-   }
+   wlc_view_for_each_user(v, views)
+      if (is_tiled(v)) ++count;
 
    bool toggle = false;
    uint32_t y = 0, height = rheight / (count > 1 ? count - 1 : 1);
@@ -39,8 +43,10 @@ relayout(struct wlc_space *space)
       if ((wlc_view_get_state(v) & WLC_BIT_FULLSCREEN)) {
          wlc_view_resize(v, rwidth, rheight);
          wlc_view_position(v, 0, 0);
-         continue;
       }
+
+      if (!is_tiled(v))
+         continue;
 
       wlc_view_set_state(v, WLC_BIT_MAXIMIZED, true);
       wlc_view_resize(v, (count > 1 ? rwidth / 2 : rwidth), (toggle ? height : rheight));
@@ -57,12 +63,27 @@ static void
 cycle(struct wlc_compositor *compositor)
 {
    struct wl_list *l = wlc_space_get_userdata(wlc_compositor_get_focused_space(compositor));
-   if (!l || wl_list_empty(l))
+
+   if (!l)
       return;
 
-   struct wl_list *p = l->prev;
-   wl_list_remove(l->prev);
-   wl_list_insert(l, p);
+   struct wlc_view *v;
+   uint32_t count = 0;
+   wlc_view_for_each_user(v, l)
+      if (is_tiled(v)) ++count;
+
+   // Check that we have at least two tiled views
+   // so we don't get in infinite loop.
+   if (count <= 1)
+      return;
+
+   // Cycle until we hit next tiled view.
+   struct wl_list *p;
+   do {
+      p = l->prev;
+      wl_list_remove(l->prev);
+      wl_list_insert(l, p);
+   } while (!is_tiled(wlc_view_from_user_link(p)));
 
    relayout(wlc_compositor_get_focused_space(compositor));
 }
@@ -176,9 +197,14 @@ view_destroyed(struct wlc_compositor *compositor, struct wlc_view *view)
    if (loliwm.active == view) {
       loliwm.active = NULL;
 
-      struct wlc_view *v;
-      if (!wl_list_empty(views) && (v = wlc_view_from_user_link(views->prev)))
+      struct wlc_view *v = wlc_view_get_parent(view);
+      if (v) {
+         // Focus the parent view, if there was one
          set_active(compositor, v);
+      } else if (!wl_list_empty(views) && (v = wlc_view_from_user_link(views->prev))) {
+         // Otherwise focus previous one.
+         set_active(compositor, v);
+      }
    }
 
    relayout(wlc_view_get_space(view));
@@ -208,7 +234,7 @@ view_geometry_request(struct wlc_compositor *compositor, struct wlc_view *view, 
 }
 
 static void
-view_state_request(struct wlc_compositor *compositor, struct wlc_view *view, const enum wlc_view_bit state, const bool toggle)
+view_state_request(struct wlc_compositor *compositor, struct wlc_view *view, const enum wlc_view_state_bit state, const bool toggle)
 {
    (void)compositor;
    wlc_view_set_state(view, state, toggle);
