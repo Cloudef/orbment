@@ -7,24 +7,39 @@ loliwm \- Dynamic wayland compositor.
 \fBloliwm\fP is a dynamic window manager and compositor for Wayland built using
 the wlc library.
 .SH OPTIONS
-.IP "\fB\-\-log \fR[\fIFILE\fR]"
+.IP "\fB\-\-prefix\fR \fImodifier\fR
+Defines a modifier to be used with the default keybindings supported by
+\fBloliwm\fR. Multiple modifiers may be set such as \%\fB--prefix ctrl,atl\fR 
+which would represent the keybindings as \fIctrl-alt-<key>\fR. Possible choices 
+included
+\fIshift\fR,
+\fIcaps\fR,
+\fIctrl\fR,
+\fIalt\fR,
+\fImod2\fR,
+\fImod3\fR,
+\fIlogo\fR and
+\fImod5\fR. (Default: \fIalt\fR)
+
+N.B. \fIlogo\fR is typically the "Windows" or Super key.
+.IP "\fB\-\-log\fR [\fIFILE\fR]"
 File in which the logging output is captured.
 .IP \fB\-\-shm\fR
 Force EGL clients to fallback on shm.
 .SH KEYBINDINGS
-.IP \fBalt\-Return\fR
+.IP \fBmod\-return\fR
 Opens a new terminal emulator client.
-.IP \fBalt\-l\fR
+.IP \fBmod\-l\fR
 Rotates focus through clients.
-.IP \fBalt\-k\fR
+.IP \fBmod\-k\fR
 Rotates focus through available outputs.
-.IP \fBalt\-[1..n]\fR
+.IP \fBmod\-[1..n]\fR
 Selects the \fInth\fP workspace, currently limited to ten.
-.IP \fBalt-h\fR
+.IP \fBmod-h\fR
 Cycles the focused client.
-.IP \fBalt-q\fR
+.IP \fBmod-q\fR
 Closes the focused client.
-.IP \fBctrl-q\fR
+.IP \fBmod-escape\fR
 Quits \fBloliwm\fR
 .SH ENVIRONMENT
 .IP \fBTERMINAL\fR
@@ -35,7 +50,7 @@ This corresponds to the layout you might use in X11 such as \fBgb\fR.  Use this
 if you want to select a non-us keyboard layout.
 .IP \fBXKB_DEFAULT_OPTIONS\fR
 Sets the keyboard options. The syntax is the same (comma-seperated values) as
-within an \fIxorg.conf\fR or when used via \%\fBsetxkbmap -option\fR. 
+within an \fIxorg.conf\fR or when used via \%\fBsetxkbmap -option\fR.
 For example \%\fBcompose:ralt,ctrl:nocaps\fR would set \fIralt\fR to the compose
 key and cause the \fICaps Lock\fR key to mimic \fIctrl\fR.
 .IP \fBXKB_DEFAULT_VARIANT\fR
@@ -43,7 +58,7 @@ key and cause the \fICaps Lock\fR key to mimic \fIctrl\fR.
 .IP \fBXKB_DEFAULT_MODEL\fR
 .SH AUTHORS
 .IP "Jari Vetoniemi <http://cloudef.pw/>"
-.SH SEE ALSO 
+.SH SEE ALSO
 \fBxkbcommon\fR,
 \fBwayland\fR,
 \fBweston\fR
