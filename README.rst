@@ -15,7 +15,7 @@ KEYBINDS
 +----------------+-------------------------------+
 | ``mod-k``      | Rotates focus through outputs |
 +----------------+-------------------------------+
-| ``mod-(1-0)``  | Activate space                |
+| ``mod-[1-n]``  | Activate space                |
 +----------------+-------------------------------+
 | ``mod-h``      | Cycles clients                |
 +----------------+-------------------------------+
@@ -24,11 +24,12 @@ KEYBINDS
 | ``mod-esc``    | Quits ``loliwm``              |
 +----------------+-------------------------------+
 
-You can change mod with ``--prefix`` argument.
-It takes comma ',' separated list of names:
-```
-shift, caps, ctrl, alt, mod2, mod3, logo, mod5
-```
+You can change mod with ``--prefix`` argument.  It takes comma ',' separated 
+list of names:
+
+.. code::
+
+    shift, caps, ctrl, alt, mod2, mod3, logo, mod5
 
 KEYBOARD LAYOUT
 ---------------
@@ -86,4 +87,4 @@ You can build bootstrapped version of ``loliwm`` with the following steps.
     ./src/loliwm
 
 For proper packaging ``wlc`` and ``loliwm`` should be built separately.
-...instructions later...
+Instructions later...
