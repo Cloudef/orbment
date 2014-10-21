@@ -415,8 +415,8 @@ fail:
    return false;
 }
 
-static
-void run(void)
+static void
+run(void)
 {
    wlc_log(WLC_LOG_INFO, "loliwm started");
    wlc_compositor_run(loliwm.compositor);
