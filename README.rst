@@ -9,20 +9,26 @@ KEYBINDS
 --------
 
 +----------------+-------------------------------+
-| ``alt-return`` | Opens ``weston-terminal``     |
+| ``mod-return`` | Opens ``weston-terminal``     |
 +----------------+-------------------------------+
-| ``alt-l``      | Rotates focus through clients |
+| ``mod-l``      | Rotates focus through clients |
 +----------------+-------------------------------+
-| ``alt-k``      | Rotates focus through outputs |
+| ``mod-k``      | Rotates focus through outputs |
 +----------------+-------------------------------+
-| ``alt-(1-0)``  | Activate space                |
+| ``mod-(1-0)``  | Activate space                |
 +----------------+-------------------------------+
-| ``alt-h``      | Cycles clients                |
+| ``mod-h``      | Cycles clients                |
 +----------------+-------------------------------+
-| ``alt-q``      | Closes focused client         |
+| ``mod-q``      | Closes focused client         |
 +----------------+-------------------------------+
-| ``ctrl-q``     | Quits ``loliwm``              |
+| ``mod-esc``    | Quits ``loliwm``              |
 +----------------+-------------------------------+
+
+You can change mod with ``--prefix`` argument.
+It takes comma ',' separated list of names:
+```
+shift, caps, ctrl, alt, mod2, mod3, logo, mod5
+```
 
 KEYBOARD LAYOUT
 ---------------

@@ -13,7 +13,10 @@
 static struct {
    struct wlc_compositor *compositor;
    struct wlc_view *active;
-} loliwm;
+   uint32_t prefix;
+} loliwm = {
+   .prefix = WLC_BIT_MOD_ALT,
+};
 
 static bool
 is_tiled(struct wlc_view *view)
@@ -269,8 +272,11 @@ keyboard_key(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t 
    (void)leds;
 
    bool pass = true;
-   if (mods & WLC_BIT_MOD_ALT) {
-      if (view && key == 16) {
+   if (mods == loliwm.prefix) {
+      if (key == 1) {
+         if (state == WLC_KEY_STATE_RELEASED)
+            exit(EXIT_SUCCESS);
+      } else if (view && key == 16) {
          if (state == WLC_KEY_STATE_RELEASED)
             wlc_view_close(view);
          pass = false;
@@ -305,11 +311,6 @@ keyboard_key(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t 
             focus_next_view(compositor, view);
          pass = false;
       }
-   }
-
-   if (mods & WLC_BIT_MOD_CTRL && key == 16) {
-      if (state == WLC_KEY_STATE_RELEASED)
-         exit(EXIT_SUCCESS);
    }
 
    if (pass)
@@ -422,6 +423,51 @@ run(void)
    wlc_compositor_run(loliwm.compositor);
 }
 
+static void
+die(const char *format, ...)
+{
+   va_list vargs;
+   va_start(vargs, format);
+   wlc_vlog(WLC_LOG_ERROR, format, vargs);
+   va_end(vargs);
+   fflush(stderr);
+   exit(EXIT_FAILURE);
+}
+
+static uint32_t
+parse_prefix(const char *str)
+{
+   static const struct {
+      const char *name;
+      enum wlc_modifier_bit mod;
+   } map[] = {
+      { "shift", WLC_BIT_MOD_SHIFT },
+      { "caps", WLC_BIT_MOD_CAPS },
+      { "ctrl", WLC_BIT_MOD_CTRL },
+      { "alt", WLC_BIT_MOD_ALT },
+      { "mod2", WLC_BIT_MOD_MOD2 },
+      { "mod3", WLC_BIT_MOD_MOD3 },
+      { "logo", WLC_BIT_MOD_LOGO },
+      { "mod5", WLC_BIT_MOD_MOD5 },
+      { NULL, 0 },
+   };
+
+   uint32_t prefix = 0;
+   const char *s = str;
+   for (int i = 0; map[i].name && *s; ++i) {
+      if ((prefix & map[i].mod) || strncmp(map[i].name, s, strlen(map[i].name)))
+         continue;
+
+      prefix |= map[i].mod;
+      s += strlen(map[i].name) + 1;
+      if (*(s - 1) != ',')
+         break;
+      i = 0;
+   }
+
+   return (prefix ? prefix : WLC_BIT_MOD_ALT);
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -437,6 +483,14 @@ main(int argc, char *argv[])
 
    // do not care about childs
    sigaction(SIGCHLD, &action, NULL);
+
+   for (int i = 1; i < argc; ++i) {
+      if (!strcmp(argv[i], "--prefix")) {
+         if (i + 1 >= argc)
+            die("--prefix takes an argument (shift,caps,ctrl,alt,logo,mod2,mod3,mod5)");
+         loliwm.prefix = parse_prefix(argv[++i]);
+      }
+   }
 
    if (!initialize())
       return EXIT_FAILURE;
