@@ -427,6 +427,9 @@ main(int argc, char *argv[])
 {
    (void)argc, (void)argv;
 
+   if (!wlc_init(argc, argv))
+      return EXIT_FAILURE;
+
    struct sigaction action = {
       .sa_handler = SIG_DFL,
       .sa_flags = SA_NOCLDWAIT
@@ -434,9 +437,6 @@ main(int argc, char *argv[])
 
    // do not care about childs
    sigaction(SIGCHLD, &action, NULL);
-
-   if (!wlc_init(argc, argv))
-      return EXIT_FAILURE;
 
    if (!initialize())
       return EXIT_FAILURE;
