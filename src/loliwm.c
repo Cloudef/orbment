@@ -137,21 +137,35 @@ focus_next_view(struct wlc_compositor *compositor, struct wlc_view *view)
    set_active(compositor, v);
 }
 
+static struct wlc_space*
+space_for_index(struct wl_list *spaces, int index)
+{
+   int i = 0;
+   struct wlc_space *s;
+   wlc_space_for_each(s, spaces) {
+      if (index == i)
+         return s;
+      ++i;
+   }
+   return NULL;
+}
+
 static void
 focus_space(struct wlc_compositor *compositor, int index)
 {
    struct wlc_space *active = wlc_compositor_get_focused_space(compositor);
    struct wl_list *spaces = wlc_output_get_spaces(wlc_space_get_output(active));
-
-   int i = 0;
-   struct wlc_space *s;
-   wlc_space_for_each(s, spaces) {
-      if (index == i)
-         break;
-      ++i;
-   }
-
+   struct wlc_space *s = space_for_index(spaces, index);
    wlc_output_focus_space(wlc_space_get_output(s), s);
+}
+
+static void
+move_to_space(struct wlc_compositor *compositor, struct wlc_view *view, int index)
+{
+   struct wlc_space *active = wlc_compositor_get_focused_space(compositor);
+   struct wl_list *spaces = wlc_output_get_spaces(wlc_space_get_output(active));
+   struct wlc_space *s = space_for_index(spaces, index);
+   wlc_view_set_space(view, s);
 }
 
 static void
@@ -223,7 +237,7 @@ view_destroyed(struct wlc_compositor *compositor, struct wlc_view *view)
 static void
 view_will_move_to_space(struct wlc_compositor *compositor, struct wlc_view *view, struct wlc_space *space)
 {
-   (void)space;
+   wl_list_remove(wlc_view_get_user_link(view));
    view_created(compositor, view, space);
 }
 
@@ -301,6 +315,10 @@ keyboard_key(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t 
       } else if (key >= 2 && key <= 11) {
          if (state == WLC_KEY_STATE_RELEASED)
             focus_space(compositor, key - 2);
+         pass = false;
+      } else if (view && key >= 59 && key <= 68) {
+         if (state == WLC_KEY_STATE_RELEASED)
+            move_to_space(compositor, view, key - 59);
          pass = false;
       } else if (key == 37) {
          if (state == WLC_KEY_STATE_RELEASED)
