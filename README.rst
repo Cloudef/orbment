@@ -24,12 +24,17 @@ KEYBINDS
 | ``mod-esc``    | Quits ``loliwm``              |
 +----------------+-------------------------------+
 
-You can change mod with ``--prefix`` argument.  It takes comma ',' separated 
+You can change mod with ``--prefix`` argument.  It takes comma ',' separated
 list of names:
 
-.. code::
-
-    shift, caps, ctrl, alt, mod2, mod3, logo, mod5
+- shift
+- caps
+- ctrl
+- alt
+- mod2
+- mod3
+- logo
+- mod5
 
 KEYBOARD LAYOUT
 ---------------
