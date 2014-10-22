@@ -1,4 +1,4 @@
-.TH loliwm 1 "October 20" loliwm
+.TH loliwm 1 "October 22" loliwm
 .SH NAME
 loliwm \- Dynamic wayland compositor.
 .SH SYNOPSIS
@@ -8,10 +8,9 @@ loliwm \- Dynamic wayland compositor.
 the wlc library.
 .SH OPTIONS
 .IP "\fB\-\-prefix\fR \fImodifier\fR
-Defines a modifier to be used with the default keybindings supported by
-\fBloliwm\fR. Multiple modifiers may be set such as \%\fB--prefix ctrl,atl\fR 
-which would represent the keybindings as \fIctrl-alt-<key>\fR. Possible choices 
-included
+Defines a modifier (or modifiers) to be used with the default keybindings.
+Multiple modifiers may be set such as \%\fB--prefix ctrl,atl\fR which would
+represent the keybindings as \%\fIctrl-alt-<key>\fR. Possible choices included
 \fIshift\fR,
 \fIcaps\fR,
 \fIctrl\fR,
@@ -35,12 +34,14 @@ Rotates focus through clients.
 Rotates focus through available outputs.
 .IP \fBmod\-[1..n]\fR
 Selects the \fInth\fP workspace, currently limited to ten.
+.IP \fBmod\-F1..F10\fR
+Moves the focused client to the corresponding workspace.
 .IP \fBmod-h\fR
 Cycles the focused client.
 .IP \fBmod-q\fR
 Closes the focused client.
 .IP \fBmod-escape\fR
-Quits \fBloliwm\fR
+Quits \fBloliwm\fR.
 .SH ENVIRONMENT
 .IP \fBTERMINAL\fR
 Currently \fBloliwm\fR will honor this environment variable when starting a new
