@@ -10,6 +10,11 @@
 #include <wlc.h>
 #include <wayland-util.h>
 
+// XXX: hack
+enum {
+   BIT_BEMENU = 1<<4,
+};
+
 static struct {
    struct wlc_compositor *compositor;
    struct wlc_view *active;
@@ -21,7 +26,7 @@ static struct {
 static bool
 is_tiled(struct wlc_view *view)
 {
-   return !(wlc_view_get_state(view) & WLC_BIT_FULLSCREEN) && !wlc_view_get_parent(view);
+   return !(wlc_view_get_state(view) & WLC_BIT_FULLSCREEN) && !(wlc_view_get_state(view) & BIT_BEMENU) && !wlc_view_get_parent(view);
 }
 
 static void
@@ -43,6 +48,11 @@ relayout(struct wlc_space *space)
    bool toggle = false;
    uint32_t y = 0, height = rheight / (count > 1 ? count - 1 : 1);
    wlc_view_for_each_user(v, views) {
+      if (wlc_view_get_state(v) & BIT_BEMENU) {
+         wlc_view_resize(v, rwidth, wlc_view_get_height(v));
+         wlc_view_position(v, 0, 0);
+      }
+
       if ((wlc_view_get_state(v) & WLC_BIT_FULLSCREEN)) {
          wlc_view_resize(v, rwidth, rheight);
          wlc_view_position(v, 0, 0);
@@ -97,6 +107,11 @@ set_active(struct wlc_compositor *compositor, struct wlc_view *view)
    if (loliwm.active == view)
       return;
 
+   if (loliwm.active && (wlc_view_get_state(loliwm.active) & BIT_BEMENU)) {
+      wlc_view_bring_to_front(loliwm.active);
+      return;
+   }
+
    if (loliwm.active)
       wlc_view_set_state(loliwm.active, WLC_BIT_ACTIVATED, false);
 
@@ -116,6 +131,14 @@ set_active(struct wlc_compositor *compositor, struct wlc_view *view)
 
       wlc_view_set_state(view, WLC_BIT_ACTIVATED, true);
       wlc_view_bring_to_front(view);
+
+      wlc_view_for_each_reverse(v, views) {
+         if ((wlc_view_get_state(v) & BIT_BEMENU)) {
+            // Always bring bemenu to front when exists.
+            wlc_view_bring_to_front(v);
+            break;
+         }
+      }
    }
 
    wlc_compositor_focus_view(compositor, view);
@@ -197,6 +220,9 @@ view_created(struct wlc_compositor *compositor, struct wlc_view *view, struct wl
       wl_list_init(views);
       wlc_space_set_userdata(space, views);
    }
+
+   if (wlc_view_get_class(view) && !strcmp(wlc_view_get_class(view), "bemenu"))
+      wlc_view_set_state(view, BIT_BEMENU, true); // XXX: Hack
 
    wl_list_insert(views->prev, wlc_view_get_user_link(view));
    set_active(compositor, view);
