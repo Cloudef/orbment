@@ -49,10 +49,7 @@ RUNNING ON TTY
 --------------
 
 Running on TTY works right now.
-However wlc does not yet set TTY to non interactive mode, so you may get stuck with some fancy ANSI escape.
-(Similarly you can also quit loliwm with ``ctrl-c``)
-
-You also need to suid the loliwm binary to whichever group or user has rights to /dev/input.
+You need to suid the loliwm binary to whichever group or user has rights to /dev/input.
 This is so wlc can spawn child process at start that gives rights for libinput to read from these raw input devices.
 
 BUILDING
