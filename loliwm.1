@@ -1,4 +1,4 @@
-.TH loliwm 1 "October 22" loliwm
+.TH loliwm 1 "October 25" loliwm
 .SH NAME
 loliwm \- Dynamic wayland compositor.
 .SH SYNOPSIS
@@ -26,8 +26,12 @@ File in which the logging output is captured.
 .IP \fB\-\-shm\fR
 Force EGL clients to fallback on shm.
 .SH KEYBINDINGS
+N.B. These are a tentative set of keybindings created specifically to provide
+basic usage until more flexible mechanisms are added.
 .IP \fBmod\-return\fR
 Opens a new terminal emulator client.
+.IP \fBmod-p\fR
+Opens \fBbemenu-run\fR (similar to \fBdmenu_run\fR) for starting applications.
 .IP \fBmod\-l\fR
 Rotates focus through clients.
 .IP \fBmod\-k\fR
@@ -36,6 +40,8 @@ Rotates focus through available outputs.
 Selects the \fInth\fP workspace, currently limited to ten.
 .IP \fBmod\-F1..F10\fR
 Moves the focused client to the corresponding workspace.
+.IP \fBmod-z, x, c\fR
+Moves focused client to outputs 1, 2 and 3 respectively.
 .IP \fBmod-h\fR
 Cycles the focused client.
 .IP \fBmod-q\fR
@@ -50,7 +56,7 @@ terminal emulator. If this is not set it will fall back on \fBweston-terminal\fR
 This corresponds to the layout you might use in X11 such as \fBgb\fR.  Use this
 if you want to select a non-us keyboard layout.
 .IP \fBXKB_DEFAULT_OPTIONS\fR
-Sets the keyboard options. The syntax is the same (comma-seperated values) as
+Sets the keyboard options. The syntax is the same (comma-separated values) as
 within an \fIxorg.conf\fR or when used via \%\fBsetxkbmap -option\fR.
 For example \%\fBcompose:ralt,ctrl:nocaps\fR would set \fIralt\fR to the compose
 key and cause the \fICaps Lock\fR key to mimic \fIctrl\fR.
