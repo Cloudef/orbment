@@ -183,6 +183,27 @@ focus_space(struct wlc_compositor *compositor, int index)
    wlc_output_focus_space(wlc_space_get_output(s), s);
 }
 
+static struct wlc_output*
+output_for_index(struct wl_list *outputs, int index)
+{
+   int i = 0;
+   struct wlc_output *o;
+   wlc_output_for_each(o, outputs) {
+      if (index == i)
+         return o;
+      ++i;
+   }
+   return NULL;
+}
+
+static void
+move_to_output(struct wlc_compositor *compositor, struct wlc_view *view, int index)
+{
+   struct wl_list *outputs = wlc_compositor_get_outputs(compositor);
+   struct wlc_output *o = output_for_index(outputs, index);
+   wlc_view_set_space(view, wlc_output_get_active_space(o));
+}
+
 static void
 move_to_space(struct wlc_compositor *compositor, struct wlc_view *view, int index)
 {
@@ -360,6 +381,10 @@ keyboard_key(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t 
       } else if (key >= 2 && key <= 11) {
          if (state == WLC_KEY_STATE_RELEASED)
             focus_space(compositor, key - 2);
+         pass = false;
+      } else if (view && key >= 44 && key <= 46) {
+         if (state == WLC_KEY_STATE_RELEASED)
+            move_to_output(compositor, view, key - 44);
          pass = false;
       } else if (view && key >= 59 && key <= 68) {
          if (state == WLC_KEY_STATE_RELEASED)
