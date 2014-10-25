@@ -1,40 +1,45 @@
 .. image:: http://cloudef.pw/armpit/loliwm-mpv.png
 
-LOLIWM
-______
+OPTIONS
+-------
 
 Basic information about what you can currently do in loliwm.
+
++-----------------------+------------------------------------------------+
+| ``--prefix MODIFIER`` | Set the modifier(s) to use with the keybinds.  |
+|                       | shift, caps, ctrl, alt, mod2, mod3 and mod5    |
++-----------------------+------------------------------------------------+
+| ``--log FILE``        | Logs output to specified ``FILE``.             |
++-----------------------+------------------------------------------------+
+| ``--shm``             | Force EGL clients to use shared memory.        |
++-----------------------+------------------------------------------------+
 
 KEYBINDS
 --------
 
-+----------------+-------------------------------+
-| ``mod-return`` | Opens ``weston-terminal``     |
-+----------------+-------------------------------+
-| ``mod-l``      | Rotates focus through clients |
-+----------------+-------------------------------+
-| ``mod-k``      | Rotates focus through outputs |
-+----------------+-------------------------------+
-| ``mod-[1-n]``  | Activate space                |
-+----------------+-------------------------------+
-| ``mod-h``      | Cycles clients                |
-+----------------+-------------------------------+
-| ``mod-q``      | Closes focused client         |
-+----------------+-------------------------------+
-| ``mod-esc``    | Quits ``loliwm``              |
-+----------------+-------------------------------+
-
-You can change mod with ``--prefix`` argument.  It takes comma ',' separated
-list of names:
-
-- shift
-- caps
-- ctrl
-- alt
-- mod2
-- mod3
-- logo
-- mod5
++-----------------+--------------------------------+
+| ``mod-return``  | Opens a terminal emulator.     |
++-----------------+--------------------------------+
+| ``mod-p``       | Opens ``bemenu-run``.          |
++-----------------+--------------------------------+
+| ``mod-l``       | Rotates focus through clients. |
++-----------------+--------------------------------+
+| ``mod-k``       | Rotates focus through outputs. |
++-----------------+--------------------------------+
+| ``mod-[1..n]``  | Activate space.                |
++-----------------+--------------------------------+
+| ``mod-F1..F10`` | Moves focused client to        |
+|                 | corresponding space.           |
++-----------------+--------------------------------+
+| ``mod-z, x, c`` | Moves focused client to output |
+|                 | 1, 2 and 3 respectively.       |
++-----------------+--------------------------------+
+| ``mod-h``       | Cycles clients.                |
++-----------------+--------------------------------+
+| ``mod-q``       | Closes focused client.         |
++-----------------+--------------------------------+
+| ``mod-esc``     | Quits ``loliwm``.              |
++-----------------+--------------------------------+
 
 KEYBOARD LAYOUT
 ---------------
