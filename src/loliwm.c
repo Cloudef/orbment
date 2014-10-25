@@ -315,6 +315,18 @@ pointer_button(struct wlc_compositor *compositor, struct wlc_view *view, uint32_
    return true;
 }
 
+static void
+spawn(const char *bin)
+{
+   if (fork() == 0) {
+      setsid();
+      freopen("/dev/null", "w", stdout);
+      freopen("/dev/null", "w", stderr);
+      execlp(bin, bin, NULL);
+      _exit(EXIT_SUCCESS);
+   }
+}
+
 static bool
 keyboard_key(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t leds, uint32_t mods, uint32_t key, enum wlc_key_state state)
 {
@@ -331,17 +343,14 @@ keyboard_key(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t 
          pass = false;
       } else if (key == 28) {
          if (state == WLC_KEY_STATE_RELEASED) {
-            // TEMPORARY UGLY
-            if (fork() == 0) {
-               const char *terminal = getenv("TERMINAL");
-               terminal = (terminal ? terminal : "weston-terminal");
-               setsid();
-               freopen("/dev/null", "w", stdout);
-               freopen("/dev/null", "w", stderr);
-               execlp(terminal, terminal, NULL);
-               _exit(EXIT_SUCCESS);
-            }
+            const char *terminal = getenv("TERMINAL");
+            terminal = (terminal ? terminal : "weston-terminal");
+            spawn(terminal);
          }
+         pass = false;
+      } else if (key == 25) {
+         if (state == WLC_KEY_STATE_RELEASED)
+            spawn("bemenu-run");
          pass = false;
       } else if (key == 35) {
          if (state == WLC_KEY_STATE_RELEASED)
