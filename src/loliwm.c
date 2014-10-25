@@ -262,10 +262,11 @@ view_destroyed(struct wlc_compositor *compositor, struct wlc_view *view)
 }
 
 static void
-view_will_move_to_space(struct wlc_compositor *compositor, struct wlc_view *view, struct wlc_space *space)
+view_switch_space(struct wlc_compositor *compositor, struct wlc_view *view, struct wlc_space *from, struct wlc_space *to)
 {
    wl_list_remove(wlc_view_get_user_link(view));
-   view_created(compositor, view, space);
+   relayout(from);
+   view_created(compositor, view, to);
 }
 
 static void
@@ -441,7 +442,7 @@ initialize(void)
       .view = {
          .created = view_created,
          .destroyed = view_destroyed,
-         .will_move_to_space = view_will_move_to_space,
+         .switch_space = view_switch_space,
 
          .request = {
             .geometry = view_geometry_request,
