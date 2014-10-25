@@ -12,7 +12,7 @@
 
 // XXX: hack
 enum {
-   BIT_BEMENU = 1<<4,
+   BIT_BEMENU = 1<<5,
 };
 
 static struct {
@@ -26,7 +26,8 @@ static struct {
 static bool
 is_tiled(struct wlc_view *view)
 {
-   return !(wlc_view_get_state(view) & WLC_BIT_FULLSCREEN) && !(wlc_view_get_state(view) & BIT_BEMENU) && !wlc_view_get_parent(view);
+   uint32_t state = wlc_view_get_state(view);
+   return !(state & WLC_BIT_FULLSCREEN) && !(state & BIT_BEMENU) && !wlc_view_get_parent(view);
 }
 
 static void
@@ -271,9 +272,17 @@ static void
 view_geometry_request(struct wlc_compositor *compositor, struct wlc_view *view, int32_t x, int32_t y, uint32_t w, uint32_t h)
 {
    (void)compositor;
-   wlc_view_position(view, x, y);
-   wlc_view_resize(view, w, h);
-   wlc_view_set_state(view, WLC_BIT_MAXIMIZED, false);
+
+   bool tiled = is_tiled(view);
+
+   uint32_t state = wlc_view_get_state(view);
+   if (!tiled || (state & WLC_BIT_RESIZING) || (state & WLC_BIT_MOVING)) {
+      wlc_view_position(view, x, y);
+      wlc_view_resize(view, w, h);
+
+      if (tiled)
+         wlc_view_set_state(view, WLC_BIT_MAXIMIZED, false);
+   }
 }
 
 static void
