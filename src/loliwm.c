@@ -294,6 +294,9 @@ view_switch_space(struct wlc_compositor *compositor, struct wlc_view *view, stru
    wl_list_remove(wlc_view_get_user_link(view));
    relayout(from);
    view_created(compositor, view, to);
+
+   if (wlc_space_get_output(from) == wlc_space_get_output(to))
+      wlc_output_focus_space(wlc_space_get_output(from), from);
 }
 
 static void
