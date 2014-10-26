@@ -207,8 +207,10 @@ move_to_output(struct wlc_compositor *compositor, struct wlc_view *view, int ind
    struct wl_list *outputs = wlc_compositor_get_outputs(compositor);
    struct wlc_output *o = output_for_index(outputs, index);
 
-   if (o)
+   if (o) {
       wlc_view_set_space(view, wlc_output_get_active_space(o));
+      wlc_compositor_focus_output(compositor, o);
+   }
 }
 
 static void
