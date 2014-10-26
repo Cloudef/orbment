@@ -180,7 +180,9 @@ focus_space(struct wlc_compositor *compositor, int index)
    struct wlc_space *active = wlc_compositor_get_focused_space(compositor);
    struct wl_list *spaces = wlc_output_get_spaces(wlc_space_get_output(active));
    struct wlc_space *s = space_for_index(spaces, index);
-   wlc_output_focus_space(wlc_space_get_output(s), s);
+
+   if (s)
+      wlc_output_focus_space(wlc_space_get_output(s), s);
 }
 
 static struct wlc_output*
@@ -201,7 +203,9 @@ move_to_output(struct wlc_compositor *compositor, struct wlc_view *view, int ind
 {
    struct wl_list *outputs = wlc_compositor_get_outputs(compositor);
    struct wlc_output *o = output_for_index(outputs, index);
-   wlc_view_set_space(view, wlc_output_get_active_space(o));
+
+   if (o)
+      wlc_view_set_space(view, wlc_output_get_active_space(o));
 }
 
 static void
@@ -210,7 +214,9 @@ move_to_space(struct wlc_compositor *compositor, struct wlc_view *view, int inde
    struct wlc_space *active = wlc_compositor_get_focused_space(compositor);
    struct wl_list *spaces = wlc_output_get_spaces(wlc_space_get_output(active));
    struct wlc_space *s = space_for_index(spaces, index);
-   wlc_view_set_space(view, s);
+
+   if (s)
+      wlc_view_set_space(view, s);
 }
 
 static void
