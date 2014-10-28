@@ -197,6 +197,10 @@ set_active(struct wlc_compositor *compositor, struct wlc_view *view)
          wlc_view_bring_to_front(bring_to_front);
 
       wlc_view_set_state(view, WLC_BIT_ACTIVATED, true);
+
+      for (struct wlc_view *parent = wlc_view_get_parent(view); parent; parent = wlc_view_get_parent(parent))
+         wlc_view_bring_to_front(parent);
+
       wlc_view_bring_to_front(view);
 
       wlc_view_for_each_reverse(v, views) {
