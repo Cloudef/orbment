@@ -60,10 +60,20 @@ layout_fullscreen(struct wlc_view *view, uint32_t w, uint32_t h)
 }
 
 static bool
+should_focus_on_create(struct wlc_view *view)
+{
+   // Do not allow unmanaged views to steal focus (tooltips, dnds, etc..)
+   // Do not allow parented windows to steal focus, if current window wasn't parent.
+   uint32_t type = wlc_view_get_type(view);
+   struct wlc_view *parent = wlc_view_get_parent(view);
+   return (!(type & WLC_BIT_UNMANAGED) && (!loliwm.active || !parent || parent == loliwm.active));
+}
+
+static bool
 is_managed(struct wlc_view *view)
 {
    uint32_t type = wlc_view_get_type(view);
-   return !(type & WLC_BIT_OVERRIDE_REDIRECT) && !(type & WLC_BIT_POPUP);
+   return !(type & WLC_BIT_OVERRIDE_REDIRECT) && !(type & WLC_BIT_UNMANAGED) && !(type & WLC_BIT_POPUP);
 }
 
 static bool
@@ -311,7 +321,10 @@ view_created(struct wlc_compositor *compositor, struct wlc_view *view, struct wl
       wlc_view_set_state(view, BIT_BEMENU, true); // XXX: Hack
 
    wl_list_insert(views->prev, wlc_view_get_user_link(view));
-   set_active(compositor, view);
+
+   if (should_focus_on_create(view))
+      set_active(compositor, view);
+
    relayout(space);
    wlc_log(WLC_LOG_INFO, "new view: %p (%p)", view, wlc_view_get_parent(view));
    return true;
