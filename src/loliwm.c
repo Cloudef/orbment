@@ -192,8 +192,8 @@ set_active(struct wlc_compositor *compositor, struct wlc_view *view)
       if (loliwm.active && wlc_space_get_output(wlc_view_get_space(loliwm.active)) == wlc_space_get_output(wlc_view_get_space(view)))
          wlc_view_set_state(loliwm.active, WLC_BIT_ACTIVATED, false);
 
-      // Bring fullscreen view to top.
-      if (bring_to_front)
+      // Bring fullscreen view to top, if current view is managed view.
+      if (is_managed(view) && bring_to_front)
          wlc_view_bring_to_front(bring_to_front);
 
       wlc_view_set_state(view, WLC_BIT_ACTIVATED, true);
