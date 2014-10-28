@@ -320,26 +320,27 @@ view_created(struct wlc_compositor *compositor, struct wlc_view *view, struct wl
 static void
 view_destroyed(struct wlc_compositor *compositor, struct wlc_view *view)
 {
-   struct wl_list *views = wlc_space_get_userdata(wlc_view_get_space(view));
    wl_list_remove(wlc_view_get_user_link(view));
 
    if (loliwm.active == view) {
       loliwm.active = NULL;
 
+      struct wl_list *link = wlc_view_get_link(view);
       struct wlc_view *v = wlc_view_get_parent(view);
       if (v) {
          // Focus the parent view, if there was one
          // Set parent NULL before this to avoid focusing back to dying view
          wlc_view_set_parent(view, NULL);
          set_active(compositor, v);
-      } else if (!wl_list_empty(views) && (v = wlc_view_from_user_link(views->prev))) {
-         // Otherwise focus previous one.
-         set_active(compositor, v);
+      } else if (link && link->prev != link->next) {
+         // Otherwise focus previous one (stacking order).
+         set_active(compositor, wlc_view_from_link(link->prev));
       }
    }
 
    relayout(wlc_view_get_space(view));
 
+   struct wl_list *views = wlc_space_get_userdata(wlc_view_get_space(view));
    if (wl_list_empty(views)) {
       free(views);
       wlc_space_set_userdata(wlc_view_get_space(view), NULL);
