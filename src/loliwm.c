@@ -23,11 +23,30 @@ static struct {
    .prefix = WLC_BIT_MOD_ALT,
 };
 
+static void
+layout_parent(struct wlc_view *view, struct wlc_view *parent, uint32_t w, uint32_t h)
+{
+   assert(view && parent);
+   uint32_t pw = wlc_view_get_width(parent);
+   uint32_t ph = wlc_view_get_height(parent);
+   uint32_t tw = (w > pw * 0.8 ? pw * 0.8 : w);
+   uint32_t th = (h > ph * 0.8 ? ph * 0.8 : h);
+   wlc_view_position(view, pw * 0.5 - tw * 0.5, ph * 0.5 - th * 0.5);
+   wlc_view_resize(view, tw, th);
+}
+
+static bool
+is_managed(struct wlc_view *view)
+{
+   uint32_t type = wlc_view_get_type(view);
+   return !(type & WLC_BIT_OVERRIDE_REDIRECT) && !(type & WLC_BIT_POPUP);
+}
+
 static bool
 is_tiled(struct wlc_view *view)
 {
    uint32_t state = wlc_view_get_state(view);
-   return !(state & WLC_BIT_FULLSCREEN) && !(state & BIT_BEMENU) && !wlc_view_get_parent(view);
+   return !(state & WLC_BIT_FULLSCREEN) && !(state & BIT_BEMENU) && !wlc_view_get_parent(view) && is_managed(view);
 }
 
 static void
@@ -58,6 +77,10 @@ relayout(struct wlc_space *space)
          wlc_view_resize(v, rwidth, rheight);
          wlc_view_position(v, 0, 0);
       }
+
+      struct wlc_view *parent;
+      if (is_managed(v) && (parent = wlc_view_get_parent(v)))
+         layout_parent(v, parent, wlc_view_get_width(v), wlc_view_get_height(v));
 
       if (!is_tiled(v))
          continue;
@@ -108,30 +131,41 @@ set_active(struct wlc_compositor *compositor, struct wlc_view *view)
    if (loliwm.active == view)
       return;
 
+   // Bemenu should always have focus when open.
    if (loliwm.active && (wlc_view_get_state(loliwm.active) & BIT_BEMENU)) {
       wlc_view_bring_to_front(loliwm.active);
       return;
    }
 
-   // XXX: Temporary, this logic might break maybe?
-   //      Only set active for current view to false, if new view is on same output.
-   if (loliwm.active && view &&
-       wlc_space_get_output(wlc_view_get_space(loliwm.active)) == wlc_space_get_output(wlc_view_get_space(view)))
-      wlc_view_set_state(loliwm.active, WLC_BIT_ACTIVATED, false);
-
    if (view) {
       struct wlc_view *v;
       struct wl_list *views = wlc_space_get_views(wlc_view_get_space(view));
+      struct wlc_view *bring_to_front = NULL;
       wlc_view_for_each_reverse(v, views) {
-         if ((wlc_view_get_state(v) & WLC_BIT_FULLSCREEN)) {
+         if (wlc_view_get_parent(v) == view) {
+            // If window has parent, focus it instead of this.
+            // By reverse searching views list, we get the topmost parent.
+            set_active(compositor, v);
+            return;
+         }
+
+         if (!bring_to_front && (wlc_view_get_state(v) & WLC_BIT_FULLSCREEN)) {
             // Bring the first topmost found fullscreen wlc_view to front.
             // This way we get a "peek" effect when we cycle other views.
             // Meaning the active view is always over fullscreen view,
             // but fullscreen view is on top of the other views.
-            wlc_view_bring_to_front(v);
-            break;
+            bring_to_front = v;
          }
       }
+
+      // XXX: Temporary, this logic might break maybe?
+      //      Only set active for current view to false, if new view is on same output.
+      if (loliwm.active && wlc_space_get_output(wlc_view_get_space(loliwm.active)) == wlc_space_get_output(wlc_view_get_space(view)))
+         wlc_view_set_state(loliwm.active, WLC_BIT_ACTIVATED, false);
+
+      // Bring fullscreen view to top.
+      if (bring_to_front)
+         wlc_view_bring_to_front(bring_to_front);
 
       wlc_view_set_state(view, WLC_BIT_ACTIVATED, true);
       wlc_view_bring_to_front(view);
@@ -276,6 +310,8 @@ view_destroyed(struct wlc_compositor *compositor, struct wlc_view *view)
       struct wlc_view *v = wlc_view_get_parent(view);
       if (v) {
          // Focus the parent view, if there was one
+         // Set parent NULL before this to avoid focusing back to dying view
+         wlc_view_set_parent(view, NULL);
          set_active(compositor, v);
       } else if (!wl_list_empty(views) && (v = wlc_view_from_user_link(views->prev))) {
          // Otherwise focus previous one.
@@ -309,15 +345,22 @@ view_geometry_request(struct wlc_compositor *compositor, struct wlc_view *view, 
 {
    (void)compositor;
 
-   bool tiled = is_tiled(view);
-
    uint32_t state = wlc_view_get_state(view);
-   if (!tiled || (state & WLC_BIT_RESIZING) || (state & WLC_BIT_MOVING)) {
+   bool tiled = is_tiled(view);
+   bool action = ((state & WLC_BIT_RESIZING) || (state & WLC_BIT_MOVING));
+
+   if (tiled && !action)
+      return;
+
+   if (tiled)
+      wlc_view_set_state(view, WLC_BIT_MAXIMIZED, false);
+
+   struct wlc_view *parent;
+   if (is_managed(view) && (parent = wlc_view_get_parent(view))) {
+      layout_parent(view, parent, w, h);
+   } else {
       wlc_view_position(view, x, y);
       wlc_view_resize(view, w, h);
-
-      if (tiled)
-         wlc_view_set_state(view, WLC_BIT_MAXIMIZED, false);
    }
 }
 
