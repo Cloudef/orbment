@@ -393,6 +393,10 @@ view_geometry_request(struct wlc_compositor *compositor, struct wlc_view *view, 
       return;
    }
 
+   // XXX: bemenu should set correct width, not us
+   if (state & BIT_BEMENU)
+      w = wlc_view_get_width(view);
+
    struct wlc_view *parent;
    if (is_managed(view) && (parent = wlc_view_get_parent(view))) {
       layout_parent(view, parent, w, h);
