@@ -462,45 +462,45 @@ keyboard_key(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t 
    bool pass = true;
    if (mods == loliwm.prefix) {
       if (key == 1) {
-         if (state == WLC_KEY_STATE_RELEASED)
+         if (state == WLC_KEY_STATE_PRESSED)
             exit(EXIT_SUCCESS);
       } else if (view && key == 16) {
-         if (state == WLC_KEY_STATE_RELEASED)
+         if (state == WLC_KEY_STATE_PRESSED)
             wlc_view_close(view);
          pass = false;
       } else if (key == 28) {
-         if (state == WLC_KEY_STATE_RELEASED) {
+         if (state == WLC_KEY_STATE_PRESSED) {
             const char *terminal = getenv("TERMINAL");
             terminal = (terminal ? terminal : "weston-terminal");
             spawn(terminal);
          }
          pass = false;
       } else if (key == 25) {
-         if (state == WLC_KEY_STATE_RELEASED)
+         if (state == WLC_KEY_STATE_PRESSED)
             spawn("bemenu-run");
          pass = false;
       } else if (key == 35) {
-         if (state == WLC_KEY_STATE_RELEASED)
+         if (state == WLC_KEY_STATE_PRESSED)
             cycle(compositor);
          pass = false;
       } else if (key >= 2 && key <= 11) {
-         if (state == WLC_KEY_STATE_RELEASED)
+         if (state == WLC_KEY_STATE_PRESSED)
             focus_space(compositor, key - 2);
          pass = false;
       } else if (view && key >= 44 && key <= 46) {
-         if (state == WLC_KEY_STATE_RELEASED)
+         if (state == WLC_KEY_STATE_PRESSED)
             move_to_output(compositor, view, key - 44);
          pass = false;
       } else if (view && key >= 59 && key <= 68) {
-         if (state == WLC_KEY_STATE_RELEASED)
+         if (state == WLC_KEY_STATE_PRESSED)
             move_to_space(compositor, view, key - 59);
          pass = false;
       } else if (key == 37) {
-         if (state == WLC_KEY_STATE_RELEASED)
+         if (state == WLC_KEY_STATE_PRESSED)
             focus_next_output(compositor);
          pass = false;
       } else if (view && key == 38) {
-         if (state == WLC_KEY_STATE_RELEASED)
+         if (state == WLC_KEY_STATE_PRESSED)
             focus_next_view(compositor, view);
          pass = false;
       }
