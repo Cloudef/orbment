@@ -35,6 +35,30 @@ layout_parent(struct wlc_view *view, struct wlc_view *parent, uint32_t w, uint32
    wlc_view_resize(view, tw, th);
 }
 
+static void
+layout_fullscreen(struct wlc_view *view, uint32_t w, uint32_t h)
+{
+   uint32_t rwidth, rheight;
+   struct wlc_output *output = wlc_space_get_output(wlc_view_get_space(view));
+   wlc_output_get_resolution(output, &rwidth, &rheight);
+   w = (w == 0 ? rwidth : w);
+   h = (h == 0 ? rheight : h);
+
+   switch (wlc_view_get_fullscreen_mode(view)) {
+      // XXX: we may need method to get view's buffer size.
+      //      for driver method we need modesetting and resolution api.
+      //      we also need way to tell wlc to draw black behind surface.
+
+      case WLC_FULLSCREEN_MODE_DEFAULT:
+      case WLC_FULLSCREEN_MODE_SCALE:
+      case WLC_FULLSCREEN_MODE_DRIVER:
+      case WLC_FULLSCREEN_MODE_FILL:
+         wlc_view_position(view, rwidth * 0.5 - w * 0.5, rheight * 0.5 - h * 0.5);
+         wlc_view_resize(view, w, h);
+         break;
+   }
+}
+
 static bool
 is_managed(struct wlc_view *view)
 {
@@ -70,11 +94,6 @@ relayout(struct wlc_space *space)
    wlc_view_for_each_user(v, views) {
       if (wlc_view_get_state(v) & BIT_BEMENU) {
          wlc_view_resize(v, rwidth, wlc_view_get_height(v));
-         wlc_view_position(v, 0, 0);
-      }
-
-      if ((wlc_view_get_state(v) & WLC_BIT_FULLSCREEN)) {
-         wlc_view_resize(v, rwidth, rheight);
          wlc_view_position(v, 0, 0);
       }
 
@@ -355,6 +374,11 @@ view_geometry_request(struct wlc_compositor *compositor, struct wlc_view *view, 
    if (tiled)
       wlc_view_set_state(view, WLC_BIT_MAXIMIZED, false);
 
+   if (state & WLC_BIT_FULLSCREEN) {
+      layout_fullscreen(view, w, h);
+      return;
+   }
+
    struct wlc_view *parent;
    if (is_managed(view) && (parent = wlc_view_get_parent(view))) {
       layout_parent(view, parent, w, h);
@@ -377,6 +401,8 @@ view_state_request(struct wlc_compositor *compositor, struct wlc_view *view, con
             relayout(wlc_view_get_space(view));
       break;
       case WLC_BIT_FULLSCREEN:
+         if (toggle)
+            layout_fullscreen(view, 0, 0);
          relayout(wlc_view_get_space(view));
       break;
       default:break;
