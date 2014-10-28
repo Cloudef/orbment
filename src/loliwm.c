@@ -313,7 +313,7 @@ view_created(struct wlc_compositor *compositor, struct wlc_view *view, struct wl
    wl_list_insert(views->prev, wlc_view_get_user_link(view));
    set_active(compositor, view);
    relayout(space);
-   wlc_log(WLC_LOG_INFO, "new view: %p", view);
+   wlc_log(WLC_LOG_INFO, "new view: %p (%p)", view, wlc_view_get_parent(view));
    return true;
 }
 
