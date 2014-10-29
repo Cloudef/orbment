@@ -327,8 +327,13 @@ view_created(struct wlc_compositor *compositor, struct wlc_view *view, struct wl
       wlc_space_set_userdata(space, views);
    }
 
-   if (wlc_view_get_class(view) && !strcmp(wlc_view_get_class(view), "bemenu"))
+   if (wlc_view_get_class(view) && !strcmp(wlc_view_get_class(view), "bemenu")) {
+      // Do not allow more than one bemenu instance
+      if (loliwm.active && wlc_view_get_state(loliwm.active) & BIT_BEMENU)
+         return false;
+
       wlc_view_set_state(view, BIT_BEMENU, true); // XXX: Hack
+   }
 
    wl_list_insert(views->prev, wlc_view_get_user_link(view));
 
