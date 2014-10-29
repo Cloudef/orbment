@@ -136,6 +136,34 @@ cycle(struct wlc_compositor *compositor)
 }
 
 static void
+raise_all(struct wlc_view *view)
+{
+   assert(view);
+
+   // Raise view and all related views to top honoring the stacking order.
+   struct wlc_view *parent;
+   if ((parent = wlc_view_get_parent(view))) {
+      raise_all(parent);
+
+      bool found = false;
+      do {
+         struct wlc_view *v, *vn;
+         struct wl_list *views = wlc_space_get_views(wlc_view_get_space(view));
+         wlc_view_for_each_safe(v, vn, views) {
+            if (v == view || wlc_view_get_parent(v) != parent)
+               continue;
+
+            wlc_view_bring_to_front(v);
+            found = true;
+            break;
+         }
+      } while (found);
+   }
+
+   wlc_view_bring_to_front(view);
+}
+
+static void
 set_active(struct wlc_compositor *compositor, struct wlc_view *view)
 {
    if (loliwm.active == view)
@@ -150,7 +178,6 @@ set_active(struct wlc_compositor *compositor, struct wlc_view *view)
    if (view) {
       struct wlc_view *v;
       struct wl_list *views = wlc_space_get_views(wlc_view_get_space(view));
-      struct wlc_view *bring_to_front = NULL;
       wlc_view_for_each_reverse(v, views) {
          if (wlc_view_get_parent(v) == view) {
             // If window has parent, focus it instead of this.
@@ -158,13 +185,19 @@ set_active(struct wlc_compositor *compositor, struct wlc_view *view)
             set_active(compositor, v);
             return;
          }
+      }
 
-         if (!bring_to_front && (wlc_view_get_state(v) & WLC_BIT_FULLSCREEN)) {
-            // Bring the first topmost found fullscreen wlc_view to front.
-            // This way we get a "peek" effect when we cycle other views.
-            // Meaning the active view is always over fullscreen view,
-            // but fullscreen view is on top of the other views.
-            bring_to_front = v;
+      // Only raise fullscreen views when focused view is managed
+      if (is_managed(view)) {
+         wlc_view_for_each_reverse(v, views) {
+            if (wlc_view_get_state(v) & WLC_BIT_FULLSCREEN) {
+               // Bring the first topmost found fullscreen wlc_view to front.
+               // This way we get a "peek" effect when we cycle other views.
+               // Meaning the active view is always over fullscreen view,
+               // but fullscreen view is on top of the other views.
+               wlc_view_bring_to_front(v);
+               break;
+            }
          }
       }
 
@@ -173,16 +206,8 @@ set_active(struct wlc_compositor *compositor, struct wlc_view *view)
       if (loliwm.active && wlc_space_get_output(wlc_view_get_space(loliwm.active)) == wlc_space_get_output(wlc_view_get_space(view)))
          wlc_view_set_state(loliwm.active, WLC_BIT_ACTIVATED, false);
 
-      // Bring fullscreen view to top, if current view is managed view.
-      if (is_managed(view) && bring_to_front)
-         wlc_view_bring_to_front(bring_to_front);
-
       wlc_view_set_state(view, WLC_BIT_ACTIVATED, true);
-
-      for (struct wlc_view *parent = wlc_view_get_parent(view); parent; parent = wlc_view_get_parent(parent))
-         wlc_view_bring_to_front(parent);
-
-      wlc_view_bring_to_front(view);
+      raise_all(view);
 
       wlc_view_for_each_reverse(v, views) {
          if ((wlc_view_get_state(v) & BIT_BEMENU)) {
