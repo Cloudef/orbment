@@ -226,11 +226,15 @@ set_active(struct wlc_compositor *compositor, struct wlc_view *view)
 }
 
 static void
-focus_next_view(struct wlc_compositor *compositor, struct wlc_view *view)
+focus_next_or_previous_view(struct wlc_compositor *compositor, struct wlc_view *view, bool direction)
 {
-   struct wl_list *l = wlc_view_get_user_link(view)->next;
+
+   struct wl_list *l = (direction ? wlc_view_get_user_link(view)->next : wlc_view_get_user_link(view)->prev);
    struct wl_list *views = wlc_space_get_userdata(wlc_view_get_space(view));
-   if (!l || wl_list_empty(views) || (l == views && !(l = l->next)))
+   if (!l || wl_list_empty(views))
+      return;
+
+   if (l == views && (direction ? !(l = l->next) : !(l = l->prev)))
       return;
 
    struct wlc_view *v;
@@ -301,12 +305,15 @@ move_to_space(struct wlc_compositor *compositor, struct wlc_view *view, int inde
 }
 
 static void
-focus_next_output(struct wlc_compositor *compositor)
+focus_next_or_previous_output(struct wlc_compositor *compositor, bool direction)
 {
    struct wlc_output *active = wlc_compositor_get_focused_output(compositor);
-   struct wl_list *l = wlc_output_get_link(active)->next;
+   struct wl_list *l = (direction ? wlc_output_get_link(active)->next : wlc_output_get_link(active)->prev);
    struct wl_list *outputs = wlc_compositor_get_outputs(compositor);
-   if (!l || wl_list_empty(outputs) || (l == outputs && !(l = l->next)))
+   if (!l || wl_list_empty(outputs))
+      return;
+
+   if (l == outputs && (direction ? !(l = l->next) : !(l = l->prev)))
       return;
 
    struct wlc_output *o;
@@ -508,11 +515,11 @@ keyboard_key(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t 
          pass = false;
       } else if (key == 37) {
          if (state == WLC_KEY_STATE_PRESSED)
-            focus_next_output(compositor);
+            focus_next_or_previous_output(compositor, true);
          pass = false;
       } else if (view && key == 38) {
          if (state == WLC_KEY_STATE_PRESSED)
-            focus_next_view(compositor, view);
+            focus_next_or_previous_view(compositor, view, true);
          pass = false;
       }
    }
