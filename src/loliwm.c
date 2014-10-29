@@ -49,7 +49,7 @@ static bool
 is_managed(struct wlc_view *view)
 {
    uint32_t type = wlc_view_get_type(view);
-   return !(type & WLC_BIT_OVERRIDE_REDIRECT) && !(type & WLC_BIT_UNMANAGED) && !(type & WLC_BIT_POPUP);
+   return !(type & WLC_BIT_OVERRIDE_REDIRECT) && !(type & WLC_BIT_UNMANAGED) && !(type & WLC_BIT_POPUP) && !(type & WLC_BIT_SPLASH);
 }
 
 static bool
@@ -87,6 +87,9 @@ relayout(struct wlc_space *space)
          wlc_view_resize(v, rwidth, rheight);
          wlc_view_position(v, 0, 0);
       }
+
+      if (wlc_view_get_type(v) & WLC_BIT_SPLASH)
+         wlc_view_position(v, rwidth * 0.5 - wlc_view_get_width(v) * 0.5, rheight * 0.5 - wlc_view_get_height(v) * 0.5);
 
       struct wlc_view *parent;
       if (is_managed(v) && (parent = wlc_view_get_parent(v)))
@@ -393,6 +396,7 @@ view_geometry_request(struct wlc_compositor *compositor, struct wlc_view *view, 
 {
    (void)compositor;
 
+   uint32_t type = wlc_view_get_type(view);
    uint32_t state = wlc_view_get_state(view);
    bool tiled = is_tiled(view);
    bool action = ((state & WLC_BIT_RESIZING) || (state & WLC_BIT_MOVING));
@@ -403,7 +407,7 @@ view_geometry_request(struct wlc_compositor *compositor, struct wlc_view *view, 
    if (tiled)
       wlc_view_set_state(view, WLC_BIT_MAXIMIZED, false);
 
-   if (state & WLC_BIT_FULLSCREEN)
+   if ((state & WLC_BIT_FULLSCREEN) || (type & WLC_BIT_SPLASH))
       return;
 
    // XXX: bemenu should set correct width, not us
