@@ -18,8 +18,10 @@ enum {
 static struct {
    struct wlc_compositor *compositor;
    struct wlc_view *active;
+   float cut;
    uint32_t prefix;
 } loliwm = {
+   .cut = 0.5f,
    .prefix = WLC_BIT_MOD_ALT,
 };
 
@@ -98,9 +100,10 @@ relayout(struct wlc_space *space)
       if (!is_tiled(v))
          continue;
 
+      uint32_t slave = rwidth * loliwm.cut;
       wlc_view_set_state(v, WLC_BIT_MAXIMIZED, true);
-      wlc_view_resize(v, (count > 1 ? rwidth / 2 : rwidth), (toggle ? height : rheight));
-      wlc_view_position(v, (toggle ? rwidth / 2 : 0), y);
+      wlc_view_resize(v, (count > 1 ? (toggle ? slave : rwidth - slave) : rwidth), (toggle ? height : rheight));
+      wlc_view_position(v, (toggle ? rwidth - slave : 0), y);
 
       if (toggle)
          y += height;
@@ -504,6 +507,14 @@ keyboard_key(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t 
       } else if (key >= 2 && key <= 11) {
          if (state == WLC_KEY_STATE_PRESSED)
             focus_space(compositor, key - 2);
+         pass = false;
+      } else if (key >= 23 && key <= 24) {
+         if (state == WLC_KEY_STATE_PRESSED) {
+            loliwm.cut += (key == 23 ? -0.01 : 0.01);
+            if (loliwm.cut > 1.0) loliwm.cut = 1.0;
+            if (loliwm.cut < 0.0) loliwm.cut = 0.0;
+            relayout(wlc_compositor_get_focused_space(compositor));
+         }
          pass = false;
       } else if (view && key >= 44 && key <= 46) {
          if (state == WLC_KEY_STATE_PRESSED)
