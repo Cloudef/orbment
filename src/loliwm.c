@@ -57,10 +57,16 @@ should_focus_on_create(struct wlc_view *view)
 }
 
 static bool
+is_or(struct wlc_view *view)
+{
+   return (wlc_view_get_type(view) & WLC_BIT_OVERRIDE_REDIRECT) || (wlc_view_get_state(view) & BIT_BEMENU);
+}
+
+static bool
 is_managed(struct wlc_view *view)
 {
    uint32_t type = wlc_view_get_type(view);
-   return !(type & WLC_BIT_OVERRIDE_REDIRECT) && !(type & WLC_BIT_UNMANAGED) && !(type & WLC_BIT_POPUP) && !(type & WLC_BIT_SPLASH);
+   return !(type & WLC_BIT_UNMANAGED) && !(type & WLC_BIT_POPUP) && !(type & WLC_BIT_SPLASH);
 }
 
 static bool
@@ -74,7 +80,7 @@ static bool
 is_tiled(struct wlc_view *view)
 {
    uint32_t state = wlc_view_get_state(view);
-   return !(state & WLC_BIT_FULLSCREEN) && !(state & BIT_BEMENU) && !wlc_view_get_parent(view) && is_managed(view) && !is_modal(view);
+   return !(state & WLC_BIT_FULLSCREEN) && !wlc_view_get_parent(view) && is_managed(view) && !is_or(view) && !is_modal(view);
 }
 
 static void
@@ -111,7 +117,7 @@ relayout(struct wlc_space *space)
          wlc_view_position(v, rwidth * 0.5 - wlc_view_get_width(v) * 0.5, rheight * 0.5 - wlc_view_get_height(v) * 0.5);
 
       struct wlc_view *parent;
-      if (is_managed(v) && (parent = wlc_view_get_parent(v)))
+      if (is_managed(v) && !is_or(v) && (parent = wlc_view_get_parent(v)))
          layout_parent(v, parent, wlc_view_get_width(v), wlc_view_get_height(v));
 
       if (!is_tiled(v))
@@ -206,7 +212,7 @@ set_active(struct wlc_compositor *compositor, struct wlc_view *view)
       }
 
       // Only raise fullscreen views when focused view is managed
-      if (is_managed(view)) {
+      if (is_managed(view) && !is_or(view)) {
          wlc_view_for_each_reverse(v, views) {
             if (wlc_view_get_state(v) & WLC_BIT_FULLSCREEN) {
                // Bring the first topmost found fullscreen wlc_view to front.
@@ -446,7 +452,7 @@ view_geometry_request(struct wlc_compositor *compositor, struct wlc_view *view, 
       w = wlc_view_get_width(view);
 
    struct wlc_view *parent;
-   if (is_managed(view) && (parent = wlc_view_get_parent(view))) {
+   if (is_managed(view) && !is_or(view) && (parent = wlc_view_get_parent(view))) {
       layout_parent(view, parent, w, h);
    } else {
       wlc_view_position(view, x, y);
