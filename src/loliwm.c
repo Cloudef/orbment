@@ -29,10 +29,19 @@ static void
 layout_parent(struct wlc_view *view, struct wlc_view *parent, uint32_t w, uint32_t h)
 {
    assert(view && parent);
+
+   // Size to fit the undermost parent
+   // TODO: Use surface height as base instead of current
+   struct wlc_view *under;
+   for (under = parent; under && wlc_view_get_parent(under); under = wlc_view_get_parent(under));
+   uint32_t uw = wlc_view_get_width(under);
+   uint32_t uh = wlc_view_get_height(under);
+   uint32_t tw = (w > uw * 0.8 ? uw * 0.8 : w);
+   uint32_t th = (h > uh * 0.8 ? uh * 0.8 : h);
+
+   // Center the parent
    uint32_t pw = wlc_view_get_width(parent);
    uint32_t ph = wlc_view_get_height(parent);
-   uint32_t tw = (w > pw * 0.8 ? pw * 0.8 : w);
-   uint32_t th = (h > ph * 0.8 ? ph * 0.8 : h);
    wlc_view_position(view, pw * 0.5 - tw * 0.5, ph * 0.5 - th * 0.5);
    wlc_view_resize(view, tw, th);
 }
