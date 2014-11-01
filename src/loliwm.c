@@ -219,9 +219,8 @@ set_active(struct wlc_compositor *compositor, struct wlc_view *view)
          }
       }
 
-      // XXX: Temporary, this logic might break maybe?
-      //      Only set active for current view to false, if new view is on same output.
-      if (loliwm.active && wlc_space_get_output(wlc_view_get_space(loliwm.active)) == wlc_space_get_output(wlc_view_get_space(view)))
+      // Only set active for current view to false, if new view is on same output and the new view is managed.
+      if (loliwm.active && is_managed(view) && wlc_space_get_output(wlc_view_get_space(loliwm.active)) == wlc_space_get_output(wlc_view_get_space(view)))
          wlc_view_set_state(loliwm.active, WLC_BIT_ACTIVATED, false);
 
       wlc_view_set_state(view, WLC_BIT_ACTIVATED, true);
