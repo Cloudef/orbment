@@ -55,10 +55,17 @@ is_managed(struct wlc_view *view)
 }
 
 static bool
+is_modal(struct wlc_view *view)
+{
+   uint32_t type = wlc_view_get_type(view);
+   return (type & WLC_BIT_MODAL);
+}
+
+static bool
 is_tiled(struct wlc_view *view)
 {
    uint32_t state = wlc_view_get_state(view);
-   return !(state & WLC_BIT_FULLSCREEN) && !(state & BIT_BEMENU) && !wlc_view_get_parent(view) && is_managed(view);
+   return !(state & WLC_BIT_FULLSCREEN) && !(state & BIT_BEMENU) && !wlc_view_get_parent(view) && is_managed(view) && !is_modal(view);
 }
 
 static void
