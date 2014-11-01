@@ -86,6 +86,9 @@ is_tiled(struct wlc_view *view)
 static void
 relayout(struct wlc_space *space)
 {
+   if (!space)
+      return;
+
    struct wl_list *views;
    if (!(views = wlc_space_get_userdata(space)))
       return;
@@ -327,7 +330,10 @@ move_to_space(struct wlc_compositor *compositor, struct wlc_view *view, int inde
 static void
 focus_next_or_previous_output(struct wlc_compositor *compositor, bool direction)
 {
-   struct wlc_output *active = wlc_compositor_get_focused_output(compositor);
+   struct wlc_output *active;
+   if (!(active = wlc_compositor_get_focused_output(compositor)))
+      return;
+
    struct wl_list *l = (direction ? wlc_output_get_link(active)->next : wlc_output_get_link(active)->prev);
    struct wl_list *outputs = wlc_compositor_get_outputs(compositor);
    if (!l || wl_list_empty(outputs))
