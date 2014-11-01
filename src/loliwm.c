@@ -168,19 +168,14 @@ raise_all(struct wlc_view *view)
    if ((parent = wlc_view_get_parent(view))) {
       raise_all(parent);
 
-      bool found = false;
-      do {
-         struct wlc_view *v, *vn;
-         struct wl_list *views = wlc_space_get_views(wlc_view_get_space(view));
-         wlc_view_for_each_safe(v, vn, views) {
-            if (v == view || wlc_view_get_parent(v) != parent)
-               continue;
+      struct wlc_view *v, *vn;
+      struct wl_list *views = wlc_space_get_views(wlc_view_get_space(view));
+      wlc_view_for_each_safe(v, vn, views) {
+         if (v == view || wlc_view_get_parent(v) != parent)
+            continue;
 
-            wlc_view_bring_to_front(v);
-            found = true;
-            break;
-         }
-      } while (found);
+         wlc_view_bring_to_front(v);
+      }
    }
 
    wlc_view_bring_to_front(view);
