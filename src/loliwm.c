@@ -511,7 +511,8 @@ keyboard_key(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t 
    if (mods == loliwm.prefix) {
       if (key == 1) {
          if (state == WLC_KEY_STATE_PRESSED)
-            exit(EXIT_SUCCESS);
+            wlc_compositor_terminate(compositor);
+         pass = false;
       } else if (view && key == 16) {
          if (state == WLC_KEY_STATE_PRESSED)
             wlc_view_close(view);
@@ -619,6 +620,7 @@ terminate(void)
       wlc_compositor_free(loliwm.compositor);
 
    memset(&loliwm, 0, sizeof(loliwm));
+   wlc_log(WLC_LOG_INFO, "-!- loliwm is gone, bye bye!");
 }
 
 static bool
