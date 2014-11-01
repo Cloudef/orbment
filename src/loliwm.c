@@ -95,6 +95,7 @@ relayout(struct wlc_space *space)
 
    bool toggle = false;
    uint32_t y = 0, height = rheight / (count > 1 ? count - 1 : 1);
+   uint32_t fheight = (rheight > height * (count - 1) ? height + (rheight - height * (count - 1)) : height);
    wlc_view_for_each_user(v, views) {
       if (wlc_view_get_state(v) & BIT_BEMENU) {
          wlc_view_resize(v, rwidth, wlc_view_get_height(v));
@@ -118,11 +119,11 @@ relayout(struct wlc_space *space)
 
       uint32_t slave = rwidth * loliwm.cut;
       wlc_view_set_state(v, WLC_BIT_MAXIMIZED, true);
-      wlc_view_resize(v, (count > 1 ? (toggle ? slave : rwidth - slave) : rwidth), (toggle ? height : rheight));
+      wlc_view_resize(v, (count > 1 ? (toggle ? slave : rwidth - slave) : rwidth), (toggle ? (y == 0 ? fheight : height) : rheight));
       wlc_view_position(v, (toggle ? rwidth - slave : 0), y);
 
       if (toggle)
-         y += height;
+         y += (y == 0 ? fheight : height);
 
       toggle = true;
    }
