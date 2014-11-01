@@ -399,6 +399,16 @@ view_switch_space(struct wlc_compositor *compositor, struct wlc_view *view, stru
 
    if (wlc_space_get_output(from) == wlc_space_get_output(to))
       wlc_output_focus_space(wlc_space_get_output(from), from);
+
+   if (wlc_output_get_active_space(wlc_space_get_output(to)) == to) {
+      struct wlc_view *v;
+      wlc_view_for_each_reverse(v, wlc_space_get_views(to)) {
+         if (v == loliwm.active)
+            continue;
+
+         wlc_view_set_state(v, WLC_BIT_ACTIVATED, false);
+      }
+   }
 }
 
 static void
