@@ -59,6 +59,17 @@ Quits \fBloliwm\fR.
 .IP \fBTERMINAL\fR
 Currently \fBloliwm\fR will honor this environment variable when starting a new
 terminal emulator. If this is not set it will fall back on \fBweston-terminal\fR.
+.IP \fBWLC_BG\fR
+Takes a boolean \fI0\fR or \fI1\fR which disables or enables the background.
+(Default: \fI1\fR)
+.IP \fBWLC_DEBUG\fR
+Takes a comma-separated list of values which enable tracing activity on the
+wayland socket.  These include \fIrender\fR, \fIfocus\fR and \fIxwm\fR.
+
+The \fIrender\fR flag outputs debug information about the main renderer loop in
+wlc, \fIfocus\fR captures focus changes within wlc and \fIxwm\fR is to debug
+the internal X11 window manager.
+.IP \fBWAYLAND_DEBUG\fR
 .IP \fBXKB_DEFAULT_LAYOUT\fR
 This corresponds to the layout you might use in X11 such as \fBgb\fR.  Use this
 if you want to select a non-us keyboard layout.
