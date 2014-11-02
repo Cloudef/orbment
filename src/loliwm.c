@@ -574,6 +574,12 @@ keyboard_key(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t 
          if (state == WLC_KEY_STATE_PRESSED)
             spawn("bemenu-run");
          pass = false;
+      } else if (view && key == 33) {
+         if (state == WLC_KEY_STATE_PRESSED) {
+            wlc_view_set_state(view, WLC_BIT_FULLSCREEN, !(wlc_view_get_state(view) & WLC_BIT_FULLSCREEN));
+            relayout(wlc_compositor_get_focused_space(compositor));
+         }
+         pass = false;
       } else if (key == 35) {
          if (state == WLC_KEY_STATE_PRESSED)
             cycle(compositor);
