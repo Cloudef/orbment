@@ -5,6 +5,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <assert.h>
+#include <time.h>
 
 #include <wlc.h>
 #include <wayland-util.h>
@@ -496,6 +497,55 @@ pointer_button(struct wlc_compositor *compositor, struct wlc_view *view, uint32_
 }
 
 static void
+screenshot(struct wlc_output *output)
+{
+   if (!output)
+      return;
+
+   time_t now;
+   time(&now);
+   char buf[sizeof("loliwm-0000-00-00T00:00:00Z.ppm")];
+   strftime(buf, sizeof(buf), "loliwm-%FT%TZ.ppm", gmtime(&now));
+
+   uint32_t w, h;
+   wlc_output_get_resolution(output, &w, &h);
+
+   unsigned char *pixels = NULL;
+   if (!(pixels = calloc(1, w * h * 3 + w * h * 4)))
+      goto fail;
+
+   unsigned char *rgb = pixels, *rgba = pixels + w * h * 3;
+   if (!wlc_output_get_pixels(output, rgba))
+      goto fail;
+
+   FILE *f;
+   if (!(f = fopen(buf, "wb")))
+      goto fail;
+
+   for (uint32_t i = 0, c = 0; i < w * h * 4; i += 4, c += 3)
+      memcpy(rgb + c, rgba + i, 3);
+
+   for (uint32_t i = 0; i * 2 < h; ++i) {
+      uint32_t o = i * w * 3;
+      uint32_t r = (h - 1 - i) * w * 3;
+      for (uint32_t i2 = w * 3; i2 > 0; --i2, ++o, ++r) {
+         uint8_t temp = rgb[o];
+         rgb[o] = rgb[r];
+         rgb[r] = temp;
+      }
+   }
+
+   fprintf(f, "P6\n%d %d\n255\n", w, h);
+   fwrite(pixels, 1, w * h * 3, f);
+   free(pixels);
+   fclose(f);
+   return;
+
+fail:
+   free(pixels);
+}
+
+static void
 spawn(const char *bin)
 {
    if (fork() == 0) {
@@ -564,6 +614,10 @@ keyboard_key(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t 
       } else if (view && key == 38) {
          if (state == WLC_KEY_STATE_PRESSED)
             focus_next_or_previous_view(compositor, view, true);
+         pass = false;
+      } else if (key == 99) {
+         if (state == WLC_KEY_STATE_PRESSED)
+            screenshot(wlc_compositor_get_focused_output(compositor));
          pass = false;
       }
    }
