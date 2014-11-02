@@ -17,34 +17,41 @@ Basic information about what you can currently do in loliwm.
 KEYBINDS
 --------
 
-+-----------------+--------------------------------+
-| ``mod-return``  | Opens a terminal emulator.     |
-+-----------------+--------------------------------+
-| ``mod-p``       | Opens ``bemenu-run``.          |
-+-----------------+--------------------------------+
-| ``mod-l``       | Rotates focus through clients. |
-+-----------------+--------------------------------+
-| ``mod-k``       | Rotates focus through outputs. |
-+-----------------+--------------------------------+
-| ``mod-[1..n]``  | Activate space.                |
-+-----------------+--------------------------------+
-| ``mod-F1..F10`` | Moves focused client to        |
-|                 | corresponding space.           |
-+-----------------+--------------------------------+
-| ``mod-z, x, c`` | Moves focused client to output |
-|                 | 1, 2 and 3 respectively.       |
-+-----------------+--------------------------------+
-| ``mod-h``       | Cycles clients.                |
-+-----------------+--------------------------------+
-| ``mod-q``       | Closes focused client.         |
-+-----------------+--------------------------------+
-| ``mod-esc``     | Quits ``loliwm``.              |
-+-----------------+--------------------------------+
+Note that these keybinds are temporary until configuration is added.
+
++-----------------+------------------------------------------------------+    
+| ``mod-return``  | Opens a terminal emulator.                           |
++-----------------+------------------------------------------------------+
+| ``mod-p``       | Opens ``bemenu-run``.                                |
++-----------------+------------------------------------------------------+
+| ``mod-l``       | Rotates focus through clients.                       |
++-----------------+------------------------------------------------------+
+| ``mod-k``       | Rotates focus through outputs.                       |
++-----------------+------------------------------------------------------+
+| ``mod-[1..n]``  | Activate space.                                      |
++-----------------+------------------------------------------------------+
+| ``mod-F1..F10`` | Moves focused client to                              |
+|                 | corresponding space.                                 |
++-----------------+------------------------------------------------------+
+| ``mod-z, x, c`` | Moves focused client to output 1, 2 and 3            |
+|                 | respectively.                                        |
++-----------------+------------------------------------------------------+
+| ``mod-h``       | Cycles clients.                                      |
++-----------------+------------------------------------------------------+
+| ``mod-q``       | Closes focused client.                               |
++-----------------+------------------------------------------------------+
+| ``mod-i, o``    | Shifts the cut of the nmaster layout to shrink or    |
+|                 | expand the view.                                     |
++-----------------+------------------------------------------------------+
+| ``mod-print``   | Takes a screenshot in PPM (Portable Pixmap) format.  |
++-----------------+------------------------------------------------------+
+| ``mod-esc``     | Quits ``loliwm``.                                    |
++-----------------+------------------------------------------------------+
 
 KEYBOARD LAYOUT
 ---------------
 
-You can set your prefered keyboard layout using ``XKB_DEFAULT_LAYOUT``.
+You can set your preferred keyboard layout using ``XKB_DEFAULT_LAYOUT``.
 
 .. code:: sh
 
