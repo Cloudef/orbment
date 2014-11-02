@@ -28,10 +28,11 @@ Note that these keybinds are temporary until configuration is added.
 +-----------------+------------------------------------------------------+
 | ``mod-k``       | Rotates focus through outputs.                       |
 +-----------------+------------------------------------------------------+
+| ``mod-f``       | Toggles fullscreen.                                  |
++-----------------+------------------------------------------------------+
 | ``mod-[1..n]``  | Activate space.                                      |
 +-----------------+------------------------------------------------------+
-| ``mod-F1..F10`` | Moves focused client to                              |
-|                 | corresponding space.                                 |
+| ``mod-F1..F10`` | Moves focused client to corresponding space.         |
 +-----------------+------------------------------------------------------+
 | ``mod-z, x, c`` | Moves focused client to output 1, 2 and 3            |
 |                 | respectively.                                        |
