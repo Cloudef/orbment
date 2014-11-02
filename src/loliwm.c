@@ -106,11 +106,6 @@ relayout(struct wlc_space *space)
    uint32_t y = 0, height = rheight / (count > 1 ? count - 1 : 1);
    uint32_t fheight = (rheight > height * (count - 1) ? height + (rheight - height * (count - 1)) : height);
    wlc_view_for_each_user(v, views) {
-      if (wlc_view_get_state(v) & BIT_BEMENU) {
-         wlc_view_resize(v, rwidth, wlc_view_get_height(v));
-         wlc_view_position(v, 0, 0);
-      }
-
       if (wlc_view_get_state(v) & WLC_BIT_FULLSCREEN) {
          wlc_view_resize(v, rwidth, rheight);
          wlc_view_position(v, 0, 0);
@@ -452,10 +447,6 @@ view_geometry_request(struct wlc_compositor *compositor, struct wlc_view *view, 
 
    if ((state & WLC_BIT_FULLSCREEN) || (type & WLC_BIT_SPLASH))
       return;
-
-   // XXX: bemenu should set correct width, not us
-   if (state & BIT_BEMENU)
-      w = wlc_view_get_width(view);
 
    struct wlc_view *parent;
    if (is_managed(view) && !is_or(view) && (parent = wlc_view_get_parent(view))) {
