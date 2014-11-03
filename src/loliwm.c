@@ -604,11 +604,15 @@ keyboard_key(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t 
          if (state == WLC_KEY_STATE_PRESSED)
             move_to_space(compositor, view, key - 59);
          pass = false;
-      } else if (key == 37) {
+      } else if (key == 38) {
          if (state == WLC_KEY_STATE_PRESSED)
             focus_next_or_previous_output(compositor, true);
          pass = false;
-      } else if (view && key == 38) {
+      } else if (view && key == 37) {
+         if (state == WLC_KEY_STATE_PRESSED)
+            focus_next_or_previous_view(compositor, view, false);
+         pass = false;
+      } else if (view && key == 36) {
          if (state == WLC_KEY_STATE_PRESSED)
             focus_next_or_previous_view(compositor, view, true);
          pass = false;

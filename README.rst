@@ -24,9 +24,9 @@ Note that these keybinds are temporary until configuration is added.
 +-----------------+------------------------------------------------------+
 | ``mod-p``       | Opens ``bemenu-run``.                                |
 +-----------------+------------------------------------------------------+
-| ``mod-l``       | Rotates focus through clients.                       |
+| ``mod-l``       | Rotates focus through outputs.                       |
 +-----------------+------------------------------------------------------+
-| ``mod-k``       | Rotates focus through outputs.                       |
+| ``mod-j, k``    | Rotates focus through clients.                       |
 +-----------------+------------------------------------------------------+
 | ``mod-f``       | Toggles fullscreen.                                  |
 +-----------------+------------------------------------------------------+
