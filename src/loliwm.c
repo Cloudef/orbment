@@ -477,9 +477,9 @@ view_state_request(struct wlc_compositor *compositor, struct wlc_view *view, con
 }
 
 static bool
-pointer_button(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t button, enum wlc_button_state state)
+pointer_button(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t leds, uint32_t mods, uint32_t button, enum wlc_button_state state)
 {
-   (void)button;
+   (void)leds, (void)mods, (void)button;
 
    if (state == WLC_BUTTON_STATE_PRESSED)
       set_active(compositor, view);
@@ -547,74 +547,70 @@ spawn(const char *bin)
 }
 
 static bool
-keyboard_key(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t leds, uint32_t mods, uint32_t key, enum wlc_key_state state)
+keyboard_key(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t leds, uint32_t mods, uint32_t key, uint32_t sym, enum wlc_key_state state)
 {
-   (void)leds;
+   (void)leds, (void)key;
 
    bool pass = true;
    if (mods == loliwm.prefix) {
-      if (key == 1) {
+      if (sym == XKB_KEY_Escape) {
          if (state == WLC_KEY_STATE_PRESSED)
             wlc_compositor_terminate(compositor);
          pass = false;
-      } else if (view && key == 16) {
+      } else if (view && sym == XKB_KEY_q) {
          if (state == WLC_KEY_STATE_PRESSED)
             wlc_view_close(view);
          pass = false;
-      } else if (key == 28) {
+      } else if (sym == XKB_KEY_Return) {
          if (state == WLC_KEY_STATE_PRESSED) {
             const char *terminal = getenv("TERMINAL");
             terminal = (terminal ? terminal : "weston-terminal");
             spawn(terminal);
          }
          pass = false;
-      } else if (key == 25) {
+      } else if (sym == XKB_KEY_p) {
          if (state == WLC_KEY_STATE_PRESSED)
             spawn("bemenu-run");
          pass = false;
-      } else if (view && key == 33) {
+      } else if (view && sym == XKB_KEY_f) {
          if (state == WLC_KEY_STATE_PRESSED) {
             wlc_view_set_state(view, WLC_BIT_FULLSCREEN, !(wlc_view_get_state(view) & WLC_BIT_FULLSCREEN));
             relayout(wlc_compositor_get_focused_space(compositor));
          }
          pass = false;
-      } else if (key == 35) {
+      } else if (sym == XKB_KEY_h) {
          if (state == WLC_KEY_STATE_PRESSED)
             cycle(compositor);
          pass = false;
-      } else if (key >= 2 && key <= 11) {
+      } else if (sym >= XKB_KEY_0 && sym <= XKB_KEY_9) {
          if (state == WLC_KEY_STATE_PRESSED)
-            focus_space(compositor, key - 2);
+            focus_space(compositor, (sym == XKB_KEY_0 ? 9 : sym - XKB_KEY_1));
          pass = false;
-      } else if (key >= 23 && key <= 24) {
+      } else if (sym == XKB_KEY_i || sym == XKB_KEY_o) {
          if (state == WLC_KEY_STATE_PRESSED) {
-            loliwm.cut += (key == 23 ? -0.01 : 0.01);
+            loliwm.cut += (sym == XKB_KEY_o ? -0.01 : 0.01);
             if (loliwm.cut > 1.0) loliwm.cut = 1.0;
             if (loliwm.cut < 0.0) loliwm.cut = 0.0;
             relayout(wlc_compositor_get_focused_space(compositor));
          }
          pass = false;
-      } else if (view && key >= 44 && key <= 46) {
+      } else if (view && (sym == XKB_KEY_z || sym == XKB_KEY_x || sym == XKB_KEY_c)) {
          if (state == WLC_KEY_STATE_PRESSED)
-            move_to_output(compositor, view, key - 44);
+            move_to_output(compositor, view, (sym == XKB_KEY_z ? 0 : (sym == XKB_KEY_x ? 1 : 2)));
          pass = false;
-      } else if (view && key >= 59 && key <= 68) {
+      } else if (view && sym >= XKB_KEY_F1 && sym <= XKB_KEY_F10) {
          if (state == WLC_KEY_STATE_PRESSED)
-            move_to_space(compositor, view, key - 59);
+            move_to_space(compositor, view, sym - XKB_KEY_F1);
          pass = false;
-      } else if (key == 38) {
+      } else if (sym == XKB_KEY_l) {
          if (state == WLC_KEY_STATE_PRESSED)
             focus_next_or_previous_output(compositor, true);
          pass = false;
-      } else if (view && key == 37) {
+      } else if (view && (sym == XKB_KEY_k || sym == XKB_KEY_j)) {
          if (state == WLC_KEY_STATE_PRESSED)
-            focus_next_or_previous_view(compositor, view, false);
+            focus_next_or_previous_view(compositor, view, (sym == XKB_KEY_j));
          pass = false;
-      } else if (view && key == 36) {
-         if (state == WLC_KEY_STATE_PRESSED)
-            focus_next_or_previous_view(compositor, view, true);
-         pass = false;
-      } else if (key == 99) {
+      } else if (sym == XKB_KEY_SunPrint_Screen) { // does not seem to work with alt
          if (state == WLC_KEY_STATE_PRESSED)
             screenshot(wlc_compositor_get_focused_output(compositor));
          pass = false;
@@ -622,7 +618,7 @@ keyboard_key(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t 
    }
 
    if (pass)
-      printf("(%p) KEY: %u\n", view, key);
+      printf("(%p) KEY: %u SYM: %u\n", view, key, sym);
 
    return pass;
 }
