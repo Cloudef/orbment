@@ -488,30 +488,23 @@ pointer_button(struct wlc_compositor *compositor, struct wlc_view *view, uint32_
 }
 
 static void
-screenshot(struct wlc_output *output)
+store_rgba(uint32_t w, uint32_t h, uint8_t *rgba)
 {
-   if (!output)
-      return;
+   FILE *f;
 
    time_t now;
    time(&now);
    char buf[sizeof("loliwm-0000-00-00T00:00:00Z.ppm")];
    strftime(buf, sizeof(buf), "loliwm-%FT%TZ.ppm", gmtime(&now));
 
-   uint32_t w, h;
-   wlc_output_get_resolution(output, &w, &h);
+   uint8_t *rgb;
+   if (!(rgb = calloc(1, w * h * 3)))
+      return;
 
-   unsigned char *pixels = NULL;
-   if (!(pixels = calloc(1, w * h * 3 + w * h * 4)))
-      goto fail;
-
-   unsigned char *rgb = pixels, *rgba = pixels + w * h * 3;
-   if (!wlc_output_get_pixels(output, rgba))
-      goto fail;
-
-   FILE *f;
-   if (!(f = fopen(buf, "wb")))
-      goto fail;
+   if (!(f = fopen(buf, "wb"))) {
+      free(rgb);
+      return;
+   }
 
    for (uint32_t i = 0, c = 0; i < w * h * 4; i += 4, c += 3)
       memcpy(rgb + c, rgba + i, 3);
@@ -527,13 +520,18 @@ screenshot(struct wlc_output *output)
    }
 
    fprintf(f, "P6\n%d %d\n255\n", w, h);
-   fwrite(pixels, 1, w * h * 3, f);
-   free(pixels);
+   fwrite(rgb, 1, w * h * 3, f);
+   free(rgb);
    fclose(f);
-   return;
+}
 
-fail:
-   free(pixels);
+static void
+screenshot(struct wlc_output *output)
+{
+   if (!output)
+      return;
+
+   wlc_output_get_pixels(output, store_rgba);
 }
 
 static void
