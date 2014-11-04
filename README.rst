@@ -1,4 +1,6 @@
-.. image:: http://cloudef.pw/armpit/loliwm-mpv.png
+.. image:: http://cloudef.pw/armpit/loliwm-gh.png
+:Video: https://www.youtube.com/watch?v=nh_7aqNtrik
+
 
 OPTIONS
 -------
@@ -19,7 +21,7 @@ KEYBINDS
 
 Note that these keybinds are temporary until configuration is added.
 
-+-----------------+------------------------------------------------------+    
++-----------------+------------------------------------------------------+
 | ``mod-return``  | Opens a terminal emulator.                           |
 +-----------------+------------------------------------------------------+
 | ``mod-p``       | Opens ``bemenu-run``.                                |
