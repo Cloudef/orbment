@@ -23,8 +23,6 @@ represent the keybindings as \%\fIctrl-alt-<key>\fR. Possible choices included
 N.B. \fIlogo\fR is typically the "Windows" or Super key.
 .IP "\fB\-\-log\fR [\fIFILE\fR]"
 File in which the logging output is captured.
-.IP \fB\-\-shm\fR
-Force EGL clients to fallback on shm.
 .SH KEYBINDINGS
 N.B. These are a tentative set of keybindings created specifically to provide
 basic usage until more flexible mechanisms are added.
@@ -62,6 +60,9 @@ terminal emulator. If this is not set it will fall back on \fBweston-terminal\fR
 .IP \fBWLC_BG\fR
 Takes a boolean \fI0\fR or \fI1\fR which disables or enables the background.
 (Default: \fI1\fR)
+.IP \fBWLC_SHM\fR
+Takes a boolean \fI0\fR or \fI1\fR, true forces EGL clients to fallback to shm.
+(Default: \fI0\fR)
 .IP \fBWLC_DEBUG\fR
 Takes a comma-separated list of values which enable tracing activity on the
 wayland socket.  These include \fIrender\fR, \fIfocus\fR and \fIxwm\fR.
