@@ -254,7 +254,7 @@ focus_next_or_previous_view(struct wlc_compositor *compositor, struct wlc_view *
 
    struct wl_list *l = (direction ? wlc_view_get_user_link(view)->next : wlc_view_get_user_link(view)->prev);
    struct wl_list *views = wlc_space_get_userdata(wlc_view_get_space(view));
-   if (!l || wl_list_empty(views))
+   if (!l || !views || wl_list_empty(views))
       return;
 
    if (l == views && (direction ? !(l = l->next) : !(l = l->prev)))
@@ -403,12 +403,14 @@ view_destroyed(struct wlc_compositor *compositor, struct wlc_view *view)
       }
    }
 
-   relayout(wlc_view_get_space(view));
-
-   struct wl_list *views = wlc_space_get_userdata(wlc_view_get_space(view));
-   if (wl_list_empty(views)) {
-      free(views);
-      wlc_space_set_userdata(wlc_view_get_space(view), NULL);
+   struct wlc_space *space = wlc_view_get_space(view);
+   if (space) {
+      relayout(wlc_view_get_space(view));
+      struct wl_list *views = wlc_space_get_userdata(space);
+      if (views && wl_list_empty(views)) {
+         free(views);
+         wlc_space_set_userdata(wlc_view_get_space(view), NULL);
+      }
    }
 
    wlc_log(WLC_LOG_INFO, "view destroyed: %p", view);
@@ -640,7 +642,7 @@ output_notify(struct wlc_compositor *compositor, struct wlc_output *output)
 {
    struct wl_list *views = wlc_space_get_views(wlc_output_get_active_space(output));
 
-   if (!wl_list_empty(views)) {
+   if (views && !wl_list_empty(views)) {
       set_active(compositor, wlc_view_from_link(views->prev));
    } else {
       set_active(compositor, NULL);
@@ -652,7 +654,7 @@ space_notify(struct wlc_compositor *compositor, struct wlc_space *space)
 {
    struct wl_list *views = wlc_space_get_views(space);
 
-   if (!wl_list_empty(views)) {
+   if (views && !wl_list_empty(views)) {
       set_active(compositor, wlc_view_from_link(views->prev));
    } else {
       set_active(compositor, NULL);
