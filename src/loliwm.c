@@ -781,7 +781,6 @@ main(int argc, char *argv[])
    wlc_log(WLC_LOG_INFO, "loliwm started");
    wlc_run();
 
-   wlc_compositor_free(compositor);
    memset(&loliwm, 0, sizeof(loliwm));
    wlc_log(WLC_LOG_INFO, "-!- loliwm is gone, bye bye!");
    return EXIT_SUCCESS;
