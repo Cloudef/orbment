@@ -16,7 +16,6 @@ enum {
 };
 
 static struct {
-   struct wlc_compositor *compositor;
    struct wlc_view *active;
    float cut;
    uint32_t prefix;
@@ -26,7 +25,7 @@ static struct {
 };
 
 static void
-layout_parent(struct wlc_view *view, struct wlc_view *parent, uint32_t w, uint32_t h)
+layout_parent(struct wlc_view *view, struct wlc_view *parent, const struct wlc_size *size)
 {
    assert(view && parent);
 
@@ -34,16 +33,17 @@ layout_parent(struct wlc_view *view, struct wlc_view *parent, uint32_t w, uint32
    // TODO: Use surface height as base instead of current
    struct wlc_view *under;
    for (under = parent; under && wlc_view_get_parent(under); under = wlc_view_get_parent(under));
-   uint32_t uw = wlc_view_get_width(under);
-   uint32_t uh = wlc_view_get_height(under);
-   uint32_t tw = (w > uw * 0.8 ? uw * 0.8 : w);
-   uint32_t th = (h > uh * 0.8 ? uh * 0.8 : h);
 
-   // Center the parent
-   uint32_t pw = wlc_view_get_width(parent);
-   uint32_t ph = wlc_view_get_height(parent);
-   wlc_view_position(view, pw * 0.5 - tw * 0.5, ph * 0.5 - th * 0.5);
-   wlc_view_resize(view, tw, th);
+   // Undermost view and parent view geometry
+   const struct wlc_geometry *u = wlc_view_get_geometry(under);
+   const struct wlc_geometry *p = wlc_view_get_geometry(parent);
+
+   struct wlc_geometry g;
+   g.size.w = (size->w > u->size.w * 0.8 ? u->size.w * 0.8 : size->w);
+   g.size.h = (size->h > u->size.h * 0.8 ? u->size.h * 0.8 : size->h);
+   g.origin.x = p->size.w * 0.5 - g.size.w * 0.5;
+   g.origin.y = p->size.h * 0.5 - g.size.h * 0.5;
+   wlc_view_set_geometry(view, &g);
 }
 
 static bool
@@ -93,9 +93,8 @@ relayout(struct wlc_space *space)
    if (!(views = wlc_space_get_userdata(space)))
       return;
 
-   uint32_t rwidth, rheight;
    struct wlc_output *output = wlc_space_get_output(space);
-   wlc_output_get_resolution(output, &rwidth, &rheight);
+   const struct wlc_size *resolution = wlc_output_get_resolution(output);
 
    struct wlc_view *v;
    uint32_t count = 0;
@@ -103,28 +102,34 @@ relayout(struct wlc_space *space)
       if (is_tiled(v)) ++count;
 
    bool toggle = false;
-   uint32_t y = 0, height = rheight / (count > 1 ? count - 1 : 1);
-   uint32_t fheight = (rheight > height * (count - 1) ? height + (rheight - height * (count - 1)) : height);
+   uint32_t y = 0, height = resolution->h / (count > 1 ? count - 1 : 1);
+   uint32_t fheight = (resolution->h > height * (count - 1) ? height + (resolution->h - height * (count - 1)) : height);
    wlc_view_for_each_user(v, views) {
-      if (wlc_view_get_state(v) & WLC_BIT_FULLSCREEN) {
-         wlc_view_resize(v, rwidth, rheight);
-         wlc_view_position(v, 0, 0);
-      }
+      if (wlc_view_get_state(v) & WLC_BIT_FULLSCREEN)
+         wlc_view_set_geometry(v, &(struct wlc_geometry){ { 0, 0 }, *resolution });
 
-      if (wlc_view_get_type(v) & WLC_BIT_SPLASH)
-         wlc_view_position(v, rwidth * 0.5 - wlc_view_get_width(v) * 0.5, rheight * 0.5 - wlc_view_get_height(v) * 0.5);
+      if (wlc_view_get_type(v) & WLC_BIT_SPLASH) {
+         struct wlc_geometry g = *wlc_view_get_geometry(v);
+         g.origin = (struct wlc_origin){ resolution->w * 0.5 - g.size.w * 0.5, resolution->h * 0.5 - g.size.h * 0.5 };
+         wlc_view_set_geometry(v, &g);
+      }
 
       struct wlc_view *parent;
       if (is_managed(v) && !is_or(v) && (parent = wlc_view_get_parent(v)))
-         layout_parent(v, parent, wlc_view_get_width(v), wlc_view_get_height(v));
+         layout_parent(v, parent, &wlc_view_get_geometry(v)->size);
 
       if (!is_tiled(v))
          continue;
 
-      uint32_t slave = rwidth * loliwm.cut;
+      uint32_t slave = resolution->w * loliwm.cut;
       wlc_view_set_state(v, WLC_BIT_MAXIMIZED, true);
-      wlc_view_resize(v, (count > 1 ? (toggle ? slave : rwidth - slave) : rwidth), (toggle ? (y == 0 ? fheight : height) : rheight));
-      wlc_view_position(v, (toggle ? rwidth - slave : 0), y);
+
+      struct wlc_geometry g = {
+         .origin = { (toggle ? resolution->w - slave : 0), y },
+         .size = { (count > 1 ? (toggle ? slave : resolution->w - slave) : resolution->w), (toggle ? (y == 0 ? fheight : height) : resolution->h) },
+      };
+
+      wlc_view_set_geometry(v, &g);
 
       if (toggle)
          y += (y == 0 ? fheight : height);
@@ -278,11 +283,12 @@ space_for_index(struct wl_list *spaces, int index)
 static void
 focus_space(struct wlc_compositor *compositor, int index)
 {
-   struct wlc_space *active = wlc_compositor_get_focused_space(compositor);
-   struct wl_list *spaces = wlc_output_get_spaces(wlc_space_get_output(active));
-   struct wlc_space *s = space_for_index(spaces, index);
+   struct wlc_output *output;
+   if (!(output = wlc_compositor_get_focused_output(compositor)))
+      return;
 
-   if (s)
+   struct wlc_space *s;
+   if ((s = space_for_index(wlc_output_get_spaces(output), index)))
       wlc_output_focus_space(wlc_space_get_output(s), s);
 }
 
@@ -430,7 +436,7 @@ view_switch_space(struct wlc_compositor *compositor, struct wlc_view *view, stru
 }
 
 static void
-view_geometry_request(struct wlc_compositor *compositor, struct wlc_view *view, int32_t x, int32_t y, uint32_t w, uint32_t h)
+view_geometry_request(struct wlc_compositor *compositor, struct wlc_view *view, const struct wlc_geometry *geometry)
 {
    (void)compositor;
 
@@ -450,10 +456,9 @@ view_geometry_request(struct wlc_compositor *compositor, struct wlc_view *view, 
 
    struct wlc_view *parent;
    if (is_managed(view) && !is_or(view) && (parent = wlc_view_get_parent(view))) {
-      layout_parent(view, parent, w, h);
+      layout_parent(view, parent, &geometry->size);
    } else {
-      wlc_view_position(view, x, y);
-      wlc_view_resize(view, w, h);
+      wlc_view_set_geometry(view, geometry);
    }
 }
 
@@ -477,9 +482,9 @@ view_state_request(struct wlc_compositor *compositor, struct wlc_view *view, con
 }
 
 static bool
-pointer_button(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t leds, uint32_t mods, uint32_t button, enum wlc_button_state state)
+pointer_button(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t time, const struct wlc_modifiers *modifiers, uint32_t button, enum wlc_button_state state)
 {
-   (void)leds, (void)mods, (void)button;
+   (void)time, (void)modifiers, (void)button;
 
    if (state == WLC_BUTTON_STATE_PRESSED)
       set_active(compositor, view);
@@ -488,7 +493,7 @@ pointer_button(struct wlc_compositor *compositor, struct wlc_view *view, uint32_
 }
 
 static void
-store_rgba(uint32_t w, uint32_t h, uint8_t *rgba)
+store_rgba(const struct wlc_size *size, uint8_t *rgba)
 {
    FILE *f;
 
@@ -498,7 +503,7 @@ store_rgba(uint32_t w, uint32_t h, uint8_t *rgba)
    strftime(buf, sizeof(buf), "loliwm-%FT%TZ.ppm", gmtime(&now));
 
    uint8_t *rgb;
-   if (!(rgb = calloc(1, w * h * 3)))
+   if (!(rgb = calloc(1, size->w * size->h * 3)))
       return;
 
    if (!(f = fopen(buf, "wb"))) {
@@ -506,21 +511,21 @@ store_rgba(uint32_t w, uint32_t h, uint8_t *rgba)
       return;
    }
 
-   for (uint32_t i = 0, c = 0; i < w * h * 4; i += 4, c += 3)
+   for (uint32_t i = 0, c = 0; i < size->w * size->h * 4; i += 4, c += 3)
       memcpy(rgb + c, rgba + i, 3);
 
-   for (uint32_t i = 0; i * 2 < h; ++i) {
-      uint32_t o = i * w * 3;
-      uint32_t r = (h - 1 - i) * w * 3;
-      for (uint32_t i2 = w * 3; i2 > 0; --i2, ++o, ++r) {
+   for (uint32_t i = 0; i * 2 < size->h; ++i) {
+      uint32_t o = i * size->w * 3;
+      uint32_t r = (size->h - 1 - i) * size->w * 3;
+      for (uint32_t i2 = size->w * 3; i2 > 0; --i2, ++o, ++r) {
          uint8_t temp = rgb[o];
          rgb[o] = rgb[r];
          rgb[r] = temp;
       }
    }
 
-   fprintf(f, "P6\n%d %d\n255\n", w, h);
-   fwrite(rgb, 1, w * h * 3, f);
+   fprintf(f, "P6\n%d %d\n255\n", size->w, size->h);
+   fwrite(rgb, 1, size->w * size->h * 3, f);
    free(rgb);
    fclose(f);
 }
@@ -547,15 +552,15 @@ spawn(const char *bin)
 }
 
 static bool
-keyboard_key(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t leds, uint32_t mods, uint32_t key, uint32_t sym, enum wlc_key_state state)
+keyboard_key(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t time, const struct wlc_modifiers *modifiers, uint32_t key, uint32_t sym, enum wlc_key_state state)
 {
-   (void)leds, (void)key;
+   (void)time, (void)key;
 
    bool pass = true;
-   if (mods == loliwm.prefix) {
+   if (modifiers->mods == loliwm.prefix) {
       if (sym == XKB_KEY_Escape) {
          if (state == WLC_KEY_STATE_PRESSED)
-            wlc_compositor_terminate(compositor);
+            wlc_terminate();
          pass = false;
       } else if (view && sym == XKB_KEY_q) {
          if (state == WLC_KEY_STATE_PRESSED)
@@ -624,9 +629,9 @@ keyboard_key(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t 
 }
 
 static void
-resolution_notify(struct wlc_compositor *compositor, struct wlc_output *output, uint32_t width, uint32_t height)
+resolution_notify(struct wlc_compositor *compositor, struct wlc_output *output, const struct wlc_size *resolution)
 {
-   (void)compositor, (void)output, (void)width, (void)height;
+   (void)compositor, (void)output, (void)resolution;
    relayout(wlc_output_get_active_space(output));
 }
 
@@ -665,67 +670,6 @@ output_created(struct wlc_compositor *compositor, struct wlc_output *output)
          return false;
 
    return true;
-}
-
-static void
-terminate(void)
-{
-   if (loliwm.compositor)
-      wlc_compositor_free(loliwm.compositor);
-
-   memset(&loliwm, 0, sizeof(loliwm));
-   wlc_log(WLC_LOG_INFO, "-!- loliwm is gone, bye bye!");
-}
-
-static bool
-initialize(void)
-{
-   struct wlc_interface interface = {
-      .view = {
-         .created = view_created,
-         .destroyed = view_destroyed,
-         .switch_space = view_switch_space,
-
-         .request = {
-            .geometry = view_geometry_request,
-            .state = view_state_request,
-         },
-      },
-
-      .pointer = {
-         .button = pointer_button,
-      },
-
-      .keyboard = {
-         .key = keyboard_key,
-      },
-
-      .output = {
-         .created = output_created,
-         .activated = output_notify,
-         .resolution = resolution_notify,
-      },
-
-      .space = {
-         .activated = space_notify,
-      },
-   };
-
-   if (!(loliwm.compositor = wlc_compositor_new(&interface)))
-      goto fail;
-
-   return true;
-
-fail:
-   terminate();
-   return false;
-}
-
-static void
-run(void)
-{
-   wlc_log(WLC_LOG_INFO, "loliwm started");
-   wlc_compositor_run(loliwm.compositor);
 }
 
 static void
@@ -778,7 +722,42 @@ main(int argc, char *argv[])
 {
    (void)argc, (void)argv;
 
-   if (!wlc_init(argc, argv))
+   static const struct wlc_interface interface = {
+      .view = {
+         .created = view_created,
+         .destroyed = view_destroyed,
+         .switch_space = view_switch_space,
+
+         .request = {
+            .geometry = view_geometry_request,
+            .state = view_state_request,
+         },
+      },
+
+      .pointer = {
+         .button = pointer_button,
+      },
+
+      .keyboard = {
+         .key = keyboard_key,
+      },
+
+      .output = {
+         .created = output_created,
+         .activated = output_notify,
+         .resolution = resolution_notify,
+      },
+
+      .space = {
+         .activated = space_notify,
+      },
+   };
+
+   if (!wlc_init(&interface, argc, argv))
+      return EXIT_FAILURE;
+
+   struct wlc_compositor *compositor;
+   if (!(compositor = wlc_compositor_new(&loliwm)))
       return EXIT_FAILURE;
 
    struct sigaction action = {
@@ -797,10 +776,11 @@ main(int argc, char *argv[])
       }
    }
 
-   if (!initialize())
-      return EXIT_FAILURE;
+   wlc_log(WLC_LOG_INFO, "loliwm started");
+   wlc_run();
 
-   run();
-   terminate();
+   wlc_compositor_free(compositor);
+   memset(&loliwm, 0, sizeof(loliwm));
+   wlc_log(WLC_LOG_INFO, "-!- loliwm is gone, bye bye!");
    return EXIT_SUCCESS;
 }

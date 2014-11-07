@@ -17,13 +17,15 @@ Basic information about what you can currently do in loliwm.
 wlc specific env variables
 
 
-+-----------------+------------------------------------------------------+
-| ``WLC_SHM``     | Set 1 to force EGL clients to use shared memory.     |
-+-----------------+------------------------------------------------------+
-| ``WLC_OUTPUTS`` | Number of fake outputs in X11 mode.                  |
-+-----------------+------------------------------------------------------+
-| ``WLC_BG``      | Set 0 to disable the background GLSL shader.         |
-+-----------------+------------------------------------------------------+
++------------------+------------------------------------------------------+
+| ``WLC_SHM``      | Set 1 to force EGL clients to use shared memory.     |
++------------------+------------------------------------------------------+
+| ``WLC_OUTPUTS``  | Number of fake outputs in X11 mode.                  |
++------------------+------------------------------------------------------+
+| ``WLC_BG``       | Set 0 to disable the background GLSL shader.         |
++------------------+------------------------------------------------------+
+| ``WLC_XWAYLAND`` | Set 0 to disable Xwayland.                           |
++------------------+------------------------------------------------------+
 
 KEYBINDS
 --------
