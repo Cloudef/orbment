@@ -249,6 +249,18 @@ set_active(struct wlc_compositor *compositor, struct wlc_view *view)
 }
 
 static void
+active_space(struct wlc_compositor *compositor, struct wlc_space *space)
+{
+   struct wl_list *views = wlc_space_get_views(space);
+
+   if (views && !wl_list_empty(views)) {
+      set_active(compositor, wlc_view_from_link(views->prev));
+   } else {
+      set_active(compositor, NULL);
+   }
+}
+
+static void
 focus_next_or_previous_view(struct wlc_compositor *compositor, struct wlc_view *view, bool direction)
 {
 
@@ -424,7 +436,7 @@ view_switch_space(struct wlc_compositor *compositor, struct wlc_view *view, stru
    view_created(compositor, view, to);
 
    if (wlc_space_get_output(from) == wlc_space_get_output(to))
-      wlc_output_focus_space(wlc_space_get_output(from), from);
+      active_space(compositor, from);
 
    if (wlc_output_get_active_space(wlc_space_get_output(to)) == to) {
       struct wlc_view *v;
@@ -640,25 +652,13 @@ resolution_notify(struct wlc_compositor *compositor, struct wlc_output *output, 
 static void
 output_notify(struct wlc_compositor *compositor, struct wlc_output *output)
 {
-   struct wl_list *views = wlc_space_get_views(wlc_output_get_active_space(output));
-
-   if (views && !wl_list_empty(views)) {
-      set_active(compositor, wlc_view_from_link(views->prev));
-   } else {
-      set_active(compositor, NULL);
-   }
+   active_space(compositor, wlc_output_get_active_space(output));
 }
 
 static void
 space_notify(struct wlc_compositor *compositor, struct wlc_space *space)
 {
-   struct wl_list *views = wlc_space_get_views(space);
-
-   if (views && !wl_list_empty(views)) {
-      set_active(compositor, wlc_view_from_link(views->prev));
-   } else {
-      set_active(compositor, NULL);
-   }
+   active_space(compositor, space);
 }
 
 static bool
