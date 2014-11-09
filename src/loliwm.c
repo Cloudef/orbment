@@ -38,9 +38,13 @@ layout_parent(struct wlc_view *view, struct wlc_view *parent, const struct wlc_s
    const struct wlc_geometry *u = wlc_view_get_geometry(under);
    const struct wlc_geometry *p = wlc_view_get_geometry(parent);
 
+   // Current constrained size
+   float cw = fmax(size->w, u->size.w * 0.6);
+   float ch = fmax(size->h, u->size.h * 0.6);
+
    struct wlc_geometry g;
-   g.size.w = (size->w > u->size.w * 0.8 ? u->size.w * 0.8 : size->w);
-   g.size.h = (size->h > u->size.h * 0.8 ? u->size.h * 0.8 : size->h);
+   g.size.w = fmin(cw, u->size.w * 0.8);
+   g.size.h = fmin(ch, u->size.h * 0.8);
    g.origin.x = p->size.w * 0.5 - g.size.w * 0.5;
    g.origin.y = p->size.h * 0.5 - g.size.h * 0.5;
    wlc_view_set_geometry(view, &g);
