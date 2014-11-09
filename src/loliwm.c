@@ -435,8 +435,15 @@ view_switch_space(struct wlc_compositor *compositor, struct wlc_view *view, stru
    relayout(from);
    view_created(compositor, view, to);
 
-   if (wlc_space_get_output(from) == wlc_space_get_output(to))
+   if (wlc_space_get_output(from) == wlc_space_get_output(to)) {
       active_space(compositor, from);
+   } else {
+      struct wlc_view *v;
+      wlc_view_for_each_reverse(v, wlc_space_get_views(from)) {
+         wlc_view_set_state(v, WLC_BIT_ACTIVATED, true);
+         break;
+      }
+   }
 
    if (wlc_output_get_active_space(wlc_space_get_output(to)) == to) {
       struct wlc_view *v;
