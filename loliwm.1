@@ -63,6 +63,10 @@ Takes a boolean \fI0\fR or \fI1\fR which disables or enables the background.
 .IP \fBWLC_SHM\fR
 Takes a boolean \fI0\fR or \fI1\fR, true forces EGL clients to fallback to shm.
 (Default: \fI0\fR)
+.IP \fBWLC_DIM\fR
+Takes an interval between \fI0.0\fR and \fI1.0\fR to define the dullness and
+brightness of the dimming effect on unfocused clients respectively.  (Default: 
+\fI0.5\fR)
 .IP \fBWLC_DEBUG\fR
 Takes a comma-separated list of values which enable tracing activity on the
 wayland socket.  These include \fIrender\fR, \fIfocus\fR and \fIxwm\fR.
