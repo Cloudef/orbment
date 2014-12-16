@@ -1,5 +1,5 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
-PROJECT(loliwm)
+PROJECT(loliwm C)
 SET(LOLIWM_NAME "loliwm")
 SET(LOLIWM_DESCRIPTION "Simple tiling compositor for wayland")
 SET(LOLIWM_VERSION "0.0.1")
