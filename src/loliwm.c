@@ -9,6 +9,7 @@
 
 #include <wlc.h>
 #include <wayland-util.h>
+#include "config.h"
 
 // XXX: hack
 enum {
@@ -583,32 +584,32 @@ keyboard_key(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t 
 
    bool pass = true;
    if (modifiers->mods == loliwm.prefix) {
-      if (sym == XKB_KEY_Escape) {
+      if (sym == EXIT_KEY) {
          if (state == WLC_KEY_STATE_PRESSED)
             wlc_terminate();
          pass = false;
-      } else if (view && sym == XKB_KEY_q) {
+      } else if (view && sym == CLOSE_FOCUS_KEY) {
          if (state == WLC_KEY_STATE_PRESSED)
             wlc_view_close(view);
          pass = false;
-      } else if (sym == XKB_KEY_Return) {
+      } else if (sym == TERM_OPEN_KEY) {
          if (state == WLC_KEY_STATE_PRESSED) {
             const char *terminal = getenv("TERMINAL");
-            terminal = (terminal ? terminal : "weston-terminal");
+            terminal = (terminal ? terminal : DEFAULT_TERM);
             spawn(terminal);
          }
          pass = false;
-      } else if (sym == XKB_KEY_p) {
+      } else if (sym == MENU_OPEN_KEY) {
          if (state == WLC_KEY_STATE_PRESSED)
-            spawn("bemenu-run");
+	   spawn(MENU_APP);
          pass = false;
-      } else if (view && sym == XKB_KEY_f) {
+      } else if (view && sym == TOGGLE_FULLSCREEN_KEY) {
          if (state == WLC_KEY_STATE_PRESSED) {
             wlc_view_set_state(view, WLC_BIT_FULLSCREEN, !(wlc_view_get_state(view) & WLC_BIT_FULLSCREEN));
             relayout(wlc_compositor_get_focused_space(compositor));
          }
          pass = false;
-      } else if (sym == XKB_KEY_h) {
+      } else if (sym == CYCLE_CLIENT_KEY) {
          if (state == WLC_KEY_STATE_PRESSED)
             cycle(compositor);
          pass = false;
@@ -616,31 +617,31 @@ keyboard_key(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t 
          if (state == WLC_KEY_STATE_PRESSED)
             focus_space(compositor, (sym == XKB_KEY_0 ? 9 : sym - XKB_KEY_1));
          pass = false;
-      } else if (sym == XKB_KEY_i || sym == XKB_KEY_o) {
+      } else if (sym == NMASTER_EXPAND_KEY || sym == NMASTER_SHRINK_KEY) {
          if (state == WLC_KEY_STATE_PRESSED) {
-            loliwm.cut += (sym == XKB_KEY_o ? -0.01 : 0.01);
+            loliwm.cut += (sym == NMASTER_SHRINK_KEY ? -0.01 : 0.01);
             if (loliwm.cut > 1.0) loliwm.cut = 1.0;
             if (loliwm.cut < 0.0) loliwm.cut = 0.0;
             relayout(wlc_compositor_get_focused_space(compositor));
          }
          pass = false;
-      } else if (view && (sym == XKB_KEY_z || sym == XKB_KEY_x || sym == XKB_KEY_c)) {
+      } else if (view && (sym == MOVE_FOCUS_OUTPUT_ONE || sym == MOVE_FOCUS_OUTPUT_TWO || sym == MOVE_FOCUS_OUTPUT_THREE)) {
          if (state == WLC_KEY_STATE_PRESSED)
-            move_to_output(compositor, view, (sym == XKB_KEY_z ? 0 : (sym == XKB_KEY_x ? 1 : 2)));
+            move_to_output(compositor, view, (sym == MOVE_FOCUS_OUTPUT_ONE ? 0 : (sym == MOVE_FOCUS_OUTPUT_TWO ? 1 : 2)));
          pass = false;
       } else if (view && sym >= XKB_KEY_F1 && sym <= XKB_KEY_F10) {
          if (state == WLC_KEY_STATE_PRESSED)
             move_to_space(compositor, view, sym - XKB_KEY_F1);
          pass = false;
-      } else if (sym == XKB_KEY_l) {
+      } else if (sym == ROTATE_OUTPUT_FOCUS_KEY) {
          if (state == WLC_KEY_STATE_PRESSED)
             focus_next_or_previous_output(compositor, true);
          pass = false;
-      } else if (view && (sym == XKB_KEY_k || sym == XKB_KEY_j)) {
+      } else if (view && (sym == MOVE_CLIENT_FOCUS_LEFT || sym == MOVE_CLIENT_FOCUS_RIGHT)) {
          if (state == WLC_KEY_STATE_PRESSED)
-            focus_next_or_previous_view(compositor, view, (sym == XKB_KEY_j));
+            focus_next_or_previous_view(compositor, view, (sym == MOVE_CLIENT_FOCUS_LEFT));
          pass = false;
-      } else if (sym == XKB_KEY_SunPrint_Screen) { // does not seem to work with alt
+      } else if (sym == SCREENSHOT_KEY) {
          if (state == WLC_KEY_STATE_PRESSED)
             screenshot(wlc_compositor_get_focused_output(compositor));
          pass = false;
