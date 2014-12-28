@@ -2,9 +2,9 @@
 .. _build: http://build.cloudef.pw/build/loliwm/master/linux%20x86_64
 
 .. image:: http://cloudef.pw/armpit/loliwm-gh.png
+:IRC: #loliwm @ freenode (temporary)
 :Video: https://www.youtube.com/watch?v=nh_7aqNtrik
 :Build: |build|_
-
 
 OPTIONS
 -------
