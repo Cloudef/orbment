@@ -120,3 +120,8 @@ You can build bootstrapped version of ``loliwm`` with the following steps.
 
 For proper packaging ``wlc`` and ``loliwm`` should be built separately.
 Instructions later...
+
+SIMILAR SOFTWARE
+----------------
+
+`Velox <https://github.com/michaelforney/velox>`_ - Tiling wayland compositor based on swc
