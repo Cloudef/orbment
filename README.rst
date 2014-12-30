@@ -126,4 +126,5 @@ Instructions later...
 SIMILAR SOFTWARE
 ----------------
 
-`Velox <https://github.com/michaelforney/velox>`_ - Tiling wayland compositor based on swc
+- `Velox <https://github.com/michaelforney/velox>`_ - Tiling wayland compositor based on swc
+- `Waysome <https://github.com/waysome/waysome>`_ - Scriptable wayland compositor
