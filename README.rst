@@ -13,7 +13,7 @@ Basic information about what you can currently do in loliwm.
 
 +-----------------------+------------------------------------------------+
 | ``--prefix MODIFIER`` | Set the modifier(s) to use with the keybinds.  |
-|                       | shift, caps, ctrl, alt, mod2, mod3 and mod5    |
+|                       | shift, caps, ctrl, alt, logo, mod2, mod3, mod5 |
 +-----------------------+------------------------------------------------+
 | ``--log FILE``        | Logs output to specified ``FILE``.             |
 +-----------------------+------------------------------------------------+
