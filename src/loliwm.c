@@ -269,19 +269,24 @@ static void
 focus_next_or_previous_view(struct wlc_compositor *compositor, struct wlc_view *view, bool direction)
 {
 
-   struct wl_list *l = (direction ? wlc_view_get_user_link(view)->next : wlc_view_get_user_link(view)->prev);
+   struct wl_list *l = wlc_view_get_user_link(view);
    struct wl_list *views = wlc_space_get_userdata(wlc_view_get_space(view));
    if (!l || !views || wl_list_empty(views))
       return;
 
-   if (l == views && (direction ? !(l = l->next) : !(l = l->prev)))
-      return;
+   int loops = 0;
+   do {
+      if (!(l = direction ? l ->next : l->prev) || (l == views && (direction ? !(l = l->next) : !(l = l->prev))))
+         return;
 
-   struct wlc_view *v;
-   if (!(v = wlc_view_from_user_link(l)))
-      return;
+      struct wlc_view *v;
+      if (!(v = wlc_view_from_user_link(l)))
+         return;
 
-   set_active(compositor, v);
+      set_active(compositor, v);
+      if (loliwm.active == view)
+         loops++;
+   } while (loliwm.active == view && loops <= 1);
 }
 
 static struct wlc_space*
