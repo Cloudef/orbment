@@ -295,7 +295,7 @@ relayout(wlc_handle output)
    const wlc_handle *views;
    views = wlc_output_get_views(output, &memb);
 
-   struct chck_iter_pool tiled;
+   struct chck_iter_pool tiled = {{0}};
    if (loliwm.active.layout && !chck_iter_pool(&tiled, memb, memb, sizeof(wlc_handle)))
       return;
 
@@ -322,11 +322,10 @@ relayout(wlc_handle output)
       chck_iter_pool_push_back(&tiled, &views[i]);
    }
 
-   if (!loliwm.active.layout)
-      return;
-
-   loliwm.active.layout->function(output, tiled.items.buffer, tiled.items.count);
-   chck_iter_pool_release(&tiled);
+   if (loliwm.active.layout) {
+      loliwm.active.layout->function(output, tiled.items.buffer, tiled.items.count);
+      chck_iter_pool_release(&tiled);
+   }
 }
 
 static void
