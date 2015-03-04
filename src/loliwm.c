@@ -204,9 +204,8 @@ get_next_view(wlc_handle output, size_t offset, enum direction dir)
 {
    size_t memb;
    const wlc_handle *views;
-   if ((views = wlc_output_get_views(output, &memb)))
-      return views[(dir == PREV ? memb - (offset + 1) : memb + (offset + 1)) % memb];
-   return 0;
+   views = wlc_output_get_views(output, &memb);
+   return (memb > 0 ? views[(dir == PREV ? memb - (offset + 1) : memb + (offset + 1)) % memb] : 0);
 }
 
 static wlc_handle
@@ -219,10 +218,7 @@ get_next_output(size_t offset, enum direction dir)
    size_t memb, i;
    const wlc_handle *outputs = wlc_get_outputs(&memb);
    for (i = 0; i < memb && outputs[i] != focused; ++i);
-
-   if (i < memb)
-      return outputs[(dir == PREV ? i - offset : i + offset) % memb];
-   return 0;
+   return (memb > 0 && i < memb ? outputs[(dir == PREV ? i - offset : i + offset) % memb] : 0);
 }
 
 static void
