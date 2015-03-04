@@ -634,6 +634,9 @@ screenshot(wlc_handle output)
 static void
 spawn(const char *bin)
 {
+   if (chck_cstr_is_empty(bin))
+      return;
+
    if (fork() == 0) {
       setsid();
       freopen("/dev/null", "w", stdout);
@@ -879,7 +882,7 @@ static bool
 setup_default_keybinds(void)
 {
    const char *terminal = getenv("TERMINAL");
-   chck_string_set_cstr(&loliwm.terminal, (terminal && strlen(terminal) ? terminal : DEFAULT_TERMINAL), true);
+   chck_string_set_cstr(&loliwm.terminal, (chck_cstr_is_empty(terminal) ? DEFAULT_TERMINAL : terminal), false);
 
    return (add_keybind("exit", "<P-Escape>", key_cb_exit, 0) &&
            add_keybind("close client", "<P-q>", key_cb_close_client, 0) &&
