@@ -126,6 +126,7 @@ void* import_method(plugin_h plugin, const char *name, const char *signature);
  * p   | pointer
  * []  | array, you can use element count inside as C allows compile time checks for element sizes.
  * v   | void
+ * h   | wlc handle
  *
  * Written as:
  * <return_type>(<arguments>)|<ABI version>

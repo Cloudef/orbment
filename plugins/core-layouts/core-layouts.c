@@ -1,11 +1,8 @@
-#include <loliwm/plugin.h>
 #include <stdio.h>
 #include <assert.h>
-
-#include <wlc.h>
-#include <wayland-util.h>
-
+#include <wlc/wlc.h>
 #include <chck/math/math.h>
+#include <loliwm/plugin.h>
 
 static struct {
    struct {
@@ -17,65 +14,52 @@ static struct {
    },
 };
 
-static bool (*is_tiled)(struct wlc_view *v);
-static void (*relayout)(struct wlc_space *space);
+static void (*relayout)(wlc_handle output);
 
-typedef void (*layout_fun_t)(struct wlc_space*);
+typedef void (*layout_fun_t)(wlc_handle output, const wlc_handle *views, size_t memb);
 static bool (*add_layout)(const char *name, layout_fun_t);
 static void (*remove_layout)(const char *name);
 
-typedef void (*keybind_fun_t)(struct wlc_compositor*, struct wlc_view*, uint32_t time, intptr_t arg);
+typedef void (*keybind_fun_t)(wlc_handle view, uint32_t time, intptr_t arg);
 static bool (*add_keybind)(const char *name, const char *syntax, keybind_fun_t, intptr_t arg);
 static void (*remove_keybind)(const char *name);
 
 static void
-key_cb_nmaster_grow(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t time, intptr_t arg)
+key_cb_nmaster_grow(wlc_handle view, uint32_t time, intptr_t arg)
 {
    (void)view, (void)time, (void)arg;
    config.nmaster.cut = chck_minf(config.nmaster.cut + 0.01, 1.0);
-   relayout(wlc_compositor_get_focused_space(compositor));
+   relayout(wlc_get_focused_output());
 }
 
 static void
-key_cb_nmaster_shrink(struct wlc_compositor *compositor, struct wlc_view *view, uint32_t time, intptr_t arg)
+key_cb_nmaster_shrink(wlc_handle view, uint32_t time, intptr_t arg)
 {
    (void)view, (void)time, (void)arg;
    config.nmaster.cut = chck_maxf(config.nmaster.cut - 0.01, 0.0);
-   relayout(wlc_compositor_get_focused_space(compositor));
+   relayout(wlc_get_focused_output());
 }
 
 static void
-nmaster(struct wlc_space *space)
+nmaster(wlc_handle output, const wlc_handle *views, size_t memb)
 {
-   struct wl_list *views;
-   if (!(views = wlc_space_get_userdata(space)))
-      return;
-
-   struct wlc_output *output = wlc_space_get_output(space);
-   const struct wlc_size *resolution = wlc_output_get_resolution(output);
-
-   struct wlc_view *v;
-   uint32_t count = 0;
-   wlc_view_for_each_user(v, views)
-      if (is_tiled(v)) ++count;
+   const struct wlc_size *r;
+   assert((r = wlc_output_get_resolution(output)));
 
    bool toggle = false;
-   uint32_t y = 0, height = resolution->h / (count > 1 ? count - 1 : 1);
-   uint32_t fheight = (resolution->h > height * (count - 1) ? height + (resolution->h - height * (count - 1)) : height);
+   uint32_t y = 0, height = r->h / (memb > 1 ? memb - 1 : 1);
+   uint32_t fheight = (r->h > height * (memb - 1) ? height + (r->h - height * (memb - 1)) : height);
 
-   wlc_view_for_each_user(v, views) {
-      if (!is_tiled(v))
-         continue;
-
-      uint32_t slave = resolution->w * config.nmaster.cut;
-      wlc_view_set_state(v, WLC_BIT_MAXIMIZED, true);
+   for (size_t i = 0; i < memb; ++i) {
+      uint32_t slave = r->w * config.nmaster.cut;
+      wlc_view_set_state(views[i], WLC_BIT_MAXIMIZED, true);
 
       struct wlc_geometry g = {
-         .origin = { (toggle ? resolution->w - slave : 0), y },
-         .size = { (count > 1 ? (toggle ? slave : resolution->w - slave) : resolution->w), (toggle ? (y == 0 ? fheight : height) : resolution->h) },
+         .origin = { (toggle ? r->w - slave : 0), y },
+         .size = { (memb > 1 ? (toggle ? slave : r->w - slave) : r->w), (toggle ? (y == 0 ? fheight : height) : r->h) },
       };
 
-      wlc_view_set_geometry(v, &g);
+      wlc_view_set_geometry(views[i], &g);
 
       if (toggle)
          y += (y == 0 ? fheight : height);
@@ -122,18 +106,16 @@ plugin_init(void)
 
    if (!has_methods(loliwm,
             (const struct method_info[]){
-               METHOD("is_tiled", "b(p)|1"),
                METHOD("add_layout", "b(c[],p)|1"),
                METHOD("remove_layout", "v(c[])|1"),
                METHOD("add_keybind", "b(c[],c[],p,ip)|1"),
                METHOD("remove_keybind", "v(c[])|1"),
-               METHOD("relayout", "v(p)|1"),
+               METHOD("relayout", "v(h)|1"),
                {0},
             }))
       return false;
 
-   is_tiled = import_method(loliwm, "is_tiled", "b(p)|1");
-   relayout = import_method(loliwm, "relayout", "v(p)|1");
+   relayout = import_method(loliwm, "relayout", "v(h)|1");
    add_layout = import_method(loliwm, "add_layout", "b(c[],p)|1");
    remove_layout = import_method(loliwm, "remove_layout", "v(c[])|1");
    add_keybind = import_method(loliwm, "add_keybind", "b(c[],c[],p,ip)|1");
