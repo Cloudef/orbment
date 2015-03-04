@@ -6,12 +6,16 @@
 #include <unistd.h>
 #include <assert.h>
 #include <time.h>
+#include <dirent.h>
 #include <wlc/wlc.h>
 #include <wayland-util.h>
 #include <xkbcommon/xkbcommon.h>
+#include <chck/math/math.h>
 #include <chck/pool/pool.h>
 #include <chck/lut/lut.h>
+#include <chck/xdg/xdg.h>
 #include "plugin.h"
+#include "config.h"
 
 #define DEFAULT_TERMINAL "weston-terminal"
 #define DEFAULT_MENU "bemenu-run"
@@ -236,12 +240,12 @@ layout_parent(wlc_handle view, wlc_handle parent, const struct wlc_size *size)
    const struct wlc_geometry *p = wlc_view_get_geometry(parent);
 
    // Current constrained size
-   float cw = fmax(size->w, u->size.w * 0.6);
-   float ch = fmax(size->h, u->size.h * 0.6);
+   float cw = chck_maxf(size->w, u->size.w * 0.6);
+   float ch = chck_maxf(size->h, u->size.h * 0.6);
 
    struct wlc_geometry g;
-   g.size.w = fmin(cw, u->size.w * 0.8);
-   g.size.h = fmin(ch, u->size.h * 0.8);
+   g.size.w = chck_minf(cw, u->size.w * 0.8);
+   g.size.h = chck_minf(ch, u->size.h * 0.8);
    g.origin.x = p->size.w * 0.5 - g.size.w * 0.5;
    g.origin.y = p->size.h * 0.5 - g.size.h * 0.5;
    wlc_view_set_geometry(view, &g);
@@ -941,14 +945,52 @@ plugins_init(void)
          return false;
    }
 
-   {
-      register_plugin_from_path("plugins/loliwm-plugin-test.so");
+   if (chck_cstr_is_empty(PLUGINS_PATH)) {
+      wlc_log(WLC_LOG_ERROR, "Could not find plugins path. PLUGINS_PATH was not set during compile.");
+      return true;
    }
 
    {
-      register_plugin_from_path("plugins/loliwm-plugin-core-layouts.so");
-   }
+      struct chck_string xdg = {0};
+      {
+         char *tmp = xdg_get_path("XDG_DATA_HOME", ".local/share");
+         chck_string_set_cstr(&xdg, tmp, true);
+         free(tmp);
+      }
 
+      chck_string_set_format(&xdg, "%s/loliwm/plugins", xdg.data);
+
+#ifndef NDEBUG
+      // allows running without install, as long as you build in debug mode
+      const char *paths[] = { PLUGINS_PATH, "plugins", xdg.data, NULL };
+#else
+      const char *paths[] = { PLUGINS_PATH, xdg.data, NULL };
+#endif
+
+      // FIXME: add portable directory code to chck/fs/fs.c
+      for (uint32_t i = 0; paths[i]; ++i) {
+         DIR *d;
+         if (!(d = opendir(paths[i]))) {
+            wlc_log(WLC_LOG_WARN, "Could not open plugins directory: %s", paths[i]);
+            continue;
+         }
+
+         struct dirent *dir;
+         while ((dir = readdir(d))) {
+            if (!chck_cstr_starts_with(dir->d_name, "loliwm-plugin-"))
+               continue;
+
+            struct chck_string tmp = {0};
+            if (chck_string_set_format(&tmp, "%s/%s", paths[i], dir->d_name))
+               register_plugin_from_path(tmp.data);
+            chck_string_release(&tmp);
+         }
+
+         closedir(d);
+      }
+
+      chck_string_release(&xdg);
+   }
    return true;
 }
 

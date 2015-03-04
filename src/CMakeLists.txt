@@ -1,24 +1,28 @@
-SET(SRC
+set(sources
    loliwm.c
    plugin.c
    )
 
-# We use wayland-util
-FIND_PACKAGE(Wayland REQUIRED)
+configure_file(config.h.in config.h @ONLY)
 
-# Math lib
-FIND_LIBRARY(MATH_LIBRARY m)
-MARK_AS_ADVANCED(MATH_LIBRARY)
-IF (NOT MATH_LIBRARY)
-   MESSAGE(FATAL_ERROR "Math library was not found")
-ENDIF ()
+include_directories(
+   ${WLC_INCLUDE_DIRS}
+   ${WAYLAND_SERVER_INCLUDE_DIR}
+   ${loliwm_SOURCE_DIR}/include
+   ${loliwm_SOURCE_DIR}/lib/chck/src
+   ${CMAKE_CURRENT_BINARY_DIR}
+   )
 
-INCLUDE_DIRECTORIES(${WLC_INCLUDE_DIRS} ${WAYLAND_SERVER_INCLUDE_DIR} ${loliwm_SOURCE_DIR}/include ${loliwm_SOURCE_DIR}/lib/chck/src)
-ADD_EXECUTABLE(loliwm ${SRC})
-TARGET_LINK_LIBRARIES(loliwm ${WLC_LIBRARY} ${WLC_LIBRARIES} ${WAYLAND_SERVER_LIBRARIES} ${MATH_LIBRARY} chck_pool chck_lut chck_string chck_dl)
+add_executable(loliwm ${sources})
+
+target_link_libraries(loliwm
+   chck_loliwm
+   ${WLC_LIBRARY}
+   ${WLC_LIBRARIES}
+   )
 
 # Install rules
-INSTALL(TARGETS loliwm DESTINATION bin)
+install(TARGETS loliwm DESTINATION bin)
 
 if (UNIX)
    # chown to root and setid for group
@@ -28,7 +32,7 @@ if (UNIX)
    #
    # If you have install that does not need permissions to access /dev/input,
    # you can forget about this step totally.
-   INSTALL(CODE "
+   install(CODE "
    execute_process(COMMAND chown root ${CMAKE_INSTALL_PREFIX}/bin/loliwm)
    execute_process(COMMAND chmod g+s ${CMAKE_INSTALL_PREFIX}/bin/loliwm)
    ")

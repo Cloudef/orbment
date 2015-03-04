@@ -1,2 +1,2 @@
-ADD_SUBPROJECT(wlc WLC)
-ADD_SUBDIRECTORY(chck)
+add_subproject(wlc WLC)
+add_subdirectory(chck)

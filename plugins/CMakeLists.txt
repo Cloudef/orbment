@@ -1,11 +1,14 @@
-SET(plugins
-   test
+set(plugins
    core-layouts
 )
 
-SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/plugins)
+include_directories(
+   ${WLC_INCLUDE_DIRS}
+   ${loliwm_SOURCE_DIR}/include
+   ${loliwm_SOURCE_DIR}/lib/chck/src
+   )
 
-INCLUDE_DIRECTORIES(${loliwm_SOURCE_DIR}/include ${WLC_INCLUDE_DIRS} ${loliwm_SOURCE_DIR}/lib/chck/src)
-FOREACH (plugin ${plugins})
-   ADD_SUBDIRECTORY(${plugin})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/plugins)
+foreach (plugin ${plugins})
+   add_subdirectory(${plugin})
 endforeach (plugin)
