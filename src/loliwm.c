@@ -20,6 +20,8 @@
 #define DEFAULT_TERMINAL "weston-terminal"
 #define DEFAULT_MENU "bemenu-run"
 
+static const size_t NOTINDEX = (size_t)-1;
+
 // XXX: hack
 enum {
    BIT_BEMENU = 1<<5,
@@ -70,9 +72,10 @@ static struct {
 };
 
 static void
-next_or_prev_layout(bool direction)
+next_or_prev_layout(size_t offset, enum direction dir)
 {
-   loliwm.layouts.index = (loliwm.layouts.index + (direction ? 1 : -1)) % loliwm.layouts.pool.items.count;
+   const size_t index = loliwm.layouts.index, memb = loliwm.layouts.pool.items.count;
+   loliwm.layouts.index = (dir == PREV ? chck_clampsz(index - offset, 0, memb - 1) : index + offset) % memb;
    loliwm.active.layout = chck_iter_pool_get(&loliwm.layouts.pool, loliwm.layouts.index);
 }
 
@@ -108,7 +111,7 @@ add_layout(const char *name, layout_fun_t function)
    wlc_log(WLC_LOG_INFO, "Added layout: %s", name);
 
    if (!loliwm.active.layout)
-      next_or_prev_layout(true);
+      next_or_prev_layout(1, NEXT);
 
    return true;
 }
@@ -125,7 +128,7 @@ remove_layout(const char *name)
       wlc_log(WLC_LOG_INFO, "Removed layout: %s", name);
 
       if (loliwm.layouts.index >= _I - 1)
-         next_or_prev_layout(false);
+         next_or_prev_layout(1, PREV);
 
       break;
    }
@@ -145,7 +148,7 @@ static const struct keybind*
 keybind_for_syntax(const char *syntax)
 {
    size_t *index;
-   if (!(index = chck_hash_table_str_get(&loliwm.keybinds.table, syntax, strlen(syntax))) || *index == (size_t)-1)
+   if (!(index = chck_hash_table_str_get(&loliwm.keybinds.table, syntax, strlen(syntax))) || *index == NOTINDEX)
       return NULL;
 
    return chck_pool_get(&loliwm.keybinds.pool, *index);
@@ -200,25 +203,21 @@ remove_keybind(const char *name)
 }
 
 static wlc_handle
-get_next_view(wlc_handle output, size_t offset, enum direction dir)
+get_next_view(wlc_handle view, size_t offset, enum direction dir)
 {
-   size_t memb;
-   const wlc_handle *views;
-   views = wlc_output_get_views(output, &memb);
-   return (memb > 0 ? views[(dir == PREV ? memb - (offset + 1) : memb + (offset + 1)) % memb] : 0);
+   size_t memb, i;
+   wlc_handle *views = wlc_output_get_mutable_views(wlc_view_get_output(view), &memb);
+   for (i = 0; i < memb && views[i] != view; ++i);
+   return (memb > 0 ? views[(dir == PREV ? chck_clampsz(i - offset, 0, memb - 1) : i + offset) % memb] : 0);
 }
 
 static wlc_handle
-get_next_output(size_t offset, enum direction dir)
+get_next_output(wlc_handle output, size_t offset, enum direction dir)
 {
-   wlc_handle focused;
-   if (!(focused = wlc_get_focused_output()))
-      return 0;
-
    size_t memb, i;
    const wlc_handle *outputs = wlc_get_outputs(&memb);
-   for (i = 0; i < memb && outputs[i] != focused; ++i);
-   return (memb > 0 && i < memb ? outputs[(dir == PREV ? i - offset : i + offset) % memb] : 0);
+   for (i = 0; i < memb && outputs[i] != output; ++i);
+   return (memb > 0 ? outputs[(dir == PREV ? chck_clampsz(i - offset, 0, memb - 1) : i + offset) % memb] : 0);
 }
 
 static void
@@ -236,8 +235,8 @@ layout_parent(wlc_handle view, wlc_handle parent, const struct wlc_size *size)
    const struct wlc_geometry *p = wlc_view_get_geometry(parent);
 
    // Current constrained size
-   float cw = chck_maxf(size->w, u->size.w * 0.6);
-   float ch = chck_maxf(size->h, u->size.h * 0.6);
+   const float cw = chck_maxf(size->w, u->size.w * 0.6);
+   const float ch = chck_maxf(size->h, u->size.h * 0.6);
 
    struct wlc_geometry g;
    g.size.w = chck_minf(cw, u->size.w * 0.8);
@@ -252,35 +251,36 @@ should_focus_on_create(wlc_handle view)
 {
    // Do not allow unmanaged views to steal focus (tooltips, dnds, etc..)
    // Do not allow parented windows to steal focus, if current window wasn't parent.
-   uint32_t type = wlc_view_get_type(view);
-   wlc_handle parent = wlc_view_get_parent(view);
+   const uint32_t type = wlc_view_get_type(view);
+   const wlc_handle parent = wlc_view_get_parent(view);
    return (!(type & WLC_BIT_UNMANAGED) && (!loliwm.active.view || !parent || parent == loliwm.active.view));
 }
 
 static bool
 is_or(wlc_handle view)
 {
-   return (wlc_view_get_type(view) & WLC_BIT_OVERRIDE_REDIRECT) || (wlc_view_get_state(view) & BIT_BEMENU);
+   const uint32_t type = wlc_view_get_type(view);
+   return (type & WLC_BIT_OVERRIDE_REDIRECT) || (type & BIT_BEMENU);
 }
 
 static bool
 is_managed(wlc_handle view)
 {
-   uint32_t type = wlc_view_get_type(view);
+   const uint32_t type = wlc_view_get_type(view);
    return !(type & WLC_BIT_UNMANAGED) && !(type & WLC_BIT_POPUP) && !(type & WLC_BIT_SPLASH);
 }
 
 static bool
 is_modal(wlc_handle view)
 {
-   uint32_t type = wlc_view_get_type(view);
+   const uint32_t type = wlc_view_get_type(view);
    return (type & WLC_BIT_MODAL);
 }
 
 static bool
 is_tiled(wlc_handle view)
 {
-   uint32_t state = wlc_view_get_state(view);
+   const uint32_t state = wlc_view_get_state(view);
    return !(state & WLC_BIT_FULLSCREEN) && !wlc_view_get_parent(view) && is_managed(view) && !is_or(view) && !is_modal(view);
 }
 
@@ -292,16 +292,16 @@ relayout(wlc_handle output)
       return;
 
    size_t memb;
-   const wlc_handle *views;
-   views = wlc_output_get_views(output, &memb);
-
-   struct chck_iter_pool tiled = {{0}};
-   if (loliwm.active.layout && !chck_iter_pool(&tiled, memb, memb, sizeof(wlc_handle)))
-      return;
-
+   const wlc_handle *views = wlc_output_get_views(output, &memb);
    for (size_t i = 0; i < memb; ++i) {
       if (wlc_output_get_mask(output) != wlc_view_get_mask(views[i]))
          continue;
+
+      if (wlc_view_get_type(views[i]) & BIT_BEMENU) {
+         struct wlc_geometry g = *wlc_view_get_geometry(views[i]);
+         g.origin = (struct wlc_origin){ 0, 0 };
+         wlc_view_set_geometry(views[i], &g);
+      }
 
       if (wlc_view_get_state(views[i]) & WLC_BIT_FULLSCREEN)
          wlc_view_set_geometry(views[i], &(struct wlc_geometry){ { 0, 0 }, *r });
@@ -315,14 +315,20 @@ relayout(wlc_handle output)
       wlc_handle parent;
       if (is_managed(views[i]) && !is_or(views[i]) && (parent = wlc_view_get_parent(views[i])))
          layout_parent(views[i], parent, &wlc_view_get_geometry(views[i])->size);
-
-      if (!is_tiled(views[i]) || !loliwm.active.layout)
-         continue;
-
-      chck_iter_pool_push_back(&tiled, &views[i]);
    }
 
    if (loliwm.active.layout) {
+      struct chck_iter_pool tiled = {{0}};
+      if (!chck_iter_pool(&tiled, memb, memb, sizeof(wlc_handle)))
+         return;
+
+      size_t memb;
+      const wlc_handle *views = wlc_output_get_mutable_views(output, &memb);
+      for (size_t i = 0; i < memb; ++i) {
+         if (is_tiled(views[i]) && wlc_output_get_mask(output) == wlc_view_get_mask(views[i]))
+            chck_iter_pool_push_back(&tiled, &views[i]);
+      }
+
       loliwm.active.layout->function(output, tiled.items.buffer, tiled.items.count);
       chck_iter_pool_release(&tiled);
    }
@@ -358,7 +364,7 @@ focus_view(wlc_handle view)
       return;
 
    // Bemenu should always have focus when open.
-   if (loliwm.active.view && (wlc_view_get_state(loliwm.active.view) & BIT_BEMENU)) {
+   if (loliwm.active.view && (wlc_view_get_type(loliwm.active.view) & BIT_BEMENU)) {
       wlc_view_bring_to_front(loliwm.active.view);
       return;
    }
@@ -367,11 +373,11 @@ focus_view(wlc_handle view)
       {
          size_t memb;
          const wlc_handle *views = wlc_output_get_views(wlc_view_get_output(view), &memb);
-         for (size_t i = (memb > 0 ? memb - 1 : 0); i > 0; --i) {
-            if (wlc_view_get_parent(views[i]) == view) {
+         for (size_t i = memb; i > 0; --i) {
+            if (wlc_view_get_parent(views[i - 1]) == view) {
                // If window has parent, focus it instead of this.
                // By reverse searching views list, we get the topmost parent.
-               focus_view(views[i]);
+               focus_view(views[i - 1]);
                return;
             }
          }
@@ -381,13 +387,13 @@ focus_view(wlc_handle view)
       if (is_managed(view) && !is_or(view)) {
          size_t memb;
          const wlc_handle *views = wlc_output_get_views(wlc_view_get_output(view), &memb);
-         for (size_t i = (memb > 0 ? memb - 1 : 0); i > 0; --i) {
-            if (wlc_view_get_state(views[i]) & WLC_BIT_FULLSCREEN) {
+         for (size_t i = memb; i > 0; --i) {
+            if (wlc_view_get_state(views[i - 1]) & WLC_BIT_FULLSCREEN) {
                // Bring the first topmost found fullscreen wlc_view to front.
                // This way we get a "peek" effect when we cycle other views.
                // Meaning the active view is always over fullscreen view,
                // but fullscreen view is on top of the other views.
-               wlc_view_bring_to_front(views[i]);
+               wlc_view_bring_to_front(views[i - 1]);
                break;
             }
          }
@@ -398,10 +404,10 @@ focus_view(wlc_handle view)
       {
          size_t memb;
          const wlc_handle *views = wlc_output_get_views(wlc_view_get_output(view), &memb);
-         for (size_t i = (memb > 0 ? memb - 1 : 0); i > 0; --i) {
-            if ((wlc_view_get_state(views[i]) & BIT_BEMENU)) {
+         for (size_t i = memb; i > 0; --i) {
+            if ((wlc_view_get_type(views[i - 1]) & BIT_BEMENU)) {
                // Always bring bemenu to front when exists.
-               wlc_view_bring_to_front(views[i]);
+               wlc_view_bring_to_front(views[i - 1]);
                break;
             }
          }
@@ -415,20 +421,41 @@ focus_view(wlc_handle view)
 static void
 focus_next_or_previous_view(wlc_handle view, enum direction direction)
 {
-   focus_view(get_next_view(wlc_view_get_output(view), 1, direction));
+   wlc_handle v = view;
+   wlc_handle old = loliwm.active.view;
+   do {
+      while ((v = get_next_view(v, 1, direction)) && v != view && wlc_view_get_mask(v) != wlc_output_get_mask(wlc_view_get_output(view)));
+      focus_view(v);
+   } while (loliwm.active.view && loliwm.active.view == old && v != old);
+}
+
+static void
+focus_topmost(wlc_handle output)
+{
+   size_t memb;
+   const wlc_handle *views = wlc_output_get_views(output, &memb);
+   for (size_t i = memb; i > 0; --i) {
+      if (wlc_view_get_mask(views[i - 1]) != wlc_output_get_mask(output))
+         continue;
+
+      focus_view(views[i - 1]);
+      break;
+   }
 }
 
 static void
 focus_space(uint32_t index)
 {
    wlc_output_set_mask(wlc_get_focused_output(), (1<<index));
+   focus_topmost(wlc_get_focused_output());
+   relayout(wlc_get_focused_output());
 }
 
 static void
 move_to_space(wlc_handle view, uint32_t index)
 {
    wlc_view_set_mask(view, (1<<index));
-   relayout(wlc_view_get_output(view));
+   focus_space(index);
 }
 
 static wlc_handle
@@ -440,9 +467,50 @@ output_for_index(uint32_t index)
 }
 
 static void
-cycle_output(wlc_handle output)
+cycle_output(wlc_handle output, enum direction dir)
 {
-   wlc_view_send_to_back(get_next_view(output, 1, PREV));
+   size_t memb;
+   wlc_handle *views = wlc_output_get_mutable_views(output, &memb);
+   if (memb < 2)
+      return;
+
+   switch (dir) {
+      case NEXT:
+         {
+            size_t last = NOTINDEX;
+            for (size_t i = 0; i < memb; ++i) {
+               if (!is_tiled(views[i]) || wlc_view_get_mask(views[i]) != wlc_output_get_mask(output))
+                  continue;
+
+               if (last != NOTINDEX) {
+                  wlc_handle tmp = views[last];
+                  views[last] = views[i];
+                  views[i] = tmp;
+               }
+
+               last = i;
+            }
+         }
+         break;
+
+      case PREV:
+         {
+            size_t last = NOTINDEX;
+            for (size_t i = memb; i > 0; --i) {
+               if (!is_tiled(views[i - 1]) || wlc_view_get_mask(views[i - 1]) != wlc_output_get_mask(output))
+                  continue;
+
+               if (last != NOTINDEX) {
+                  wlc_handle tmp = views[last];
+                  views[last] = views[i - 1];
+                  views[i - 1] = tmp;
+               }
+
+               last = i - 1;
+            }
+         }
+         break;
+   }
    relayout(output);
 }
 
@@ -450,6 +518,7 @@ static void
 focus_output(wlc_handle output)
 {
    wlc_output_focus(output);
+   focus_topmost(wlc_get_focused_output());
    relayout(output);
 }
 
@@ -469,18 +538,18 @@ move_to_output(wlc_handle view, uint32_t index)
 static void
 focus_next_or_previous_output(enum direction direction)
 {
-   wlc_output_focus(get_next_output(1, direction));
+   focus_output(get_next_output(wlc_get_focused_output(), 1, direction));
 }
 
 static bool
 view_created(wlc_handle view)
 {
-   if (wlc_view_get_class(view) && !strcmp(wlc_view_get_class(view), "bemenu")) {
+   if (wlc_view_get_class(view) && chck_cstreq(wlc_view_get_class(view), "bemenu")) {
       // Do not allow more than one bemenu instance
-      if (loliwm.active.view && wlc_view_get_state(loliwm.active.view) & BIT_BEMENU)
+      if (loliwm.active.view && wlc_view_get_type(loliwm.active.view) & BIT_BEMENU)
          return false;
 
-      wlc_view_set_state(view, BIT_BEMENU, true); // XXX: Hack
+      wlc_view_set_type(view, BIT_BEMENU, true); // XXX: Hack
    }
 
    if (should_focus_on_create(view))
@@ -526,6 +595,7 @@ view_move_to_output(wlc_handle view, wlc_handle from, wlc_handle to)
 
    relayout(from);
    relayout(to);
+   wlc_log(WLC_LOG_INFO, "view %zu moved from output %zu to %zu", view, from, to);
 
    if (from == to)
       focus_space(wlc_output_get_mask(from));
@@ -534,10 +604,10 @@ view_move_to_output(wlc_handle view, wlc_handle from, wlc_handle to)
 static void
 view_geometry_request(wlc_handle view, const struct wlc_geometry *geometry)
 {
-   uint32_t type = wlc_view_get_type(view);
-   uint32_t state = wlc_view_get_state(view);
-   bool tiled = is_tiled(view);
-   bool action = ((state & WLC_BIT_RESIZING) || (state & WLC_BIT_MOVING));
+   const uint32_t type = wlc_view_get_type(view);
+   const uint32_t state = wlc_view_get_state(view);
+   const bool tiled = is_tiled(view);
+   const bool action = ((state & WLC_BIT_RESIZING) || (state & WLC_BIT_MOVING));
 
    if (tiled && !action)
       return;
@@ -590,8 +660,6 @@ store_rgba(const struct wlc_size *size, uint8_t *rgba, void *arg)
 {
    (void)arg;
 
-   FILE *f;
-
    time_t now;
    time(&now);
    char buf[sizeof("loliwm-0000-00-00T00:00:00Z.ppm")];
@@ -601,6 +669,7 @@ store_rgba(const struct wlc_size *size, uint8_t *rgba, void *arg)
    if (!(rgb = calloc(1, size->w * size->h * 3)))
       return;
 
+   FILE *f;
    if (!(f = fopen(buf, "wb"))) {
       free(rgb);
       return;
@@ -704,6 +773,7 @@ keyboard_key(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifie
    syntax_append(&prefixed, name, true);
    chck_string_set_format(&syntax, "<%s>", syntax.data);
    chck_string_set_format(&prefixed, "<%s>", prefixed.data);
+   wlc_log(WLC_LOG_INFO, "hit combo: %s %s", syntax.data, prefixed.data);
 
    const struct keybind *k;
    if (!(k = keybind_for_syntax(prefixed.data)) &&
@@ -725,51 +795,6 @@ output_resolution(wlc_handle output, const struct wlc_size *from, const struct w
 {
    (void)output, (void)from, (void)to;
    relayout(output);
-}
-
-static void
-die(const char *format, ...)
-{
-   va_list vargs;
-   va_start(vargs, format);
-   wlc_vlog(WLC_LOG_ERROR, format, vargs);
-   va_end(vargs);
-   fflush(stderr);
-   exit(EXIT_FAILURE);
-}
-
-static uint32_t
-parse_prefix(const char *str)
-{
-   static const struct {
-      const char *name;
-      enum wlc_modifier_bit mod;
-   } map[] = {
-      { "shift", WLC_BIT_MOD_SHIFT },
-      { "caps", WLC_BIT_MOD_CAPS },
-      { "ctrl", WLC_BIT_MOD_CTRL },
-      { "alt", WLC_BIT_MOD_ALT },
-      { "mod2", WLC_BIT_MOD_MOD2 },
-      { "mod3", WLC_BIT_MOD_MOD3 },
-      { "logo", WLC_BIT_MOD_LOGO },
-      { "mod5", WLC_BIT_MOD_MOD5 },
-      { NULL, 0 },
-   };
-
-   uint32_t prefix = 0;
-   const char *s = str;
-   for (int i = 0; map[i].name && *s; ++i) {
-      if ((prefix & map[i].mod) || strncmp(map[i].name, s, strlen(map[i].name)))
-         continue;
-
-      prefix |= map[i].mod;
-      s += strlen(map[i].name) + 1;
-      if (*(s - 1) != ',')
-         break;
-      i = 0;
-   }
-
-   return (prefix ? prefix : WLC_BIT_MOD_ALT);
 }
 
 static void
@@ -813,7 +838,7 @@ static void
 key_cb_cycle_clients(wlc_handle view, uint32_t time, intptr_t arg)
 {
    (void)view, (void)time, (void)arg;
-   cycle_output(wlc_get_focused_output());
+   cycle_output(wlc_get_focused_output(), NEXT);
 }
 
 static void key_cb_focus_space(wlc_handle view, uint32_t time, intptr_t arg)
@@ -882,7 +907,7 @@ static bool
 setup_default_keybinds(void)
 {
    const char *terminal = getenv("TERMINAL");
-   chck_string_set_cstr(&loliwm.terminal, (chck_cstr_is_empty(terminal) ? DEFAULT_TERMINAL : terminal), false);
+   chck_string_set_cstr(&loliwm.terminal, (chck_cstr_is_empty(terminal) ? DEFAULT_TERMINAL : terminal), true);
 
    return (add_keybind("exit", "<P-Escape>", key_cb_exit, 0) &&
            add_keybind("close client", "<P-q>", key_cb_close_client, 0) &&
@@ -894,26 +919,26 @@ setup_default_keybinds(void)
            add_keybind("focus next client", "<P-k>", key_cb_focus_next_client, 0) &&
            add_keybind("focus previous client", "<P-j>", key_cb_focus_previous_client, 0) &&
            add_keybind("take screenshot", "<P-SunPrint_Screen>", key_cb_take_screenshot, 0) &&
-           add_keybind("focus space 0", "<P-0>", key_cb_focus_space, 0) &&
-           add_keybind("focus space 1", "<P-1>", key_cb_focus_space, 1) &&
-           add_keybind("focus space 2", "<P-2>", key_cb_focus_space, 2) &&
-           add_keybind("focus space 3", "<P-3>", key_cb_focus_space, 3) &&
-           add_keybind("focus space 4", "<P-4>", key_cb_focus_space, 4) &&
-           add_keybind("focus space 5", "<P-5>", key_cb_focus_space, 5) &&
-           add_keybind("focus space 6", "<P-6>", key_cb_focus_space, 6) &&
-           add_keybind("focus space 7", "<P-7>", key_cb_focus_space, 7) &&
-           add_keybind("focus space 8", "<P-8>", key_cb_focus_space, 8) &&
-           add_keybind("focus space 9", "<P-9>", key_cb_focus_space, 9) &&
-           add_keybind("move to space 0", "<P-F0>", key_cb_move_to_space, 0) &&
-           add_keybind("move to space 1", "<P-F1>", key_cb_move_to_space, 1) &&
-           add_keybind("move to space 2", "<P-F2>", key_cb_move_to_space, 2) &&
-           add_keybind("move to space 3", "<P-F3>", key_cb_move_to_space, 3) &&
-           add_keybind("move to space 4", "<P-F4>", key_cb_move_to_space, 4) &&
-           add_keybind("move to space 5", "<P-F5>", key_cb_move_to_space, 5) &&
-           add_keybind("move to space 6", "<P-F6>", key_cb_move_to_space, 6) &&
-           add_keybind("move to space 7", "<P-F7>", key_cb_move_to_space, 7) &&
-           add_keybind("move to space 8", "<P-F8>", key_cb_move_to_space, 8) &&
-           add_keybind("move to space 9", "<P-F9>", key_cb_move_to_space, 9) &&
+           add_keybind("focus space 0", "<P-1>", key_cb_focus_space, 0) &&
+           add_keybind("focus space 1", "<P-2>", key_cb_focus_space, 1) &&
+           add_keybind("focus space 2", "<P-3>", key_cb_focus_space, 2) &&
+           add_keybind("focus space 3", "<P-4>", key_cb_focus_space, 3) &&
+           add_keybind("focus space 4", "<P-5>", key_cb_focus_space, 4) &&
+           add_keybind("focus space 5", "<P-6>", key_cb_focus_space, 5) &&
+           add_keybind("focus space 6", "<P-7>", key_cb_focus_space, 6) &&
+           add_keybind("focus space 7", "<P-8>", key_cb_focus_space, 7) &&
+           add_keybind("focus space 8", "<P-9>", key_cb_focus_space, 8) &&
+           add_keybind("focus space 9", "<P-0>", key_cb_focus_space, 9) &&
+           add_keybind("move to space 0", "<P-F1>", key_cb_move_to_space, 0) &&
+           add_keybind("move to space 1", "<P-F2>", key_cb_move_to_space, 1) &&
+           add_keybind("move to space 2", "<P-F3>", key_cb_move_to_space, 2) &&
+           add_keybind("move to space 3", "<P-F4>", key_cb_move_to_space, 3) &&
+           add_keybind("move to space 4", "<P-F5>", key_cb_move_to_space, 4) &&
+           add_keybind("move to space 5", "<P-F6>", key_cb_move_to_space, 5) &&
+           add_keybind("move to space 6", "<P-F7>", key_cb_move_to_space, 6) &&
+           add_keybind("move to space 7", "<P-F8>", key_cb_move_to_space, 7) &&
+           add_keybind("move to space 8", "<P-F9>", key_cb_move_to_space, 8) &&
+           add_keybind("move to space 9", "<P-F0>", key_cb_move_to_space, 9) &&
            add_keybind("move to output 0", "<P-z>", key_cb_move_to_output, 0) &&
            add_keybind("move to output 1", "<P-x>", key_cb_move_to_output, 1) &&
            add_keybind("move to output 2", "<P-c>", key_cb_move_to_output, 2));
@@ -1038,14 +1063,6 @@ main(int argc, char *argv[])
 
    // do not care about childs
    sigaction(SIGCHLD, &action, NULL);
-
-   for (int i = 1; i < argc; ++i) {
-      if (!strcmp(argv[i], "--prefix")) {
-         if (i + 1 >= argc)
-            die("--prefix takes an argument (shift,caps,ctrl,alt,logo,mod2,mod3,mod5)");
-         loliwm.prefix = parse_prefix(argv[++i]);
-      }
-   }
 
    if (!setup_default_keybinds())
       return EXIT_FAILURE;
