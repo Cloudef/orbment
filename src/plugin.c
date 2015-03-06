@@ -122,14 +122,17 @@ import_method(plugin_h handle, const char *name, const char *signature)
       const struct method *m = &p->info.methods[i];
       if (chck_cstreq(m->info.name, name)) {
          if (!chck_cstreq(m->info.signature, signature)) {
-            wlc_log(WLC_LOG_WARN, "%s %s != %s signature mismatch in %s (%s)", name, signature, m->info.signature, p->info.name, p->info.version);
+            wlc_log(WLC_LOG_WARN, "Method '%s' '%s' != '%s' signature mismatch in %s (%s)", name, signature, m->info.signature, p->info.name, p->info.version);
             return NULL;
          }
+
+         if (m->deprecated)
+            wlc_log(WLC_LOG_WARN, "Method '%s' is deprecated in %s (%s)", name, p->info.name, p->info.version);
 
          return m->function;
       }
    }
 
-   wlc_log(WLC_LOG_WARN, "no such method %s in %s (%s)", name, p->info.name, p->info.version);
+   wlc_log(WLC_LOG_WARN, "No such method '%s' in %s (%s)", name, p->info.name, p->info.version);
    return NULL;
 }
