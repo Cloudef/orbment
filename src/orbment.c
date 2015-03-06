@@ -325,8 +325,10 @@ relayout(wlc_handle output)
       size_t memb;
       const wlc_handle *views = wlc_output_get_mutable_views(output, &memb);
       for (size_t i = 0; i < memb; ++i) {
-         if (is_tiled(views[i]) && wlc_output_get_mask(output) == wlc_view_get_mask(views[i]))
+         if (is_tiled(views[i]) && wlc_output_get_mask(output) == wlc_view_get_mask(views[i])) {
+            wlc_view_set_state(views[i], WLC_BIT_MAXIMIZED, true);
             chck_iter_pool_push_back(&tiled, &views[i]);
+         }
       }
 
       orbment.active.layout->function(output, tiled.items.buffer, tiled.items.count);
