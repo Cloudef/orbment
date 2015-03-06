@@ -421,11 +421,11 @@ focus_view(wlc_handle view)
 static void
 focus_next_or_previous_view(wlc_handle view, enum direction direction)
 {
-   wlc_handle v = view;
-   wlc_handle old = loliwm.active.view;
+   wlc_handle first = get_next_view(view, 0, direction), v = first, old = loliwm.active.view;
    do {
-      while ((v = get_next_view(v, 1, direction)) && v != view && wlc_view_get_mask(v) != wlc_output_get_mask(wlc_view_get_output(view)));
-      focus_view(v);
+      while ((v = get_next_view(v, 1, direction)) && v != first && wlc_view_get_mask(v) != wlc_output_get_mask(wlc_view_get_output(view)));
+      if (wlc_view_get_mask(v) == wlc_output_get_mask(wlc_get_focused_output()))
+         focus_view(v);
    } while (loliwm.active.view && loliwm.active.view == old && v != old);
 }
 
