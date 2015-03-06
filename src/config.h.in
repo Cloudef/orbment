@@ -1,6 +1,6 @@
 #ifndef __config__
 #define __config__
 
-#define PLUGINS_PATH "/usr/local/lib/loliwm"
+#define PLUGINS_PATH "@LOLIWM_PLUGINS_PATH@"
 
 #endif /* __config__ */
