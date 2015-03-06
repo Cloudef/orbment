@@ -77,7 +77,7 @@ static void
 next_layout(size_t offset, enum direction dir)
 {
    const size_t index = orbment.layouts.index, memb = orbment.layouts.pool.items.count;
-   orbment.layouts.index = (dir == PREV ? chck_clampsz(index - offset, 0, memb - 1) : index + offset) % memb;
+   orbment.layouts.index = (dir == PREV ? chck_clampsz(index - offset, 0, memb - 1) : index + offset) % chck_maxsz(memb, 1);
    orbment.active.layout = chck_iter_pool_get(&orbment.layouts.pool, orbment.layouts.index);
 }
 
