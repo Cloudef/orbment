@@ -1,5 +1,5 @@
-#ifndef __loliwm_plugin_h__
-#define __loliwm_plugin_h__
+#ifndef __orbment_plugin_h__
+#define __orbment_plugin_h__
 
 #include <stddef.h>
 #include <stdint.h>
@@ -14,6 +14,7 @@ struct method {
    struct method_info {
       const char *name, *signature;
    } info;
+   bool deprecated;
 };
 
 /**
@@ -29,6 +30,11 @@ struct plugin_info {
     * Name of the plugin.
     */
    const char *name;
+
+   /**
+    * Description of the plugin.
+    */
+   const char *description;
 
    /**
     * Version of the plugin.
@@ -154,7 +160,12 @@ void* import_method(plugin_h plugin, const char *name, const char *signature);
  *
  * Of course, it is always good idea to check source of your plugins.
  */
-#define REGISTER_METHOD(x, y) { .info = { .name = #x, .signature = y }, .function = x }
+#define REGISTER_METHOD(x, y) { .info = { .name = #x, .signature = y }, .function = x, .deprecated = false }
+
+/**
+ * Same as above, but marks as deprecated.
+ */
+#define REGISTER_DEPRECATED(x, y) { .info = { .name = #x, .signature = y }, .function = x, .deprecated = true }
 
 /**
  * Helper macro for filling method_info struct, mainly for has_methods function.
@@ -163,4 +174,4 @@ void* import_method(plugin_h plugin, const char *name, const char *signature);
  */
 #define METHOD(x, y) { .name = x, .signature = y }
 
-#endif /* __loliwm_plugin_h__ */
+#endif /* __orbment_plugin_h__ */

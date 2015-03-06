@@ -67,23 +67,23 @@ static struct {
 
    uint32_t prefix;
    struct chck_string terminal;
-} loliwm = {
+} orbment = {
    .prefix = WLC_BIT_MOD_LOGO,
 };
 
 static void
 next_layout(size_t offset, enum direction dir)
 {
-   const size_t index = loliwm.layouts.index, memb = loliwm.layouts.pool.items.count;
-   loliwm.layouts.index = (dir == PREV ? chck_clampsz(index - offset, 0, memb - 1) : index + offset) % memb;
-   loliwm.active.layout = chck_iter_pool_get(&loliwm.layouts.pool, loliwm.layouts.index);
+   const size_t index = orbment.layouts.index, memb = orbment.layouts.pool.items.count;
+   orbment.layouts.index = (dir == PREV ? chck_clampsz(index - offset, 0, memb - 1) : index + offset) % memb;
+   orbment.active.layout = chck_iter_pool_get(&orbment.layouts.pool, orbment.layouts.index);
 }
 
 static bool
 layout_exists(const char *name)
 {
    const struct layout *l;
-   chck_iter_pool_for_each(&loliwm.layouts.pool, l)
+   chck_iter_pool_for_each(&orbment.layouts.pool, l)
       if (chck_cstreq(name, l->name))
          return true;
    return false;
@@ -105,12 +105,12 @@ add_layout(const char *name, layout_fun_t function)
       .function = function,
    };
 
-   if (!chck_iter_pool_push_back(&loliwm.layouts.pool, &l))
+   if (!chck_iter_pool_push_back(&orbment.layouts.pool, &l))
       return false;
 
    wlc_log(WLC_LOG_INFO, "Added layout: %s", name);
 
-   if (!loliwm.active.layout)
+   if (!orbment.active.layout)
       next_layout(1, NEXT);
 
    return true;
@@ -120,14 +120,14 @@ static void
 remove_layout(const char *name)
 {
    const struct layout *l;
-   chck_iter_pool_for_each(&loliwm.layouts.pool, l) {
+   chck_iter_pool_for_each(&orbment.layouts.pool, l) {
       if (!chck_cstreq(name, l->name))
          continue;
 
-      chck_iter_pool_remove(&loliwm.layouts.pool, _I - 1);
+      chck_iter_pool_remove(&orbment.layouts.pool, _I - 1);
       wlc_log(WLC_LOG_INFO, "Removed layout: %s", name);
 
-      if (loliwm.layouts.index >= _I - 1)
+      if (orbment.layouts.index >= _I - 1)
          next_layout(1, PREV);
 
       break;
@@ -138,7 +138,7 @@ static bool
 keybind_exists(const char *name)
 {
    const struct keybind *k;
-   chck_pool_for_each(&loliwm.keybinds.pool, k)
+   chck_pool_for_each(&orbment.keybinds.pool, k)
       if (chck_cstreq(name, k->name))
          return true;
    return false;
@@ -148,10 +148,10 @@ static const struct keybind*
 keybind_for_syntax(const char *syntax)
 {
    size_t *index;
-   if (!(index = chck_hash_table_str_get(&loliwm.keybinds.table, syntax, strlen(syntax))) || *index == NOTINDEX)
+   if (!(index = chck_hash_table_str_get(&orbment.keybinds.table, syntax, strlen(syntax))) || *index == NOTINDEX)
       return NULL;
 
-   return chck_pool_get(&loliwm.keybinds.pool, *index);
+   return chck_pool_get(&orbment.keybinds.pool, *index);
 }
 
 static bool
@@ -174,12 +174,12 @@ add_keybind(const char *name, const char *syntax, keybind_fun_t function, intptr
    chck_string_set_cstr(&k.syntax, syntax, false);
 
    size_t index;
-   if (!chck_pool_add(&loliwm.keybinds.pool, &k, &index))
+   if (!chck_pool_add(&orbment.keybinds.pool, &k, &index))
       return false;
 
    const struct keybind *o;
    if (!(o = keybind_for_syntax(k.syntax.data))) {
-      chck_hash_table_str_set(&loliwm.keybinds.table, k.syntax.data, k.syntax.size, &index);
+      chck_hash_table_str_set(&orbment.keybinds.table, k.syntax.data, k.syntax.size, &index);
    } else {
       wlc_log(WLC_LOG_WARN, "'%s' is already mapped to keybind '%s'", syntax, o->name);
    }
@@ -192,11 +192,11 @@ static void
 remove_keybind(const char *name)
 {
    const struct keybind *k;
-   chck_pool_for_each(&loliwm.keybinds.pool, k) {
+   chck_pool_for_each(&orbment.keybinds.pool, k) {
       if (!chck_cstreq(name, k->name))
          continue;
 
-      chck_hash_table_str_set(&loliwm.keybinds.table, k->syntax.data, k->syntax.size, NULL);
+      chck_hash_table_str_set(&orbment.keybinds.table, k->syntax.data, k->syntax.size, NULL);
       wlc_log(WLC_LOG_INFO, "Removed keybind: %s", name);
       break;
    };
@@ -253,7 +253,7 @@ should_focus_on_create(wlc_handle view)
    // Do not allow parented windows to steal focus, if current window wasn't parent.
    const uint32_t type = wlc_view_get_type(view);
    const wlc_handle parent = wlc_view_get_parent(view);
-   return (!(type & WLC_BIT_UNMANAGED) && (!loliwm.active.view || !parent || parent == loliwm.active.view));
+   return (!(type & WLC_BIT_UNMANAGED) && (!orbment.active.view || !parent || parent == orbment.active.view));
 }
 
 static bool
@@ -317,7 +317,7 @@ relayout(wlc_handle output)
          layout_parent(views[i], parent, &wlc_view_get_geometry(views[i])->size);
    }
 
-   if (loliwm.active.layout) {
+   if (orbment.active.layout) {
       struct chck_iter_pool tiled = {{0}};
       if (!chck_iter_pool(&tiled, memb, memb, sizeof(wlc_handle)))
          return;
@@ -329,7 +329,7 @@ relayout(wlc_handle output)
             chck_iter_pool_push_back(&tiled, &views[i]);
       }
 
-      loliwm.active.layout->function(output, tiled.items.buffer, tiled.items.count);
+      orbment.active.layout->function(output, tiled.items.buffer, tiled.items.count);
       chck_iter_pool_release(&tiled);
    }
 }
@@ -360,12 +360,12 @@ raise_all(wlc_handle view)
 static void
 focus_view(wlc_handle view)
 {
-   if (loliwm.active.view == view)
+   if (orbment.active.view == view)
       return;
 
    // Bemenu should always have focus when open.
-   if (loliwm.active.view && (wlc_view_get_type(loliwm.active.view) & BIT_BEMENU)) {
-      wlc_view_bring_to_front(loliwm.active.view);
+   if (orbment.active.view && (wlc_view_get_type(orbment.active.view) & BIT_BEMENU)) {
+      wlc_view_bring_to_front(orbment.active.view);
       return;
    }
 
@@ -415,18 +415,18 @@ focus_view(wlc_handle view)
    }
 
    wlc_view_focus(view);
-   loliwm.active.view = view;
+   orbment.active.view = view;
 }
 
 static void
 focus_next_or_previous_view(wlc_handle view, enum direction direction)
 {
-   wlc_handle first = get_next_view(view, 0, direction), v = first, old = loliwm.active.view;
+   wlc_handle first = get_next_view(view, 0, direction), v = first, old = orbment.active.view;
    do {
       while ((v = get_next_view(v, 1, direction)) && v != first && wlc_view_get_mask(v) != wlc_output_get_mask(wlc_view_get_output(view)));
       if (wlc_view_get_mask(v) == wlc_output_get_mask(wlc_get_focused_output()))
          focus_view(v);
-   } while (loliwm.active.view && loliwm.active.view == old && v != old);
+   } while (orbment.active.view && orbment.active.view == old && v != old);
 }
 
 static void
@@ -546,7 +546,7 @@ view_created(wlc_handle view)
 {
    if (wlc_view_get_class(view) && chck_cstreq(wlc_view_get_class(view), "bemenu")) {
       // Do not allow more than one bemenu instance
-      if (loliwm.active.view && wlc_view_get_type(loliwm.active.view) & BIT_BEMENU)
+      if (orbment.active.view && wlc_view_get_type(orbment.active.view) & BIT_BEMENU)
          return false;
 
       wlc_view_set_type(view, BIT_BEMENU, true); // XXX: Hack
@@ -563,8 +563,8 @@ view_created(wlc_handle view)
 static void
 view_destroyed(wlc_handle view)
 {
-   if (loliwm.active.view == view) {
-      loliwm.active.view = 0;
+   if (orbment.active.view == view) {
+      orbment.active.view = 0;
 
       wlc_handle v;
       if ((v = wlc_view_get_parent(view))) {
@@ -662,8 +662,8 @@ store_rgba(const struct wlc_size *size, uint8_t *rgba, void *arg)
 
    time_t now;
    time(&now);
-   char buf[sizeof("loliwm-0000-00-00T00:00:00Z.ppm")];
-   strftime(buf, sizeof(buf), "loliwm-%FT%TZ.ppm", gmtime(&now));
+   char buf[sizeof("orbment-0000-00-00T00:00:00Z.ppm")];
+   strftime(buf, sizeof(buf), "orbment-%FT%TZ.ppm", gmtime(&now));
 
    uint8_t *rgb;
    if (!(rgb = calloc(1, size->w * size->h * 3)))
@@ -726,7 +726,7 @@ syntax_append(struct chck_string *syntax, const char *cstr, bool is_heap)
 static bool
 append_mods(struct chck_string *syntax, struct chck_string *prefixed, uint32_t mods)
 {
-   if (mods == loliwm.prefix && !syntax_append(prefixed, "P", false))
+   if (mods == orbment.prefix && !syntax_append(prefixed, "P", false))
       return false;
 
    static const struct {
@@ -915,11 +915,11 @@ static bool
 setup_default_keybinds(void)
 {
    const char *terminal = getenv("TERMINAL");
-   chck_string_set_cstr(&loliwm.terminal, (chck_cstr_is_empty(terminal) ? DEFAULT_TERMINAL : terminal), true);
+   chck_string_set_cstr(&orbment.terminal, (chck_cstr_is_empty(terminal) ? DEFAULT_TERMINAL : terminal), true);
 
    return (add_keybind("exit", "<P-Escape>", key_cb_exit, 0) &&
            add_keybind("close client", "<P-q>", key_cb_close_client, 0) &&
-           add_keybind("spawn terminal", "<P-Return>", key_cb_spawn, (intptr_t)loliwm.terminal.data) &&
+           add_keybind("spawn terminal", "<P-Return>", key_cb_spawn, (intptr_t)orbment.terminal.data) &&
            add_keybind("spawn bemenu", "<P-p>", key_cb_spawn, (intptr_t)DEFAULT_MENU) &&
            add_keybind("toggle fullscreen", "<P-f>", key_cb_toggle_fullscreen, 0) &&
            add_keybind("cycle clients", "<P-h>", key_cb_cycle_clients, 0) &&
@@ -968,7 +968,7 @@ plugins_init(void)
 
       struct plugin core = {
          .info = {
-            .name = "loliwm",
+            .name = "orbment",
             .version = "1.0.0",
             .methods = methods,
       }, {0}};
@@ -990,7 +990,7 @@ plugins_init(void)
          free(tmp);
       }
 
-      chck_string_set_format(&xdg, "%s/loliwm/plugins", xdg.data);
+      chck_string_set_format(&xdg, "%s/orbment/plugins", xdg.data);
 
 #ifndef NDEBUG
       // allows running without install, as long as you build in debug mode
@@ -1009,7 +1009,7 @@ plugins_init(void)
 
          struct dirent *dir;
          while ((dir = readdir(d))) {
-            if (!chck_cstr_starts_with(dir->d_name, "loliwm-plugin-"))
+            if (!chck_cstr_starts_with(dir->d_name, "orbment-plugin-"))
                continue;
 
             struct chck_string tmp = {0};
@@ -1065,11 +1065,11 @@ main(int argc, char *argv[])
 
    // default to alt on x11 session
    if (!chck_cstr_is_empty(x11))
-      loliwm.prefix = WLC_BIT_MOD_ALT;
+      orbment.prefix = WLC_BIT_MOD_ALT;
 
-   if (!chck_iter_pool(&loliwm.layouts.pool, 32, 0, sizeof(struct layout)) ||
-       !chck_pool(&loliwm.keybinds.pool, 32, 0, sizeof(struct keybind)) ||
-       !chck_hash_table(&loliwm.keybinds.table, -1, 256, sizeof(size_t)))
+   if (!chck_iter_pool(&orbment.layouts.pool, 32, 0, sizeof(struct layout)) ||
+       !chck_pool(&orbment.keybinds.pool, 32, 0, sizeof(struct keybind)) ||
+       !chck_hash_table(&orbment.keybinds.table, -1, 256, sizeof(size_t)))
       return EXIT_FAILURE;
 
    struct sigaction action = {
@@ -1086,10 +1086,10 @@ main(int argc, char *argv[])
    if (!plugins_init())
       return EXIT_FAILURE;
 
-   wlc_log(WLC_LOG_INFO, "loliwm started");
+   wlc_log(WLC_LOG_INFO, "orbment started");
    wlc_run();
 
-   memset(&loliwm, 0, sizeof(loliwm));
-   wlc_log(WLC_LOG_INFO, "-!- loliwm is gone, bye bye!");
+   memset(&orbment, 0, sizeof(orbment));
+   wlc_log(WLC_LOG_INFO, "-!- Orbment is gone, bye bye!");
    return EXIT_SUCCESS;
 }

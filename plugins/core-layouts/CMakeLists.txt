@@ -1,3 +1,3 @@
-add_library(loliwm-plugin-core-layouts SHARED core-layouts.c)
-set_target_properties(loliwm-plugin-core-layouts PROPERTIES PREFIX "")
-install(TARGETS loliwm-plugin-core-layouts DESTINATION ${LOLIWM_PLUGINS_PATH})
+add_library(orbment-plugin-core-layouts SHARED core-layouts.c)
+set_target_properties(orbment-plugin-core-layouts PROPERTIES PREFIX "")
+install(TARGETS orbment-plugin-core-layouts DESTINATION ${ORBMENT_PLUGINS_PATH})

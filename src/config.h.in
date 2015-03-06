@@ -1,6 +1,6 @@
-#ifndef __config__
-#define __config__
+#ifndef __orbment_config__
+#define __orbment_config__
 
-#define PLUGINS_PATH "@LOLIWM_PLUGINS_PATH@"
+#define PLUGINS_PATH "@ORBMENT_PLUGINS_PATH@"
 
-#endif /* __config__ */
+#endif /* __orbment_config__ */

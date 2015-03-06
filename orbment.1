@@ -1,10 +1,10 @@
-.TH loliwm 1 "October 25" loliwm
+.TH orbment 1 "October 25" orbment
 .SH NAME
-loliwm \- Dynamic wayland compositor.
+Orbment \- Dynamic wayland compositor.
 .SH SYNOPSIS
-\fBloliwm\fP [options]
+\fBorbment\fP [options]
 .SH DESCRIPTION
-\fBloliwm\fP is a dynamic window manager and compositor for Wayland built using
+\fBorbment\fP is a dynamic window manager and compositor for Wayland built using
 the wlc library.
 .SH OPTIONS
 .IP "\fB\-\-prefix\fR \fImodifier\fR
@@ -50,12 +50,12 @@ Closes the focused client.
 Shifts the cut of the nmaster layout to shrink or expand the view.
 .IP \fBmod-print\fR
 Takes a screenshot in PPM (Portable Pixmap) format and stores it in the directory
-loliwm was started from.
+Orbment was started from.
 .IP \fBmod-escape\fR
-Quits \fBloliwm\fR.
+Quits \fBOrbment\fR.
 .SH ENVIRONMENT
 .IP \fBTERMINAL\fR
-Currently \fBloliwm\fR will honor this environment variable when starting a new
+Currently \fBOrbment\fR will honor this environment variable when starting a new
 terminal emulator. If this is not set it will fall back on \fBweston-terminal\fR.
 .IP \fBWLC_BG\fR
 Takes a boolean \fI0\fR or \fI1\fR which disables or enables the background.
@@ -65,7 +65,7 @@ Takes a boolean \fI0\fR or \fI1\fR, true forces EGL clients to fallback to shm.
 (Default: \fI0\fR)
 .IP \fBWLC_DIM\fR
 Takes an interval between \fI0.0\fR and \fI1.0\fR to define the dullness and
-brightness of the dimming effect on unfocused clients respectively.  (Default: 
+brightness of the dimming effect on unfocused clients respectively.  (Default:
 \fI0.5\fR)
 .IP \fBWLC_DEBUG\fR
 Takes a comma-separated list of values which enable tracing activity on the

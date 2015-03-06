@@ -2,7 +2,7 @@
 #include <assert.h>
 #include <wlc/wlc.h>
 #include <chck/math/math.h>
-#include <loliwm/plugin.h>
+#include <orbment/plugin.h>
 
 static struct {
    struct {
@@ -118,11 +118,11 @@ plugin_deinit(void)
 bool
 plugin_init(void)
 {
-   plugin_h loliwm;
-   if (!(loliwm = import_plugin("loliwm")))
+   plugin_h orbment;
+   if (!(orbment = import_plugin("orbment")))
       return false;
 
-   if (!has_methods(loliwm,
+   if (!has_methods(orbment,
             (const struct method_info[]){
                METHOD("add_layout", "b(c[],p)|1"),
                METHOD("remove_layout", "v(c[])|1"),
@@ -133,11 +133,11 @@ plugin_init(void)
             }))
       return false;
 
-   relayout = import_method(loliwm, "relayout", "v(h)|1");
-   add_layout = import_method(loliwm, "add_layout", "b(c[],p)|1");
-   remove_layout = import_method(loliwm, "remove_layout", "v(c[])|1");
-   add_keybind = import_method(loliwm, "add_keybind", "b(c[],c[],p,ip)|1");
-   remove_keybind = import_method(loliwm, "remove_keybind", "v(c[])|1");
+   relayout = import_method(orbment, "relayout", "v(h)|1");
+   add_layout = import_method(orbment, "add_layout", "b(c[],p)|1");
+   remove_layout = import_method(orbment, "remove_layout", "v(c[])|1");
+   add_keybind = import_method(orbment, "add_keybind", "b(c[],c[],p,ip)|1");
+   remove_keybind = import_method(orbment, "remove_keybind", "v(c[])|1");
 
    for (size_t i = 0; layouts[i].name; ++i)
       if (!add_layout(layouts[i].name, layouts[i].function))
@@ -155,6 +155,7 @@ plugin_register(void)
 {
    static const struct plugin_info info = {
       .name = "core-layouts",
+      .description = "Provides core set of layouts.",
       .version = "1.0.0",
    };
 

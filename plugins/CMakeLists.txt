@@ -4,8 +4,8 @@ set(plugins
 
 include_directories(
    ${WLC_INCLUDE_DIRS}
-   ${loliwm_SOURCE_DIR}/include
-   ${loliwm_SOURCE_DIR}/lib/chck/src
+   ${orbment_SOURCE_DIR}/include
+   ${orbment_SOURCE_DIR}/lib/chck/src
    )
 
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/plugins)
