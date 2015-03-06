@@ -529,8 +529,10 @@ move_to_output(wlc_handle view, uint32_t index)
    if (!(output = output_for_index(index)))
       return;
 
+   focus_next_or_previous_view(view, PREV);
    wlc_handle old = wlc_view_get_output(view);
    wlc_view_set_output(view, output);
+   wlc_view_set_mask(view, wlc_output_get_mask(output));
    relayout(old);
    focus_output(output);
 }
