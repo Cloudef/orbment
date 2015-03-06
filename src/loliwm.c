@@ -1031,11 +1031,6 @@ main(int argc, char *argv[])
 {
    (void)argc, (void)argv;
 
-   if (!chck_iter_pool(&loliwm.layouts.pool, 32, 0, sizeof(struct layout)) ||
-       !chck_pool(&loliwm.keybinds.pool, 32, 0, sizeof(struct keybind)) ||
-       !chck_hash_table(&loliwm.keybinds.table, -1, 256, sizeof(size_t)))
-      return EXIT_FAILURE;
-
    static const struct wlc_interface interface = {
       .output = {
          .resolution = output_resolution,
@@ -1063,6 +1058,11 @@ main(int argc, char *argv[])
    };
 
    if (!wlc_init(&interface, argc, argv))
+      return EXIT_FAILURE;
+
+   if (!chck_iter_pool(&loliwm.layouts.pool, 32, 0, sizeof(struct layout)) ||
+       !chck_pool(&loliwm.keybinds.pool, 32, 0, sizeof(struct keybind)) ||
+       !chck_hash_table(&loliwm.keybinds.table, -1, 256, sizeof(size_t)))
       return EXIT_FAILURE;
 
    struct sigaction action = {
