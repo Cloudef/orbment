@@ -118,8 +118,6 @@ void* import_method(plugin_h plugin, const char *name, const char *signature);
 
 /**
  * Helper macro for registering methods.
- * x == function
- * y == signature
  *
  * Type literals:
  * XXX: Extendable, however we should have good base that does not change
