@@ -32,12 +32,14 @@ enum direction {
    PREV,
 };
 
-typedef void (*layout_fun_t)(wlc_handle output, const wlc_handle *views, size_t memb);
+static const char *layout_signature = "v(*,h[],sz)|1";
+typedef void (*layout_fun_t)(const struct wlc_geometry *region, const wlc_handle *views, size_t memb);
 struct layout {
    const char *name;
    layout_fun_t function;
 };
 
+static const char *keybind_signature = "v(h,u32,ip)|1";
 typedef void (*keybind_fun_t)(wlc_handle view, uint32_t time, intptr_t arg);
 struct keybind {
    const char *name;
@@ -90,10 +92,15 @@ layout_exists(const char *name)
 }
 
 static bool
-add_layout(const char *name, layout_fun_t function)
+add_layout(const char *name, const struct function *fun)
 {
-   if (!name)
+   if (!name || !fun)
       return false;
+
+   if (!chck_cstreq(fun->signature, layout_signature)) {
+      wlc_log(WLC_LOG_WARN, "Wrong signature provided for '%s layout' function. (%s != %s)", name, layout_signature, fun->signature);
+      return false;
+   }
 
    if (layout_exists(name)) {
       wlc_log(WLC_LOG_WARN, "Layout with name '%s' already exists", name);
@@ -102,7 +109,7 @@ add_layout(const char *name, layout_fun_t function)
 
    struct layout l = {
       .name = name,
-      .function = function,
+      .function = fun->function,
    };
 
    if (!chck_iter_pool_push_back(&orbment.layouts.pool, &l))
@@ -155,10 +162,15 @@ keybind_for_syntax(const char *syntax)
 }
 
 static bool
-add_keybind(const char *name, const char *syntax, keybind_fun_t function, intptr_t arg)
+add_keybind(const char *name, const char *syntax, const struct function *fun, intptr_t arg)
 {
-   if (!name)
+   if (!name || !fun)
       return false;
+
+   if (!chck_cstreq(fun->signature, keybind_signature)) {
+      wlc_log(WLC_LOG_WARN, "Wrong signature provided for '%s keybind' function. (%s != %s)", name, keybind_signature, fun->signature);
+      return false;
+   }
 
    if (keybind_exists(name)) {
       wlc_log(WLC_LOG_WARN, "Keybind with name '%s' already exists", name);
@@ -167,7 +179,7 @@ add_keybind(const char *name, const char *syntax, keybind_fun_t function, intptr
 
    struct keybind k = {
       .name = name,
-      .function = function,
+      .function = fun->function,
       .arg = arg,
    };
 
@@ -331,7 +343,7 @@ relayout(wlc_handle output)
          }
       }
 
-      orbment.active.layout->function(output, tiled.items.buffer, tiled.items.count);
+      orbment.active.layout->function(&(struct wlc_geometry){ { 0, 0 }, *r }, tiled.items.buffer, tiled.items.count);
       chck_iter_pool_release(&tiled);
    }
 }
@@ -660,50 +672,7 @@ pointer_button(wlc_handle view, uint32_t time, const struct wlc_modifiers *modif
    return true;
 }
 
-static void
-store_rgba(const struct wlc_size *size, uint8_t *rgba, void *arg)
-{
-   (void)arg;
 
-   time_t now;
-   time(&now);
-   char buf[sizeof("orbment-0000-00-00T00:00:00Z.ppm")];
-   strftime(buf, sizeof(buf), "orbment-%FT%TZ.ppm", gmtime(&now));
-
-   uint8_t *rgb;
-   if (!(rgb = calloc(1, size->w * size->h * 3)))
-      return;
-
-   FILE *f;
-   if (!(f = fopen(buf, "wb"))) {
-      free(rgb);
-      return;
-   }
-
-   for (uint32_t i = 0, c = 0; i < size->w * size->h * 4; i += 4, c += 3)
-      memcpy(rgb + c, rgba + i, 3);
-
-   for (uint32_t i = 0; i * 2 < size->h; ++i) {
-      uint32_t o = i * size->w * 3;
-      uint32_t r = (size->h - 1 - i) * size->w * 3;
-      for (uint32_t i2 = size->w * 3; i2 > 0; --i2, ++o, ++r) {
-         uint8_t temp = rgb[o];
-         rgb[o] = rgb[r];
-         rgb[r] = temp;
-      }
-   }
-
-   fprintf(f, "P6\n%d %d\n255\n", size->w, size->h);
-   fwrite(rgb, 1, size->w * size->h * 3, f);
-   free(rgb);
-   fclose(f);
-}
-
-static void
-screenshot(wlc_handle output)
-{
-   wlc_output_get_pixels(output, store_rgba, NULL);
-}
 
 static void
 spawn(const char *bin)
@@ -902,13 +871,6 @@ key_cb_focus_next_client(wlc_handle view, uint32_t time, intptr_t arg)
 }
 
 static void
-key_cb_take_screenshot(wlc_handle view, uint32_t time, intptr_t arg)
-{
-   (void)view, (void)time, (void)arg;
-   screenshot(wlc_get_focused_output());
-}
-
-static void
 key_cb_next_layout(wlc_handle view, uint32_t time, intptr_t arg)
 {
    (void)view, (void)time, (void)arg;
@@ -922,40 +884,53 @@ setup_default_keybinds(void)
    const char *terminal = getenv("TERMINAL");
    chck_string_set_cstr(&orbment.terminal, (chck_cstr_is_empty(terminal) ? DEFAULT_TERMINAL : terminal), true);
 
-   return (add_keybind("exit", "<P-Escape>", key_cb_exit, 0) &&
-           add_keybind("close client", "<P-q>", key_cb_close_client, 0) &&
-           add_keybind("spawn terminal", "<P-Return>", key_cb_spawn, (intptr_t)orbment.terminal.data) &&
-           add_keybind("spawn bemenu", "<P-p>", key_cb_spawn, (intptr_t)DEFAULT_MENU) &&
-           add_keybind("toggle fullscreen", "<P-f>", key_cb_toggle_fullscreen, 0) &&
-           add_keybind("cycle clients", "<P-h>", key_cb_cycle_clients, 0) &&
-           add_keybind("focus next output", "<P-l>", key_cb_focus_next_output, 0) &&
-           add_keybind("focus next client", "<P-k>", key_cb_focus_next_client, 0) &&
-           add_keybind("focus previous client", "<P-j>", key_cb_focus_previous_client, 0) &&
-           add_keybind("take screenshot", "<P-SunPrint_Screen>", key_cb_take_screenshot, 0) &&
-           add_keybind("focus space 0", "<P-1>", key_cb_focus_space, 0) &&
-           add_keybind("focus space 1", "<P-2>", key_cb_focus_space, 1) &&
-           add_keybind("focus space 2", "<P-3>", key_cb_focus_space, 2) &&
-           add_keybind("focus space 3", "<P-4>", key_cb_focus_space, 3) &&
-           add_keybind("focus space 4", "<P-5>", key_cb_focus_space, 4) &&
-           add_keybind("focus space 5", "<P-6>", key_cb_focus_space, 5) &&
-           add_keybind("focus space 6", "<P-7>", key_cb_focus_space, 6) &&
-           add_keybind("focus space 7", "<P-8>", key_cb_focus_space, 7) &&
-           add_keybind("focus space 8", "<P-9>", key_cb_focus_space, 8) &&
-           add_keybind("focus space 9", "<P-0>", key_cb_focus_space, 9) &&
-           add_keybind("move to space 0", "<P-F1>", key_cb_move_to_space, 0) &&
-           add_keybind("move to space 1", "<P-F2>", key_cb_move_to_space, 1) &&
-           add_keybind("move to space 2", "<P-F3>", key_cb_move_to_space, 2) &&
-           add_keybind("move to space 3", "<P-F4>", key_cb_move_to_space, 3) &&
-           add_keybind("move to space 4", "<P-F5>", key_cb_move_to_space, 4) &&
-           add_keybind("move to space 5", "<P-F6>", key_cb_move_to_space, 5) &&
-           add_keybind("move to space 6", "<P-F7>", key_cb_move_to_space, 6) &&
-           add_keybind("move to space 7", "<P-F8>", key_cb_move_to_space, 7) &&
-           add_keybind("move to space 8", "<P-F9>", key_cb_move_to_space, 8) &&
-           add_keybind("move to space 9", "<P-F0>", key_cb_move_to_space, 9) &&
-           add_keybind("move to output 0", "<P-z>", key_cb_move_to_output, 0) &&
-           add_keybind("move to output 1", "<P-x>", key_cb_move_to_output, 1) &&
-           add_keybind("move to output 2", "<P-c>", key_cb_move_to_output, 2) &&
-           add_keybind("next layout", "<P-w>", key_cb_next_layout, 0));
+   const struct {
+      const char *name, *syntax;
+      keybind_fun_t function;
+      intptr_t arg;
+   } keybinds[] = {
+      { "exit", "<P-Escape>", key_cb_exit, 0 },
+      { "close client", "<P-q>", key_cb_close_client, 0 },
+      { "spawn terminal", "<P-Return>", key_cb_spawn, (intptr_t)orbment.terminal.data },
+      { "spawn bemenu", "<P-p>", key_cb_spawn, (intptr_t)DEFAULT_MENU },
+      { "toggle fullscreen", "<P-f>", key_cb_toggle_fullscreen, 0 },
+      { "cycle clients", "<P-h>", key_cb_cycle_clients, 0 },
+      { "focus next output", "<P-l>", key_cb_focus_next_output, 0 },
+      { "focus next client", "<P-k>", key_cb_focus_next_client, 0 },
+      { "focus previous client", "<P-j>", key_cb_focus_previous_client, 0 },
+      { "focus space 0", "<P-1>", key_cb_focus_space, 0 },
+      { "focus space 1", "<P-2>", key_cb_focus_space, 1 },
+      { "focus space 2", "<P-3>", key_cb_focus_space, 2 },
+      { "focus space 3", "<P-4>", key_cb_focus_space, 3 },
+      { "focus space 4", "<P-5>", key_cb_focus_space, 4 },
+      { "focus space 5", "<P-6>", key_cb_focus_space, 5 },
+      { "focus space 6", "<P-7>", key_cb_focus_space, 6 },
+      { "focus space 7", "<P-8>", key_cb_focus_space, 7 },
+      { "focus space 8", "<P-9>", key_cb_focus_space, 8 },
+      { "focus space 9", "<P-0>", key_cb_focus_space, 9 },
+      { "move to space 0", "<P-F1>", key_cb_move_to_space, 0 },
+      { "move to space 1", "<P-F2>", key_cb_move_to_space, 1 },
+      { "move to space 2", "<P-F3>", key_cb_move_to_space, 2 },
+      { "move to space 3", "<P-F4>", key_cb_move_to_space, 3 },
+      { "move to space 4", "<P-F5>", key_cb_move_to_space, 4 },
+      { "move to space 5", "<P-F6>", key_cb_move_to_space, 5 },
+      { "move to space 6", "<P-F7>", key_cb_move_to_space, 6 },
+      { "move to space 7", "<P-F8>", key_cb_move_to_space, 7 },
+      { "move to space 8", "<P-F9>", key_cb_move_to_space, 8 },
+      { "move to space 9", "<P-F0>", key_cb_move_to_space, 9 },
+      { "move to output 0", "<P-z>", key_cb_move_to_output, 0 },
+      { "move to output 1", "<P-x>", key_cb_move_to_output, 1 },
+      { "move to output 2", "<P-c>", key_cb_move_to_output, 2 },
+      { "next layout", "<P-w>", key_cb_next_layout, 0 },
+      {0},
+   };
+
+   for (size_t i = 0; keybinds[i].name; ++i)
+      if (!add_keybind(keybinds[i].name, keybinds[i].syntax, FUN(keybinds[i].function, keybind_signature), keybinds[i].arg))
+         return false;
+
+   return true;
+
 }
 
 static bool
@@ -964,9 +939,9 @@ plugins_init(void)
    {
       static const struct method methods[] = {
          REGISTER_METHOD(relayout, "v(h)|1"),
-         REGISTER_METHOD(add_layout, "b(c[],p)|1"),
+         REGISTER_METHOD(add_layout, "b(c[],fun)|1"),
          REGISTER_METHOD(remove_layout, "v(c[])|1"),
-         REGISTER_METHOD(add_keybind, "b(c[],c[],p,ip)|1"),
+         REGISTER_METHOD(add_keybind, "b(c[],c[],fun,ip)|1"),
          REGISTER_METHOD(remove_keybind, "v(c[])|1"),
          {0},
       };
@@ -975,7 +950,7 @@ plugins_init(void)
          .info = {
             .name = "orbment",
             .description = "Provides core functionality.",
-            .version = "1.0.0",
+            .version = VERSION,
             .methods = methods,
       }, {0}};
 

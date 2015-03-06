@@ -18,6 +18,16 @@ struct method {
 };
 
 /**
+ * Use this instead of pointers when passing functions between plugins.
+ * The other plugin can sanity check the function signature.
+ * See also the FUN macro.
+ */
+struct function {
+   void *function;
+   const char *signature;
+};
+
+/**
  * Struct which statically allocated reference should be returned by plugin_register function.
  * Used for filling information and functionality of the plugin.
  *
@@ -129,9 +139,10 @@ void* import_method(plugin_h plugin, const char *name, const char *signature);
  * d   | double
  * c   | char
  * b   | bool
- * p   | pointer
+ * *   | pointer
  * []  | array, you can use element count inside as C allows compile time checks for element sizes.
  * v   | void
+ * fun | function, see function struct above.
  * h   | wlc handle
  *
  * Written as:
@@ -143,7 +154,8 @@ void* import_method(plugin_h plugin, const char *name, const char *signature);
  * p(c[12],i16,i32)|1
  *
  * Returns pointer, takes char array with size of 12, signed short and signed int.
- * For pointers to POD arrays use [] without number instead of p. eg. char* would be c[].
+ * For pointers to POD arrays use [] without number instead of *. eg. char* would be c[].
+ * For pointers to POD types use <type>*, eg. size_t* would be sz*.
  *
  * The ABI version must be incremented for each revision of the function where meaning of input data changed.
  * This is most important with pointers used as references to data structures.
@@ -160,18 +172,21 @@ void* import_method(plugin_h plugin, const char *name, const char *signature);
  *
  * Of course, it is always good idea to check source of your plugins.
  */
-#define REGISTER_METHOD(x, y) { .info = { .name = #x, .signature = y }, .function = x, .deprecated = false }
+#define REGISTER_METHOD(fun, sig) { .info = { .name = #fun, .signature = sig }, .function = fun, .deprecated = false }
 
 /**
  * Same as above, but marks as deprecated.
  */
-#define REGISTER_DEPRECATED(x, y) { .info = { .name = #x, .signature = y }, .function = x, .deprecated = true }
+#define REGISTER_DEPRECATED(fun, sig) { .info = { .name = #fun, .signature = sig }, .function = fun, .deprecated = true }
 
 /**
  * Helper macro for filling method_info struct, mainly for has_methods function.
- * x == function
- * y == signature
  */
-#define METHOD(x, y) { .name = x, .signature = y }
+#define METHOD(fun, sig) { .name = fun, .signature = sig }
+
+/**
+ * Helper macro for filling function struct, use when passing functions to other plugins.
+ */
+#define FUN(fun, sig) &(struct function){ .function = fun, .signature = sig }
 
 #endif /* __orbment_plugin_h__ */
