@@ -672,8 +672,6 @@ pointer_button(wlc_handle view, uint32_t time, const struct wlc_modifiers *modif
    return true;
 }
 
-
-
 static void
 spawn(const char *bin)
 {
