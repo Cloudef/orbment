@@ -122,10 +122,16 @@ plugin_init(void)
 const struct plugin_info*
 plugin_register(void)
 {
+   static const char *requires[] = {
+      "compressor",
+      NULL,
+   };
+
    static const struct plugin_info info = {
       .name = "core-screenshot",
       .description = "Provides screenshot functionality.",
       .version = VERSION,
+      .requires = requires,
    };
 
    return &info;
