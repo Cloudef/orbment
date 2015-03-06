@@ -68,7 +68,7 @@ static struct {
    uint32_t prefix;
    struct chck_string terminal;
 } loliwm = {
-   .prefix = WLC_BIT_MOD_ALT,
+   .prefix = WLC_BIT_MOD_LOGO,
 };
 
 static void
@@ -1057,8 +1057,15 @@ main(int argc, char *argv[])
       },
    };
 
+   // get before wlc_init, as it may set DISPLAY for xwayland
+   const char *x11 = getenv("DISPLAY");
+
    if (!wlc_init(&interface, argc, argv))
       return EXIT_FAILURE;
+
+   // default to alt on x11 session
+   if (!chck_cstr_is_empty(x11))
+      loliwm.prefix = WLC_BIT_MOD_ALT;
 
    if (!chck_iter_pool(&loliwm.layouts.pool, 32, 0, sizeof(struct layout)) ||
        !chck_pool(&loliwm.keybinds.pool, 32, 0, sizeof(struct keybind)) ||
