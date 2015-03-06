@@ -15,7 +15,7 @@ exists(const char *name, struct plugin **out_p)
 
    struct plugin *p;
    chck_pool_for_each(&plugins, p) {
-      if (chck_cstreq(p->info.name, name)) {
+      if (p->handle && chck_cstreq(p->info.name, name)) {
          if (out_p) *out_p = p;
          return true;
       }
