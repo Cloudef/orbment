@@ -151,7 +151,7 @@ void* import_method(plugin_h plugin, const char *name, const char *signature);
  * Arguments are separated with colons for readibility.
  *
  * Example:
- * p(c[12],i16,i32)|1
+ * *(c[12],i16,i32)|1
  *
  * Returns pointer, takes char array with size of 12, signed short and signed int.
  * For pointers to POD arrays use [] without number instead of *. eg. char* would be c[].
