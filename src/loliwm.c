@@ -72,7 +72,7 @@ static struct {
 };
 
 static void
-next_or_prev_layout(size_t offset, enum direction dir)
+next_layout(size_t offset, enum direction dir)
 {
    const size_t index = loliwm.layouts.index, memb = loliwm.layouts.pool.items.count;
    loliwm.layouts.index = (dir == PREV ? chck_clampsz(index - offset, 0, memb - 1) : index + offset) % memb;
@@ -111,7 +111,7 @@ add_layout(const char *name, layout_fun_t function)
    wlc_log(WLC_LOG_INFO, "Added layout: %s", name);
 
    if (!loliwm.active.layout)
-      next_or_prev_layout(1, NEXT);
+      next_layout(1, NEXT);
 
    return true;
 }
@@ -128,7 +128,7 @@ remove_layout(const char *name)
       wlc_log(WLC_LOG_INFO, "Removed layout: %s", name);
 
       if (loliwm.layouts.index >= _I - 1)
-         next_or_prev_layout(1, PREV);
+         next_layout(1, PREV);
 
       break;
    }
@@ -903,6 +903,14 @@ key_cb_take_screenshot(wlc_handle view, uint32_t time, intptr_t arg)
    screenshot(wlc_get_focused_output());
 }
 
+static void
+key_cb_next_layout(wlc_handle view, uint32_t time, intptr_t arg)
+{
+   (void)view, (void)time, (void)arg;
+   next_layout(1, NEXT);
+   relayout(wlc_get_focused_output());
+}
+
 static bool
 setup_default_keybinds(void)
 {
@@ -941,7 +949,8 @@ setup_default_keybinds(void)
            add_keybind("move to space 9", "<P-F0>", key_cb_move_to_space, 9) &&
            add_keybind("move to output 0", "<P-z>", key_cb_move_to_output, 0) &&
            add_keybind("move to output 1", "<P-x>", key_cb_move_to_output, 1) &&
-           add_keybind("move to output 2", "<P-c>", key_cb_move_to_output, 2));
+           add_keybind("move to output 2", "<P-c>", key_cb_move_to_output, 2) &&
+           add_keybind("next layout", "<P-w>", key_cb_next_layout, 0));
 }
 
 static bool

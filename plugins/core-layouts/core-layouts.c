@@ -68,6 +68,23 @@ nmaster(wlc_handle output, const wlc_handle *views, size_t memb)
    }
 }
 
+static void
+grid(wlc_handle output, const wlc_handle *views, size_t memb)
+{
+   const struct wlc_size *r;
+   if (!(r = wlc_output_get_resolution(output)))
+      return;
+
+   bool toggle = false;
+   uint32_t y = 0;
+   uint32_t w = r->w / 2, h = r->h / chck_maxu32((1 + memb) / 2, 1);
+   for (size_t i = 0; i < memb; ++i) {
+      struct wlc_geometry g = { { (toggle ? w : 0), y }, { (!toggle && i == memb - 1 ? r->w : w), h } };
+      wlc_view_set_geometry(views[i], &g);
+      y = y + (!(toggle = !toggle) ? h : 0);
+   }
+}
+
 static const struct {
    const char *name, *syntax;
    keybind_fun_t function;
@@ -82,6 +99,7 @@ static const struct {
    layout_fun_t function;
 } layouts[] = {
    { "nmaster", nmaster },
+   { "grid", grid },
    {0},
 };
 
