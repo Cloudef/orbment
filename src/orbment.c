@@ -1004,6 +1004,8 @@ plugins_init(void)
 
       chck_string_release(&xdg);
    }
+
+   load_plugins();
    return true;
 }
 
@@ -1069,6 +1071,8 @@ main(int argc, char *argv[])
 
    wlc_log(WLC_LOG_INFO, "orbment started");
    wlc_run();
+   deload_plugins();
+   wlc_terminate();
 
    memset(&orbment, 0, sizeof(orbment));
    wlc_log(WLC_LOG_INFO, "-!- Orbment is gone, bye bye!");
