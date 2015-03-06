@@ -587,7 +587,8 @@ view_destroyed(wlc_handle view)
 static void
 view_focus(wlc_handle view, bool focus)
 {
-   wlc_view_set_state(view, WLC_BIT_ACTIVATED, focus);
+   if (wlc_view_get_output(view) == wlc_get_focused_output())
+      wlc_view_set_state(view, WLC_BIT_ACTIVATED, focus);
 }
 
 static void
