@@ -24,7 +24,7 @@ register_plugin(struct plugin *plugin, const struct plugin_info* (*reg)(void))
    if (!chck_pool_add(&plugins, plugin, NULL))
       return false;
 
-   wlc_log(WLC_LOG_INFO, "registered plugin %s (%s)", plugin->info.name, plugin->info.version);
+   wlc_log(WLC_LOG_INFO, "registered plugin %s (%s) %s", plugin->info.name, plugin->info.version, plugin->info.description);
    return true;
 }
 

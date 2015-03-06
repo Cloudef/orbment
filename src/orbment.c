@@ -969,6 +969,7 @@ plugins_init(void)
       struct plugin core = {
          .info = {
             .name = "orbment",
+            .description = "Provides core functionality.",
             .version = "1.0.0",
             .methods = methods,
       }, {0}};
