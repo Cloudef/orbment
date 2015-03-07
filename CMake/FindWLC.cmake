@@ -10,7 +10,7 @@
 #     WLC_LIBRARY      - the wlc library
 #
 
-find_path(WLC_INCLUDE_DIR NAMES wlc.h)
+find_path(WLC_INCLUDE_DIR NAMES wlc/wlc.h)
 find_library(WLC_LIBRARY NAMES wlc)
 
 include(FindPackageHandleStandardArgs)
