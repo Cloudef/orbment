@@ -7,6 +7,7 @@
 #include <chck/math/math.h>
 #include <chck/string/string.h>
 #include <chck/pool/pool.h>
+#include <pthread.h>
 #include "config.h"
 
 static const char *compress_signature = "u8[](p,u8[],sz*)|1";
@@ -28,35 +29,40 @@ static void (*remove_keybind)(const char *name);
 
 static struct chck_iter_pool keybinds;
 
-static void
-cb_pixels(const struct wlc_size *dimensions, uint8_t *rgba, void *arg)
-{
-   size_t memb;
-   size_t i = (size_t)arg;
-   struct compressor *compressors = list_compressors("image", struct_signature, compress_signature, &memb);
-   if (!memb || i >= memb) {
-      wlc_log(WLC_LOG_ERROR, "Could not find compressor for index (%zu)", i);
-      return;
-   }
-
-   size_t size;
+struct work {
+   struct wlc_size dimensions;
+   struct compressor compressor;
    uint8_t *data;
-   if (!(data = compressors[i].function(dimensions, rgba, &size)) || !size)
-      return;
+};
+
+static void*
+on_thread(void *arg)
+{
+   struct work *work = arg;
+   assert(work);
+
+   if (!work)
+      return NULL;
 
    time_t now;
    time(&now);
    char buf[sizeof("orbment-0000-00-00T00:00:00Z")];
    strftime(buf, sizeof(buf), "orbment-%FT%TZ", gmtime(&now));
 
+   size_t size;
+   uint8_t *data;
+   if (!(data = work->compressor.function(&work->dimensions, work->data, &size)) || !size) {
+      wlc_log(WLC_LOG_ERROR, "Failed to compress data using '%s compressor'", work->compressor.name);
+      goto error0;
+   }
+
    struct chck_string name = {0};
-   chck_string_set_format(&name, "%s.%s", buf, compressors[i].ext);
+   chck_string_set_format(&name, "%s.%s", buf, work->compressor.ext);
 
    FILE *f;
    if (!(f = fopen(name.data, "wb"))) {
-      chck_string_release(&name);
-      free(data);
-      return;
+      wlc_log(WLC_LOG_ERROR, "Could not open file for writing: %s", name.data);
+      goto error1;
    }
 
    fwrite(data, 1, size, f);
@@ -65,7 +71,48 @@ cb_pixels(const struct wlc_size *dimensions, uint8_t *rgba, void *arg)
 
    wlc_log(WLC_LOG_INFO, "Wrote screenshot to %s", name.data);
    chck_string_release(&name);
+   free(work->data);
+   free(work);
+   return NULL;
 
+error1:
+   chck_string_release(&name);
+   free(data);
+error0:
+   free(work->data);
+   free(work);
+   return NULL;
+}
+
+static bool
+cb_pixels(const struct wlc_size *dimensions, uint8_t *rgba, void *arg)
+{
+   size_t memb;
+   size_t i = (size_t)arg;
+   struct compressor *compressors = list_compressors("image", struct_signature, compress_signature, &memb);
+   if (!memb || i >= memb) {
+      wlc_log(WLC_LOG_ERROR, "Could not find compressor for index (%zu)", i);
+      return false;
+   }
+
+   struct work *work;
+   if (!(work = calloc(1, sizeof(struct work)))) {
+      wlc_log(WLC_LOG_ERROR, "Out of memory");
+      return false;
+   }
+
+   work->data = rgba;
+   work->dimensions = *dimensions;
+   memcpy(&work->compressor, &compressors[i], sizeof(struct compressor));
+
+   pthread_t thread;
+   if (pthread_create(&thread, NULL, on_thread, work) != 0) {
+      wlc_log(WLC_LOG_ERROR, "Could not spawn thread");
+      return false;
+   }
+
+   pthread_detach(thread);
+   return true; // ← rgba is not released
 }
 
 static void
@@ -110,7 +157,7 @@ plugin_init(void)
    for (size_t i = 0; i < memb; ++i) {
       struct chck_string name = {0};
       chck_string_set_format(&name, "take screenshot (%s)", compressors[i].name);
-      if (!add_keybind(name.data, (i == 0 ? "<P-s>" : NULL), FUN(key_cb_screenshot, keybind_signature), i))
+      if (!add_keybind(name.data, (chck_cstreq(compressors[i].name, "png") ? "<P-s>" : NULL), FUN(key_cb_screenshot, keybind_signature), i))
          return false;
       chck_iter_pool_push_back(&keybinds, &name);
    }
