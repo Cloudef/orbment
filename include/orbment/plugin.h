@@ -54,6 +54,12 @@ struct plugin_info {
    const char *version;
 
    /**
+    * Use REGISTER_METHOD macro to register each method the plugin exports for others.
+    * Zero-terminated array of methods (struct method)
+    */
+   const struct method *methods;
+
+   /**
     * Provides given plugins in addition to the name of this plugin.
     * May be NULL, if no additional provides are needed.
     * Zero-terminated array of pointers to char arrays.
@@ -84,10 +90,15 @@ struct plugin_info {
    const char **after;
 
    /**
-    * Use REGISTER_METHOD macro to register each method the plugin exports for others.
-    * Zero-terminated array of methods (struct method)
+    * Groups the plugin belongs to. Plugins may require or load after group.
+    * Group name can be same as plugin name.
+    * This will not cause recursion if plugin belonging to the group also requires similar named plugin.
+    * This is useful when providing api, which other plugins can extend. (ex. compressor)
+    * It makes sure the api and the extensions are loaded on require.
+    * May be NULL, if no groups are needed
+    * Zero-terminated array of pointers to char arrays.
     */
-   const struct method *methods;
+   const char **groups;
 };
 
 /**

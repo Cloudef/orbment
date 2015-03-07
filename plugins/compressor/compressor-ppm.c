@@ -86,11 +86,17 @@ plugin_register(void)
       NULL,
    };
 
+   static const char *groups[] = {
+      "compressor",
+      NULL,
+   };
+
    static const struct plugin_info info = {
       .name = "compressor-ppm",
       .description = "Provides compression to ppm image format.",
       .version = VERSION,
       .requires = requires,
+      .groups = groups,
    };
 
    return &info;

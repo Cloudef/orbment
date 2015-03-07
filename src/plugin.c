@@ -3,37 +3,126 @@
 #include <stdio.h>
 #include <assert.h>
 #include "chck/dl/dl.h"
+#include "chck/lut/lut.h"
 #include "chck/pool/pool.h"
 
-static struct chck_pool plugins;
+static const size_t NOTINDEX = (size_t)-1;
 
-static bool
-exists(const char *name, struct plugin **out_p)
+static struct chck_pool plugins;
+static struct chck_hash_table names;
+static struct chck_hash_table groups;
+
+static plugin_h
+get_handle(const char *name)
 {
    assert(name);
-   if (out_p) *out_p = NULL;
+   plugin_h *h = chck_hash_table_str_get(&names, name, strlen(name));
+   return (h ? *h : NOTINDEX);
+}
 
-   struct plugin *p;
-   chck_pool_for_each(&plugins, p) {
-      if (p->handle && chck_cstreq(p->info.name, name)) {
-         if (out_p) *out_p = p;
+static struct plugin*
+get(const char *name)
+{
+   assert(name);
+   return chck_pool_get(&plugins, get_handle(name));
+}
+
+static void
+unlink_name(const char *name)
+{
+   assert(name);
+   chck_hash_table_str_set(&names, name, strlen(name), &NOTINDEX);
+}
+
+static bool
+link_name(const char *name, plugin_h handle)
+{
+   assert(name);
+
+   if (handle == NOTINDEX || (!names.lut.table && !chck_hash_table(&names, NOTINDEX, 256, sizeof(plugin_h))))
+      return false;
+
+   return chck_hash_table_str_set(&names, name, strlen(name), &handle);
+}
+
+static struct chck_iter_pool*
+get_group(const char *name)
+{
+   assert(name);
+   return (groups.lut.table ? chck_hash_table_str_get(&groups, name, strlen(name)) : NULL);
+}
+
+static void
+remove_from_group(const char *name, plugin_h handle)
+{
+   assert(name);
+
+   struct chck_iter_pool *pool;
+   if (!(pool = get_group(name)))
+      return;
+
+   plugin_h *h;
+   chck_iter_pool_for_each(pool, h) {
+      if (*h != handle)
+         continue;
+
+      chck_iter_pool_remove(pool, _I - 1);
+      break;
+   }
+}
+
+static bool
+exists_in_pool(struct chck_iter_pool *pool, plugin_h handle)
+{
+   assert(pool);
+   plugin_h *h;
+   chck_iter_pool_for_each(pool, h) {
+      if (*h == handle)
          return true;
-      }
+   }
+   return false;
+}
+
+static bool
+add_to_group(const char *name, plugin_h handle)
+{
+   assert(name);
+
+   if (handle == NOTINDEX || (!groups.lut.table && !chck_hash_table(&groups, NOTINDEX, 256, sizeof(struct chck_iter_pool))))
+      return false;
+
+   {
+      struct chck_iter_pool *pool;
+      if ((pool = get_group(name)))
+         return (exists_in_pool(pool, handle) ? false : chck_iter_pool_push_back(pool, &handle));
    }
 
+   struct chck_iter_pool pool;
+   if (!chck_iter_pool(&pool, 1, 0, sizeof(plugin_h)))
+      return false;
+
+   if (!chck_iter_pool_push_back(&pool, &handle) || !chck_hash_table_str_set(&groups, name, strlen(name), &pool))
+      goto error0;
+
+   return true;
+
+error0:
+   chck_iter_pool_release(&pool);
    return false;
 }
 
 static bool
 deload_plugin(struct plugin *p, bool force)
 {
-   if (!p->loaded)
+   assert(p);
+
+   if (!p->loaded && !p->handle)
       return true;
 
    struct chck_string *s;
    chck_iter_pool_for_each(&p->needed, s) {
       struct plugin *d;
-      if (exists(s->data, &d) && d->loaded) {
+      if ((d = get(s->data)) && d->loaded) {
          if (force) {
             deload_plugin(d, force);
          } else {
@@ -46,7 +135,10 @@ deload_plugin(struct plugin *p, bool force)
    chck_iter_pool_for_each_call(&p->needed, chck_string_release);
    chck_iter_pool_release(&p->needed);
 
-   if (p->deinit)
+   if (p->info.name)
+      unlink_name(p->info.name);
+
+   if (p->loaded && p->deinit)
       p->deinit();
 
    if (p->handle)
@@ -57,49 +149,98 @@ deload_plugin(struct plugin *p, bool force)
    return true;
 }
 
+static bool load_plugin(struct plugin *p);
+
+static bool
+load_dep(struct plugin *p, struct plugin *d, bool hard)
+{
+   assert(p && d);
+
+   if (!d->loaded && !load_plugin(d) && hard)
+      return false;
+
+   struct chck_string name = {0};
+   if (!chck_string_set_cstr(&name, p->info.name, true))
+      return false;
+
+   if (!chck_iter_pool_push_back(&d->needed, &name))
+      goto error0;
+
+   return true;
+
+error0:
+   chck_string_release(&name);
+   return false;
+}
+
+static bool
+load_deps_from_group(struct plugin *p, struct chck_iter_pool *pool, bool hard)
+{
+   assert(p && pool);
+   plugin_h *h;
+   chck_iter_pool_for_each(pool, h) {
+      struct plugin *d = chck_pool_get(&plugins, *h);
+      if (d && !load_dep(p, d, hard))
+         return false;
+   }
+   return true;
+}
+
+static bool
+belongs_to_group(struct plugin *p, const char *name)
+{
+   assert(p && name);
+   for (uint32_t i = 0; p->info.groups && p->info.groups[i]; ++i) {
+      if (chck_cstreq(p->info.groups[i], name))
+         return true;
+   }
+   return false;
+}
+
+static bool
+load_deps_from_array(struct plugin *p, const char **array, bool hard)
+{
+   assert(p);
+
+   for (uint32_t i = 0; array && array[i]; ++i) {
+      struct chck_iter_pool *pool;
+      if (!belongs_to_group(p, array[i]) && (pool = get_group(array[i])))
+         return load_deps_from_group(p, pool, hard);
+
+      struct plugin *d;
+      if (!(d = get(array[i])) && hard) {
+         wlc_log(WLC_LOG_ERROR, "Dependency '%s' for plugin '%s' was not found", array[i], p->info.name);
+         return false;
+      }
+
+      if (d && !load_dep(p, d, hard))
+         return false;
+   }
+
+   return true;
+}
+
 static bool
 load_plugin(struct plugin *p)
 {
+   assert(p);
+
    if (p->loaded)
       return true;
 
-   if (p->info.requires) {
-      for (uint32_t i = 0; p->info.requires[i]; ++i) {
-         struct plugin *d;
-         if (!exists(p->info.requires[i], &d)) {
-            wlc_log(WLC_LOG_ERROR, "Dependency '%s' for plugin '%s' was not found", p->info.requires[i], p->info.name);
-            return false;
-         }
+   if (!load_deps_from_array(p, p->info.requires, true) ||
+       !load_deps_from_array(p, p->info.after, false))
+      goto error0;
 
-         if (!d->loaded && !load_plugin(d))
-            return false;
-
-         struct chck_string name = {0};
-         chck_string_set_cstr(&name, p->info.name, true);
-         chck_iter_pool_push_back(&d->needed, &name);
-      }
-   }
-
-   if (p->info.after) {
-      for (uint32_t i = 0; p->info.after[i]; ++i) {
-         struct plugin *d;
-         if (exists(p->info.after[i], &d)) {
-            if (load_plugin(d)) {
-               struct chck_string name = {0};
-               chck_string_set_cstr(&name, p->info.name, true);
-               chck_iter_pool_push_back(&d->needed, &name);
-            }
-         }
-      }
-   }
-
-   if (p->init && !p->init()) {
-      wlc_log(WLC_LOG_ERROR, "Plugin '%s' failed to load", p->info.name);
-      deload_plugin(p, false);
-      return false;
-   }
+   if (p->init && !p->init())
+      goto error0;
 
    return (p->loaded = true);
+
+error0:
+   wlc_log(WLC_LOG_ERROR, "Plugin '%s' failed to load", p->info.name);
+   deload_plugin(p, false);
+   return false;
 }
 
 static void
@@ -118,14 +259,15 @@ deload_plugins(void)
       plugin_release(p);
 
    chck_pool_release(&plugins);
+   chck_hash_table_release(&names);
    wlc_log(WLC_LOG_INFO, "Deloaded plugins");
 }
 
 void
 load_plugins(void)
 {
-   size_t loaded = 0, count = plugins.items.count;
    struct plugin *p;
+   size_t loaded = 0, count = plugins.items.count;
    chck_pool_for_each(&plugins, p) {
       if (!load_plugin(p)) {
          chck_pool_remove(&plugins, _I - 1);
@@ -137,6 +279,36 @@ load_plugins(void)
    wlc_log(WLC_LOG_INFO, "Loaded %zu/%zu plugins", loaded, count);
 }
 
+enum conflict_msg {
+   registered,
+   conflict,
+   group
+};
+
+static bool
+exists_in_info_array(const char *name, const char **array, bool check_group, enum conflict_msg msg)
+{
+   assert(name);
+
+   for (uint32_t i = 0; array && array[i]; ++i) {
+      struct plugin *p;
+      if ((p = get(array[i])) || (check_group && get_group(array[i]))) {
+         if (msg == registered) {
+            wlc_log(WLC_LOG_ERROR, "%s with name '%s' is already registered", (p ? "Plugin" : "Group"), array[i]);
+         } else if (msg == conflict) {
+            wlc_log(WLC_LOG_ERROR, "Plugin '%s' conflicts with %s '%s'", (p ? "plugin" : "group"), name, array[i]);
+         } else if (msg == group) {
+            if (get_group(array[i])) // check if the conflicted package belongs to the group as well
+               return false;         // if that is true, we can ignore this conflict.
+            wlc_log(WLC_LOG_ERROR, "Group '%s' conflicts with plugin '%s'", array[i], p->info.name);
+         }
+         return true;
+      }
+   }
+
+   return false;
+}
+
 bool
 register_plugin(struct plugin *plugin, const struct plugin_info* (*reg)(void))
 {
@@ -145,45 +317,56 @@ register_plugin(struct plugin *plugin, const struct plugin_info* (*reg)(void))
    if (reg) {
       const struct plugin_info *info;
       if (!(info = reg()))
-         return false;
+         goto error0;
 
-      if (exists(info->name, NULL)) {
-         wlc_log(WLC_LOG_ERROR, "Plugin with name '%s' is already registered", info->name);
-         return false;
+      if (!info->name || !info->description) {
+         wlc_log(WLC_LOG_ERROR, "Plugin with no name or description is not allowed");
+         goto error0;
       }
 
-      if (info->provides) {
-         for (uint32_t i = 0; info->provides[i]; ++i) {
-            if (exists(info->provides[i], NULL)) {
-               wlc_log(WLC_LOG_ERROR, "Plugin with name '%s' is already registered", info->provides[i]);
-               return false;
-            }
-         }
+      struct plugin *p;
+      if ((p = get(info->name)) || get_group(info->name)) {
+         wlc_log(WLC_LOG_ERROR, "Plugin with %s '%s' is already registered", (p ? "plugin" : "group"), info->name);
+         goto error0;
       }
 
-      if (info->conflicts) {
-         for (uint32_t i = 0; info->conflicts[i]; ++i) {
-            if (exists(info->conflicts[i], NULL)) {
-               wlc_log(WLC_LOG_ERROR, "Plugin '%s' conflicts with plugin '%s'", info->name, info->conflicts[i]);
-               return false;
-            }
-         }
-      }
+      if (exists_in_info_array(info->name, info->provides, true, registered) ||
+          exists_in_info_array(info->name, info->conflicts, true, conflict) ||
+          exists_in_info_array(info->name, info->groups, false, group))
+         goto error0;
 
       memcpy(&plugin->info, info, sizeof(plugin->info));
    }
 
    if (!plugins.items.member && !chck_pool(&plugins, 1, 0, sizeof(struct plugin)))
-      return false;
+      goto error0;
 
-   if (!chck_iter_pool(&plugin->needed, 1, 0, sizeof(struct chck_string)))
-      return false;
+   plugin_h handle;
+   if (!chck_iter_pool(&plugin->needed, 1, 0, sizeof(struct chck_string)) || !chck_pool_add(&plugins, plugin, &handle))
+      goto error0;
 
-   if (!chck_pool_add(&plugins, plugin, NULL))
-      return false;
+   if (!link_name(plugin->info.name, handle))
+      goto error1;
+
+   if (plugin->info.groups) {
+      for (uint32_t i = 0; plugin->info.groups[i]; ++i) {
+         if (!add_to_group(plugin->info.groups[i], handle))
+            goto error2;
+      }
+   }
 
    wlc_log(WLC_LOG_INFO, "registered plugin %s (%s) %s", plugin->info.name, plugin->info.version, plugin->info.description);
    return true;
+
+error2:
+   unlink_name(plugin->info.name);
+   for (uint32_t i = 0; plugin->info.groups[i]; ++i)
+      remove_from_group(plugin->info.groups[i], handle);
+error1:
+   chck_pool_remove(&plugins, handle);
+error0:
+   plugin_release(plugin);
+   return false;
 }
 
 bool
@@ -213,14 +396,7 @@ register_plugin_from_path(const char *path)
    p.init = methods[1];
    p.deinit = methods[2];
    p.handle = handle;
-   chck_string_set_cstr(&p.path, path, true);
-
-   if (!register_plugin(&p, methods[0])) {
-      plugin_release(&p);
-      return false;
-   }
-
-   return true;
+   return (chck_string_set_cstr(&p.path, path, true) && register_plugin(&p, methods[0]));
 }
 
 plugin_h
@@ -229,13 +405,8 @@ import_plugin(const char *name)
    if (!name)
       return 0;
 
-   struct plugin *p;
-   chck_pool_for_each(&plugins, p) {
-      if (chck_cstreq(p->info.name, name))
-         return _I;
-   }
-
-   return 0;
+   const plugin_h h = get_handle(name);
+   return (h == NOTINDEX ? 0 : h + 1);
 }
 
 bool

@@ -162,11 +162,17 @@ plugin_register(void)
       {0},
    };
 
+   static const char *groups[] = {
+      "compressor",
+      NULL,
+   };
+
    static const struct plugin_info info = {
       .name = "compressor",
       .description = "Provides compression api.",
       .version = VERSION,
       .methods = methods,
+      .groups = groups,
    };
 
    return &info;
