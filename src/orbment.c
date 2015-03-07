@@ -155,7 +155,7 @@ static const struct keybind*
 keybind_for_syntax(const char *syntax)
 {
    size_t *index;
-   if (!(index = chck_hash_table_str_get(&orbment.keybinds.table, syntax, strlen(syntax))) || *index == NOTINDEX)
+   if (chck_cstr_is_empty(syntax) || !(index = chck_hash_table_str_get(&orbment.keybinds.table, syntax, strlen(syntax))) || *index == NOTINDEX)
       return NULL;
 
    return chck_pool_get(&orbment.keybinds.pool, *index);
@@ -191,7 +191,8 @@ add_keybind(const char *name, const char *syntax, const struct function *fun, in
 
    const struct keybind *o;
    if (!(o = keybind_for_syntax(k.syntax.data))) {
-      chck_hash_table_str_set(&orbment.keybinds.table, k.syntax.data, k.syntax.size, &index);
+      if (!chck_string_is_empty(&k.syntax))
+         chck_hash_table_str_set(&orbment.keybinds.table, k.syntax.data, k.syntax.size, &index);
    } else {
       wlc_log(WLC_LOG_WARN, "'%s' is already mapped to keybind '%s'", syntax, o->name);
    }
@@ -208,7 +209,10 @@ remove_keybind(const char *name)
       if (!chck_cstreq(name, k->name))
          continue;
 
-      chck_hash_table_str_set(&orbment.keybinds.table, k->syntax.data, k->syntax.size, NULL);
+      if (!chck_string_is_empty(&k->syntax))
+         chck_hash_table_str_set(&orbment.keybinds.table, k->syntax.data, k->syntax.size, NULL);
+
+      chck_pool_remove(&orbment.keybinds.pool, _I - 1);
       wlc_log(WLC_LOG_INFO, "Removed keybind: %s", name);
       break;
    };
@@ -1051,7 +1055,7 @@ main(int argc, char *argv[])
 
    if (!chck_iter_pool(&orbment.layouts.pool, 32, 0, sizeof(struct layout)) ||
        !chck_pool(&orbment.keybinds.pool, 32, 0, sizeof(struct keybind)) ||
-       !chck_hash_table(&orbment.keybinds.table, -1, 256, sizeof(size_t)))
+       !chck_hash_table(&orbment.keybinds.table, NOTINDEX, 256, sizeof(size_t)))
       return EXIT_FAILURE;
 
    struct sigaction action = {
