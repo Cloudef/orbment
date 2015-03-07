@@ -114,7 +114,7 @@ You can build bootstrapped version of ``Orbment`` with the following steps.
 
     git submodule update --init --recursive # - initialize and fetch submodules
     mkdir target && cd target               # - create build target directory
-    cmake ..                                # - run CMake
+    cmake -DCMAKE_BUILD_TYPE=Debug ..       # - run CMake (Use -DSOURCE_WLC=ON, to build wlc from repo)
     make                                    # - compile
 
     # You can now run
