@@ -591,7 +591,7 @@ view_destroyed(wlc_handle view)
          focus_view(v);
       } else {
          // Otherwise focus previous one.
-         focus_next_or_previous_view(view, PREV);
+         focus_topmost(wlc_view_get_output(view));
       }
    }
 
