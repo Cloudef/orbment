@@ -14,6 +14,9 @@ compress(const struct wlc_size *size, uint8_t *rgba, size_t *out_size)
    if (out_size)
       *out_size = 0;
 
+   if (!size)
+      return NULL;
+
    uint8_t *rgb;
    if (!(rgb = calloc(1, size->w * size->h * 3)))
       return NULL;
