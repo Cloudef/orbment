@@ -107,6 +107,9 @@ add_layout(const char *name, const struct function *fun)
       return false;
    }
 
+   if (!orbment.layouts.pool.items.member && !chck_iter_pool(&orbment.layouts.pool, 32, 0, sizeof(struct layout)))
+      return false;
+
    struct layout l = {
       .name = name,
       .function = fun->function,
@@ -139,6 +142,14 @@ remove_layout(const char *name)
 
       break;
    }
+}
+
+static void
+remove_layouts(void)
+{
+   chck_iter_pool_release(&orbment.layouts.pool);
+   orbment.layouts.index = 0;
+   orbment.active.layout = NULL;
 }
 
 static bool
@@ -177,6 +188,12 @@ add_keybind(const char *name, const char *syntax, const struct function *fun, in
       return false;
    }
 
+   if (!orbment.keybinds.pool.items.member && !chck_pool(&orbment.keybinds.pool, 32, 0, sizeof(struct keybind)))
+      return false;
+
+   if (!orbment.keybinds.table.lut.table && !chck_hash_table(&orbment.keybinds.table, NOTINDEX, 256, sizeof(size_t)))
+      return false;
+
    struct keybind k = {
       .name = name,
       .function = fun->function,
@@ -202,9 +219,18 @@ add_keybind(const char *name, const char *syntax, const struct function *fun, in
 }
 
 static void
+keybind_release(struct keybind *k)
+{
+   if (!k)
+      return;
+
+   chck_string_release(&k->syntax);
+}
+
+static void
 remove_keybind(const char *name)
 {
-   const struct keybind *k;
+   struct keybind *k;
    chck_pool_for_each(&orbment.keybinds.pool, k) {
       if (!chck_cstreq(name, k->name))
          continue;
@@ -212,10 +238,19 @@ remove_keybind(const char *name)
       if (!chck_string_is_empty(&k->syntax))
          chck_hash_table_str_set(&orbment.keybinds.table, k->syntax.data, k->syntax.size, NULL);
 
+      keybind_release(k);
       chck_pool_remove(&orbment.keybinds.pool, _I - 1);
       wlc_log(WLC_LOG_INFO, "Removed keybind: %s", name);
       break;
    };
+}
+
+static void
+remove_keybinds(void)
+{
+   chck_pool_for_each_call(&orbment.keybinds.pool, keybind_release);
+   chck_pool_release(&orbment.keybinds.pool);
+   chck_hash_table_release(&orbment.keybinds.table);
 }
 
 static wlc_handle
@@ -1055,11 +1090,6 @@ main(int argc, char *argv[])
    if (!chck_cstr_is_empty(x11))
       orbment.prefix = WLC_BIT_MOD_ALT;
 
-   if (!chck_iter_pool(&orbment.layouts.pool, 32, 0, sizeof(struct layout)) ||
-       !chck_pool(&orbment.keybinds.pool, 32, 0, sizeof(struct keybind)) ||
-       !chck_hash_table(&orbment.keybinds.table, NOTINDEX, 256, sizeof(size_t)))
-      return EXIT_FAILURE;
-
    struct sigaction action = {
       .sa_handler = SIG_DFL,
       .sa_flags = SA_NOCLDWAIT
@@ -1076,9 +1106,12 @@ main(int argc, char *argv[])
 
    wlc_log(WLC_LOG_INFO, "orbment started");
    wlc_run();
+   remove_layouts();
+   remove_keybinds();
    deload_plugins();
    wlc_terminate();
 
+   chck_string_release(&orbment.terminal);
    memset(&orbment, 0, sizeof(orbment));
    wlc_log(WLC_LOG_INFO, "-!- Orbment is gone, bye bye!");
    return EXIT_SUCCESS;
