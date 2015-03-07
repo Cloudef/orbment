@@ -81,6 +81,13 @@ grid(const struct wlc_geometry *r, const wlc_handle *views, size_t memb)
    }
 }
 
+static void
+monocle(const struct wlc_geometry *r, const wlc_handle *views, size_t memb)
+{
+   for (size_t i = 0; i < memb; ++i)
+      wlc_view_set_geometry(views[i], r);
+}
+
 static const struct {
    const char *name, *syntax;
    keybind_fun_t function;
@@ -96,6 +103,7 @@ static const struct {
 } layouts[] = {
    { "nmaster", nmaster },
    { "grid", grid },
+   { "monocle", monocle },
    {0},
 };
 
