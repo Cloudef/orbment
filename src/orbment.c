@@ -950,7 +950,8 @@ plugins_init(void)
             .description = "Provides core functionality.",
             .version = VERSION,
             .methods = methods,
-      }, {0}};
+         }
+      };
 
       if (!register_plugin(&core, NULL))
          return false;
