@@ -79,11 +79,10 @@ bool
 plugin_deinit(void)
 {
    struct chck_string *str;
-   chck_iter_pool_for_each(&keybinds, str) {
+   chck_iter_pool_for_each(&keybinds, str)
       remove_keybind(str->data);
-      chck_string_release(str);
-   }
 
+   chck_iter_pool_for_each_call(&keybinds, chck_string_release);
    chck_iter_pool_release(&keybinds);
    return true;
 }
