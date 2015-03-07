@@ -590,7 +590,7 @@ view_destroyed(wlc_handle view)
          wlc_view_set_parent(view, 0);
          focus_view(v);
       } else {
-         // Otherwise focus previous one (stacking order).
+         // Otherwise focus previous one.
          focus_next_or_previous_view(view, PREV);
       }
    }
