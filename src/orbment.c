@@ -547,11 +547,8 @@ move_to_output(wlc_handle view, uint32_t index)
    if (!(output = output_for_index(index)))
       return;
 
-   focus_next_or_previous_view(view, PREV);
-   wlc_handle old = wlc_view_get_output(view);
-   wlc_view_set_output(view, output);
    wlc_view_set_mask(view, wlc_output_get_mask(output));
-   relayout(old);
+   wlc_view_set_output(view, output);
    focus_output(output);
 }
 
@@ -614,12 +611,17 @@ view_move_to_output(wlc_handle view, wlc_handle from, wlc_handle to)
 {
    (void)view;
 
+   focus_topmost(from);
    relayout(from);
    relayout(to);
    wlc_log(WLC_LOG_INFO, "view %zu moved from output %zu to %zu", view, from, to);
 
-   if (from == to)
-      focus_space(wlc_output_get_mask(from));
+   if (wlc_view_get_state(view) & WLC_BIT_ACTIVATED) {
+      size_t memb;
+      const wlc_handle *views = wlc_output_get_views(to, &memb);
+      for (size_t i = 0; i < memb; ++i)
+         wlc_view_set_state(views[i], WLC_BIT_ACTIVATED, (views[i] == orbment.active.view));
+   }
 }
 
 static void
