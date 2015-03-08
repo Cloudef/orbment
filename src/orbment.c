@@ -1106,12 +1106,12 @@ main(int argc, char *argv[])
 
    wlc_log(WLC_LOG_INFO, "orbment started");
    wlc_run();
+
    remove_layouts();
    remove_keybinds();
    deload_plugins();
-   wlc_terminate();
-
    chck_string_release(&orbment.terminal);
+
    memset(&orbment, 0, sizeof(orbment));
    wlc_log(WLC_LOG_INFO, "-!- Orbment is gone, bye bye!");
    return EXIT_SUCCESS;
