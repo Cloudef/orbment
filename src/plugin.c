@@ -325,8 +325,8 @@ register_plugin(struct plugin *plugin, const struct plugin_info* (*reg)(void))
       }
 
       struct plugin *p;
-      if ((p = get(info->name)) || get_group(info->name)) {
-         wlc_log(WLC_LOG_ERROR, "Plugin with %s '%s' is already registered", (p ? "plugin" : "group"), info->name);
+      if ((p = get(info->name))) {
+         wlc_log(WLC_LOG_ERROR, "Plugin with name '%s' is already registered", info->name);
          goto error0;
       }
 
