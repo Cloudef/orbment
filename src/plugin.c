@@ -225,6 +225,10 @@ load_plugin(struct plugin *p)
 {
    assert(p);
 
+   // plugins with path need handle, or they point garbage
+   if (!chck_string_is_empty(&p->path) && !p->handle)
+      return false;
+
    if (p->loaded)
       return true;
 
