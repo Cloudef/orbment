@@ -43,7 +43,7 @@ static const char *keybind_signature = "v(h,u32,ip)|1";
 typedef void (*keybind_fun_t)(wlc_handle view, uint32_t time, intptr_t arg);
 struct keybind {
    const char *name;
-   struct chck_string syntax;
+   const char **defaults;
    keybind_fun_t function;
    intptr_t arg;
 };
@@ -173,7 +173,7 @@ keybind_for_syntax(const char *syntax)
 }
 
 static bool
-add_keybind(const char *name, const char *syntax, const struct function *fun, intptr_t arg)
+add_keybind(const char *name, const char **syntax, const struct function *fun, intptr_t arg)
 {
    if (!name || !fun)
       return false;
@@ -196,35 +196,31 @@ add_keybind(const char *name, const char *syntax, const struct function *fun, in
 
    struct keybind k = {
       .name = name,
+      .defaults = syntax,
       .function = fun->function,
       .arg = arg,
    };
-
-   chck_string_set_cstr(&k.syntax, syntax, false);
 
    size_t index;
    if (!chck_pool_add(&orbment.keybinds.pool, &k, &index))
       return false;
 
-   const struct keybind *o;
-   if (!(o = keybind_for_syntax(k.syntax.data))) {
-      if (!chck_string_is_empty(&k.syntax))
-         chck_hash_table_str_set(&orbment.keybinds.table, k.syntax.data, k.syntax.size, &index);
-   } else {
-      wlc_log(WLC_LOG_WARN, "'%s' is already mapped to keybind '%s'", syntax, o->name);
+   struct chck_string mappings = {0};
+   for (uint32_t i = 0; syntax && syntax[i]; ++i) {
+      if (chck_cstr_is_empty(syntax[i]))
+         continue;
+
+      const struct keybind *o;
+      if (!(o = keybind_for_syntax(syntax[i]))) {
+         chck_hash_table_str_set(&orbment.keybinds.table, syntax[i], strlen(syntax[i]), &index);
+         chck_string_set_format(&mappings, (mappings.size > 0 ? "%s, %s" : "%s%s"), mappings.data, syntax[i]);
+      } else {
+         wlc_log(WLC_LOG_WARN, "'%s' is already mapped to keybind '%s'", syntax[i], o->name);
+      }
    }
 
-   wlc_log(WLC_LOG_INFO, "Added keybind: %s (%s)", name, syntax);
+   wlc_log(WLC_LOG_INFO, "Added keybind: %s (%s)", name, (chck_string_is_empty(&mappings) ? "none" : mappings.data));
    return true;
-}
-
-static void
-keybind_release(struct keybind *k)
-{
-   if (!k)
-      return;
-
-   chck_string_release(&k->syntax);
 }
 
 static void
@@ -235,10 +231,6 @@ remove_keybind(const char *name)
       if (!chck_cstreq(name, k->name))
          continue;
 
-      if (!chck_string_is_empty(&k->syntax))
-         chck_hash_table_str_set(&orbment.keybinds.table, k->syntax.data, k->syntax.size, NULL);
-
-      keybind_release(k);
       chck_pool_remove(&orbment.keybinds.pool, _I - 1);
       wlc_log(WLC_LOG_INFO, "Removed keybind: %s", name);
       break;
@@ -248,7 +240,6 @@ remove_keybind(const char *name)
 static void
 remove_keybinds(void)
 {
-   chck_pool_for_each_call(&orbment.keybinds.pool, keybind_release);
    chck_pool_release(&orbment.keybinds.pool);
    chck_hash_table_release(&orbment.keybinds.table);
 }
@@ -924,43 +915,43 @@ setup_default_keybinds(void)
    chck_string_set_cstr(&orbment.terminal, (chck_cstr_is_empty(terminal) ? DEFAULT_TERMINAL : terminal), true);
 
    const struct {
-      const char *name, *syntax;
+      const char *name, **syntax;
       keybind_fun_t function;
       intptr_t arg;
    } keybinds[] = {
-      { "exit", "<P-Escape>", key_cb_exit, 0 },
-      { "close client", "<P-q>", key_cb_close_client, 0 },
-      { "spawn terminal", "<P-Return>", key_cb_spawn, (intptr_t)orbment.terminal.data },
-      { "spawn bemenu", "<P-p>", key_cb_spawn, (intptr_t)DEFAULT_MENU },
-      { "toggle fullscreen", "<P-f>", key_cb_toggle_fullscreen, 0 },
-      { "cycle clients", "<P-h>", key_cb_cycle_clients, 0 },
-      { "focus next output", "<P-l>", key_cb_focus_next_output, 0 },
-      { "focus next client", "<P-k>", key_cb_focus_next_client, 0 },
-      { "focus previous client", "<P-j>", key_cb_focus_previous_client, 0 },
-      { "focus space 0", "<P-1>", key_cb_focus_space, 0 },
-      { "focus space 1", "<P-2>", key_cb_focus_space, 1 },
-      { "focus space 2", "<P-3>", key_cb_focus_space, 2 },
-      { "focus space 3", "<P-4>", key_cb_focus_space, 3 },
-      { "focus space 4", "<P-5>", key_cb_focus_space, 4 },
-      { "focus space 5", "<P-6>", key_cb_focus_space, 5 },
-      { "focus space 6", "<P-7>", key_cb_focus_space, 6 },
-      { "focus space 7", "<P-8>", key_cb_focus_space, 7 },
-      { "focus space 8", "<P-9>", key_cb_focus_space, 8 },
-      { "focus space 9", "<P-0>", key_cb_focus_space, 9 },
-      { "move to space 0", "<P-F1>", key_cb_move_to_space, 0 },
-      { "move to space 1", "<P-F2>", key_cb_move_to_space, 1 },
-      { "move to space 2", "<P-F3>", key_cb_move_to_space, 2 },
-      { "move to space 3", "<P-F4>", key_cb_move_to_space, 3 },
-      { "move to space 4", "<P-F5>", key_cb_move_to_space, 4 },
-      { "move to space 5", "<P-F6>", key_cb_move_to_space, 5 },
-      { "move to space 6", "<P-F7>", key_cb_move_to_space, 6 },
-      { "move to space 7", "<P-F8>", key_cb_move_to_space, 7 },
-      { "move to space 8", "<P-F9>", key_cb_move_to_space, 8 },
-      { "move to space 9", "<P-F0>", key_cb_move_to_space, 9 },
-      { "move to output 0", "<P-z>", key_cb_move_to_output, 0 },
-      { "move to output 1", "<P-x>", key_cb_move_to_output, 1 },
-      { "move to output 2", "<P-c>", key_cb_move_to_output, 2 },
-      { "next layout", "<P-w>", key_cb_next_layout, 0 },
+      { "exit", (const char*[]){ "<P-Escape>", NULL }, key_cb_exit, 0 },
+      { "close client", (const char*[]){ "<P-q>", NULL }, key_cb_close_client, 0 },
+      { "spawn terminal", (const char*[]){ "<P-Return>", NULL }, key_cb_spawn, (intptr_t)orbment.terminal.data },
+      { "spawn bemenu", (const char*[]){ "<P-p>", NULL }, key_cb_spawn, (intptr_t)DEFAULT_MENU },
+      { "toggle fullscreen", (const char*[]){ "<P-f>", NULL }, key_cb_toggle_fullscreen, 0 },
+      { "cycle clients", (const char*[]){ "<P-h>", NULL }, key_cb_cycle_clients, 0 },
+      { "focus next output", (const char*[]){ "<P-l>", NULL }, key_cb_focus_next_output, 0 },
+      { "focus next client", (const char*[]){ "<P-k>", NULL }, key_cb_focus_next_client, 0 },
+      { "focus previous client", (const char*[]){ "<P-j>", NULL }, key_cb_focus_previous_client, 0 },
+      { "focus space 0", (const char*[]){ "<P-1>", "<P-KP_1>", NULL }, key_cb_focus_space, 0 },
+      { "focus space 1", (const char*[]){ "<P-2>", "<P-KP_2>", NULL }, key_cb_focus_space, 1 },
+      { "focus space 2", (const char*[]){ "<P-3>", "<P-KP_3>", NULL }, key_cb_focus_space, 2 },
+      { "focus space 3", (const char*[]){ "<P-4>", "<P-KP_4>", NULL }, key_cb_focus_space, 3 },
+      { "focus space 4", (const char*[]){ "<P-5>", "<P-KP_5>", NULL }, key_cb_focus_space, 4 },
+      { "focus space 5", (const char*[]){ "<P-6>", "<P-KP_6>", NULL }, key_cb_focus_space, 5 },
+      { "focus space 6", (const char*[]){ "<P-7>", "<P-KP_7>", NULL }, key_cb_focus_space, 6 },
+      { "focus space 7", (const char*[]){ "<P-8>", "<P-KP_8>", NULL }, key_cb_focus_space, 7 },
+      { "focus space 8", (const char*[]){ "<P-9>", "<P-KP_9>", NULL }, key_cb_focus_space, 8 },
+      { "focus space 9", (const char*[]){ "<P-0>", "<P-KP_0>", NULL }, key_cb_focus_space, 9 },
+      { "move to space 0", (const char*[]){ "<P-F1>", NULL }, key_cb_move_to_space, 0 },
+      { "move to space 1", (const char*[]){ "<P-F2>", NULL }, key_cb_move_to_space, 1 },
+      { "move to space 2", (const char*[]){ "<P-F3>", NULL }, key_cb_move_to_space, 2 },
+      { "move to space 3", (const char*[]){ "<P-F4>", NULL }, key_cb_move_to_space, 3 },
+      { "move to space 4", (const char*[]){ "<P-F5>", NULL }, key_cb_move_to_space, 4 },
+      { "move to space 5", (const char*[]){ "<P-F6>", NULL }, key_cb_move_to_space, 5 },
+      { "move to space 6", (const char*[]){ "<P-F7>", NULL }, key_cb_move_to_space, 6 },
+      { "move to space 7", (const char*[]){ "<P-F8>", NULL }, key_cb_move_to_space, 7 },
+      { "move to space 8", (const char*[]){ "<P-F9>", NULL }, key_cb_move_to_space, 8 },
+      { "move to space 9", (const char*[]){ "<P-F0>", NULL }, key_cb_move_to_space, 9 },
+      { "move to output 0", (const char*[]){ "<P-z>", NULL }, key_cb_move_to_output, 0 },
+      { "move to output 1", (const char*[]){ "<P-x>", NULL }, key_cb_move_to_output, 1 },
+      { "move to output 2", (const char*[]){ "<P-c>", NULL }, key_cb_move_to_output, 2 },
+      { "next layout", (const char*[]){ "<P-w>", NULL }, key_cb_next_layout, 0 },
       {0},
    };
 
@@ -980,7 +971,7 @@ plugins_init(void)
          REGISTER_METHOD(relayout, "v(h)|1"),
          REGISTER_METHOD(add_layout, "b(c[],fun)|1"),
          REGISTER_METHOD(remove_layout, "v(c[])|1"),
-         REGISTER_METHOD(add_keybind, "b(c[],c[],fun,ip)|1"),
+         REGISTER_METHOD(add_keybind, "b(c[],c*[],fun,ip)|1"),
          REGISTER_METHOD(remove_keybind, "v(c[])|1"),
          {0},
       };

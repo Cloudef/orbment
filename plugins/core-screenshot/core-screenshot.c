@@ -24,7 +24,7 @@ struct compressor* (*list_compressors)(const char *type, const char *stsign, con
 
 static const char *keybind_signature = "v(h,u32,ip)|1";
 typedef void (*keybind_fun_t)(wlc_handle view, uint32_t time, intptr_t arg);
-static bool (*add_keybind)(const char *name, const char *syntax, const struct function*, intptr_t arg);
+static bool (*add_keybind)(const char *name, const char **syntax, const struct function*, intptr_t arg);
 static void (*remove_keybind)(const char *name);
 
 static struct chck_iter_pool keybinds;
@@ -142,7 +142,7 @@ plugin_init(void)
        !(compressor = import_plugin("compressor")))
       return false;
 
-   if (!(add_keybind = import_method(orbment, "add_keybind", "b(c[],c[],fun,ip)|1")) ||
+   if (!(add_keybind = import_method(orbment, "add_keybind", "b(c[],c*[],fun,ip)|1")) ||
        !(remove_keybind = import_method(orbment, "remove_keybind", "v(c[])|1")))
       return false;
 
@@ -157,7 +157,7 @@ plugin_init(void)
    for (size_t i = 0; i < memb; ++i) {
       struct chck_string name = {0};
       chck_string_set_format(&name, "take screenshot (%s)", compressors[i].name);
-      if (!add_keybind(name.data, (chck_cstreq(compressors[i].name, "png") ? "<P-s>" : NULL), FUN(key_cb_screenshot, keybind_signature), i))
+      if (!add_keybind(name.data, (chck_cstreq(compressors[i].name, "png") ? (const char*[]){ "<SunPrint_Screen>", "<P-s>", NULL } : NULL), FUN(key_cb_screenshot, keybind_signature), i))
          return false;
       chck_iter_pool_push_back(&keybinds, &name);
    }

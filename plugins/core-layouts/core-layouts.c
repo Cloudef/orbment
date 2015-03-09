@@ -24,7 +24,7 @@ static void (*remove_layout)(const char *name);
 
 static const char *keybind_signature = "v(h,u32,ip)|1";
 typedef void (*keybind_fun_t)(wlc_handle view, uint32_t time, intptr_t arg);
-static bool (*add_keybind)(const char *name, const char *syntax, const struct function*, intptr_t arg);
+static bool (*add_keybind)(const char *name, const char **syntax, const struct function*, intptr_t arg);
 static void (*remove_keybind)(const char *name);
 
 static void
@@ -89,11 +89,11 @@ monocle(const struct wlc_geometry *r, const wlc_handle *views, size_t memb)
 }
 
 static const struct {
-   const char *name, *syntax;
+   const char *name, **syntax;
    keybind_fun_t function;
 } keybinds[] = {
-   { "grow nmaster", "<P-i>", key_cb_nmaster_grow },
-   { "shrink nmaster", "<P-o>", key_cb_nmaster_shrink },
+   { "grow nmaster", (const char*[]){ "<P-i>", NULL }, key_cb_nmaster_grow },
+   { "shrink nmaster", (const char*[]){ "<P-o>", NULL }, key_cb_nmaster_shrink },
    {0},
 };
 
@@ -130,7 +130,7 @@ plugin_init(void)
             (const struct method_info[]){
                METHOD("add_layout", "b(c[],fun)|1"),
                METHOD("remove_layout", "v(c[])|1"),
-               METHOD("add_keybind", "b(c[],c[],fun,ip)|1"),
+               METHOD("add_keybind", "b(c[],c*[],fun,ip)|1"),
                METHOD("remove_keybind", "v(c[])|1"),
                METHOD("relayout", "v(h)|1"),
                {0},
@@ -140,7 +140,7 @@ plugin_init(void)
    relayout = import_method(orbment, "relayout", "v(h)|1");
    add_layout = import_method(orbment, "add_layout", "b(c[],fun)|1");
    remove_layout = import_method(orbment, "remove_layout", "v(c[])|1");
-   add_keybind = import_method(orbment, "add_keybind", "b(c[],c[],fun,ip)|1");
+   add_keybind = import_method(orbment, "add_keybind", "b(c[],c*[],fun,ip)|1");
    remove_keybind = import_method(orbment, "remove_keybind", "v(c[])|1");
 
    for (size_t i = 0; layouts[i].name; ++i)
