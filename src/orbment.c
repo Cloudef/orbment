@@ -262,32 +262,6 @@ get_next_output(wlc_handle output, size_t offset, enum direction dir)
    return (memb > 0 ? outputs[(dir == PREV ? chck_clampsz(i - offset, 0, memb - 1) : i + offset) % memb] : 0);
 }
 
-static void
-layout_parent(wlc_handle view, wlc_handle parent, const struct wlc_size *size)
-{
-   assert(view && parent);
-
-   // Size to fit the undermost parent
-   // TODO: Use surface height as base instead of current
-   wlc_handle under;
-   for (under = parent; under && wlc_view_get_parent(under); under = wlc_view_get_parent(under));
-
-   // Undermost view and parent view geometry
-   const struct wlc_geometry *u = wlc_view_get_geometry(under);
-   const struct wlc_geometry *p = wlc_view_get_geometry(parent);
-
-   // Current constrained size
-   const float cw = chck_maxf(size->w, u->size.w * 0.6);
-   const float ch = chck_maxf(size->h, u->size.h * 0.6);
-
-   struct wlc_geometry g;
-   g.size.w = chck_minf(cw, u->size.w * 0.8);
-   g.size.h = chck_minf(ch, u->size.h * 0.8);
-   g.origin.x = p->size.w * 0.5 - g.size.w * 0.5;
-   g.origin.y = p->size.h * 0.5 - g.size.h * 0.5;
-   wlc_view_set_geometry(view, &g);
-}
-
 static bool
 should_focus_on_create(wlc_handle view)
 {
@@ -324,6 +298,32 @@ is_tiled(wlc_handle view)
 {
    const uint32_t state = wlc_view_get_state(view);
    return !(state & WLC_BIT_FULLSCREEN) && !wlc_view_get_parent(view) && is_managed(view) && !is_or(view) && !is_modal(view);
+}
+
+static void
+layout_parent(wlc_handle view, wlc_handle parent, const struct wlc_size *size)
+{
+   assert(view && parent);
+
+   // Size to fit the undermost parent
+   // TODO: Use surface height as base instead of current
+   wlc_handle under;
+   for (under = parent; under && wlc_view_get_parent(under); under = wlc_view_get_parent(under));
+
+   // Undermost view and parent view geometry
+   const struct wlc_geometry *u = wlc_view_get_geometry(under);
+   const struct wlc_geometry *p = wlc_view_get_geometry(parent);
+
+   // Current constrained size
+   const float cw = chck_maxf(size->w, u->size.w * 0.6);
+   const float ch = chck_maxf(size->h, u->size.h * 0.6);
+
+   struct wlc_geometry g;
+   g.size.w = chck_minf(cw, u->size.w * 0.8);
+   g.size.h = chck_minf(ch, u->size.h * 0.8);
+   g.origin.x = p->size.w * 0.5 - g.size.w * 0.5;
+   g.origin.y = p->size.h * 0.5 - g.size.h * 0.5;
+   wlc_view_set_geometry(view, &g);
 }
 
 static void
