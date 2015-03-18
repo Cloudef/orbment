@@ -22,6 +22,13 @@ elseif (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-variadic-macros -Wno-long-long")
 endif ()
 
+if (UNIX AND CMAKE_COMPILER_IS_GNUCC)
+   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+   if (${CMAKE_VERSION} VERSION_LESS 2.8.9)
+      add_definitions(-fPIC)
+   endif ()
+endif ()
+
 add_definitions(-std=c99 -D_DEFAULT_SOURCE)
 
 add_subdirectory(lib)

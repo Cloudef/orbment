@@ -6,6 +6,7 @@
 #include <wlc/wlc.h>
 #include <chck/math/math.h>
 #include <chck/string/string.h>
+#include <chck/thread/queue/queue.h>
 #include <pthread.h>
 #include "config.h"
 
