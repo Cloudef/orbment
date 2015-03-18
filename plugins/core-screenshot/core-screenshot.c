@@ -6,7 +6,6 @@
 #include <wlc/wlc.h>
 #include <chck/math/math.h>
 #include <chck/string/string.h>
-#include <chck/pool/pool.h>
 #include <pthread.h>
 #include "config.h"
 
@@ -22,134 +21,150 @@ struct compressor {
 
 struct compressor* (*list_compressors)(const char *type, const char *stsign, const char *funsign, size_t *out_memb);
 
-static const char *keybind_signature = "v(h,u32,ip)|1";
 typedef void (*keybind_fun_t)(wlc_handle view, uint32_t time, intptr_t arg);
-static bool (*add_keybind)(const char *name, const char **syntax, const struct function*, intptr_t arg);
-static void (*remove_keybind)(const char *name);
+static bool (*add_keybind)(plugin_h, const char *name, const char **syntax, const struct function*, intptr_t arg);
 
-static struct chck_iter_pool keybinds;
+static struct {
+   struct chck_tqueue tqueue;
+   plugin_h self;
+} plugin;
+
+
+struct image {
+   uint8_t *data;
+   size_t size;
+};
 
 struct work {
    struct wlc_size dimensions;
    struct compressor compressor;
-   uint8_t *data;
+   struct image image;
 };
 
-static void*
-on_thread(void *arg)
+static void
+work_release(struct work *work)
 {
-   struct work *work = arg;
+   if (!work)
+      return;
+
+   free(work->image.data);
+}
+
+static void
+cb_did_compress(struct work *work)
+{
    assert(work);
 
-   if (!work)
-      return NULL;
 
+}
+
+static void
+cb_compress(struct work *work)
+{
+   assert(work);
+
+   uint8_t *data;
+   if (!(data = work->compressor.function(&work->dimensions, work->image.data, &work->image.size))) {
+      plog(plugin.self, PLOG_ERROR, "Failed to compress data using '%s compressor'", work->compressor.name);
+      return;
+   }
+
+   free(work->image.data);
+   work->image.data = data;
+
+   if (!work->image.size)
+      return;
+
+   struct chck_string name = {0};
    time_t now;
    time(&now);
    char buf[sizeof("orbment-0000-00-00T00:00:00Z")];
    strftime(buf, sizeof(buf), "orbment-%FT%TZ", gmtime(&now));
-
-   size_t size;
-   uint8_t *data;
-   if (!(data = work->compressor.function(&work->dimensions, work->data, &size)) || !size) {
-      wlc_log(WLC_LOG_ERROR, "Failed to compress data using '%s compressor'", work->compressor.name);
-      goto error0;
-   }
-
-   struct chck_string name = {0};
    chck_string_set_format(&name, "%s.%s", buf, work->compressor.ext);
 
    FILE *f;
    if (!(f = fopen(name.data, "wb"))) {
-      wlc_log(WLC_LOG_ERROR, "Could not open file for writing: %s", name.data);
+      plog(plugin.self, PLOG_ERROR, "Could not open file for writing: %s", name.data);
       goto error1;
    }
 
-   fwrite(data, 1, size, f);
-   free(data);
+   fwrite(data, 1, work->image.size, f);
    fclose(f);
 
-   wlc_log(WLC_LOG_INFO, "Wrote screenshot to %s", name.data);
+   plog(plugin.self, PLOG_ERROR, "Wrote screenshot to %s", name.data);
    chck_string_release(&name);
-   free(work->data);
-   free(work);
-   return NULL;
+
+   return;
 
 error1:
    chck_string_release(&name);
-   free(data);
-error0:
-   free(work->data);
-   free(work);
-   return NULL;
 }
+
+struct info {
+   size_t index;
+};
 
 static bool
 cb_pixels(const struct wlc_size *dimensions, uint8_t *rgba, void *arg)
 {
+   struct info info;
+   memcpy(&info, arg, sizeof(info));
+   free(arg);
+
    size_t memb;
-   size_t i = (size_t)arg;
    struct compressor *compressors = list_compressors("image", struct_signature, compress_signature, &memb);
-   if (!memb || i >= memb) {
-      wlc_log(WLC_LOG_ERROR, "Could not find compressor for index (%zu)", i);
+   if (!memb || info.index >= memb) {
+      plog(plugin.self, PLOG_ERROR, "Could not find compressor for index (%zu)", info.index);
       return false;
    }
 
-   struct work *work;
-   if (!(work = calloc(1, sizeof(struct work)))) {
-      wlc_log(WLC_LOG_ERROR, "Out of memory");
-      return false;
-   }
+   struct work work = {
+      .image = {
+         .data = rgba,
+      },
+      .dimensions = *dimensions,
+      .compressor = compressors[info.index],
+   };
 
-   work->data = rgba;
-   work->dimensions = *dimensions;
-   memcpy(&work->compressor, &compressors[i], sizeof(struct compressor));
-
-   pthread_t thread;
-   if (pthread_create(&thread, NULL, on_thread, work) != 0) {
-      wlc_log(WLC_LOG_ERROR, "Could not spawn thread");
-      return false;
-   }
-
-   pthread_detach(thread);
-   return true; // ← rgba is not released
+   // if returns true, rgba is not released
+   return chck_tqueue_add_task(&plugin.tqueue, &work, 0);
 }
 
 static void
 key_cb_screenshot(wlc_handle view, uint32_t time, intptr_t arg)
 {
    (void)view, (void)time;
-   wlc_output_get_pixels(wlc_get_focused_output(), cb_pixels, (void*)arg);
+
+   struct info *info;
+   if (!(info = calloc(1, sizeof(struct info))))
+      return;
+
+   info->index = arg;
+   wlc_output_get_pixels(wlc_get_focused_output(), cb_pixels, info);
+}
+
+void
+plugin_deinit(plugin_h self)
+{
+   (void)self;
+
+   chck_tqueue_release(&plugin.tqueue);
 }
 
 bool
-plugin_deinit(void)
+plugin_init(plugin_h self)
 {
-   struct chck_string *str;
-   chck_iter_pool_for_each(&keybinds, str)
-      remove_keybind(str->data);
+   plugin.self = self;
 
-   chck_iter_pool_for_each_call(&keybinds, chck_string_release);
-   chck_iter_pool_release(&keybinds);
-   return true;
-}
-
-bool
-plugin_init(void)
-{
    plugin_h orbment, compressor;
-   if (!(orbment = import_plugin("orbment")) ||
-       !(compressor = import_plugin("compressor")))
+   if (!(orbment = import_plugin(self, "orbment")) ||
+       !(compressor = import_plugin(self, "compressor")))
       return false;
 
-   if (!(add_keybind = import_method(orbment, "add_keybind", "b(c[],c*[],fun,ip)|1")) ||
-       !(remove_keybind = import_method(orbment, "remove_keybind", "v(c[])|1")))
+   if (!(add_keybind = import_method(self, orbment, "add_keybind", "b(h,c[],c*[],fun,ip)|1")))
       return false;
 
-   if (!(list_compressors = import_method(compressor, "list_compressors", "*(c[],c[],c[],sz*)|1")))
-      return false;
-
-   if (!chck_iter_pool(&keybinds, 4, 0, sizeof(struct chck_string)))
+   if (!(list_compressors = import_method(self, compressor, "list_compressors", "*(c[],c[],c[],sz*)|1")))
       return false;
 
    size_t memb;
@@ -157,10 +172,15 @@ plugin_init(void)
    for (size_t i = 0; i < memb; ++i) {
       struct chck_string name = {0};
       chck_string_set_format(&name, "take screenshot (%s)", compressors[i].name);
-      if (!add_keybind(name.data, (chck_cstreq(compressors[i].name, "png") ? (const char*[]){ "<SunPrint_Screen>", "<P-s>", NULL } : NULL), FUN(key_cb_screenshot, keybind_signature), i))
+      const bool ret = add_keybind(self, name.data, (chck_cstreq(compressors[i].name, "png") ? (const char*[]){ "<SunPrint_Screen>", "<P-s>", NULL } : NULL), FUN(key_cb_screenshot, "v(h,u32,ip)|1"), i);
+      chck_string_release(&name);
+
+      if (!ret)
          return false;
-      chck_iter_pool_push_back(&keybinds, &name);
    }
+
+   if (!chck_tqueue(&plugin.tqueue, 1, 4, sizeof(struct work), cb_compress, cb_did_compress, work_release))
+      return false;
 
    return true;
 }
@@ -175,7 +195,7 @@ plugin_register(void)
 
    static const struct plugin_info info = {
       .name = "core-screenshot",
-      .description = "Provides screenshot functionality.",
+      .description = "Screenshot functionality.",
       .version = VERSION,
       .requires = requires,
    };

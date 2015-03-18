@@ -1,16 +1,22 @@
 #include "plugin.h"
 #include <wlc.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <assert.h>
-#include "chck/dl/dl.h"
-#include "chck/lut/lut.h"
-#include "chck/pool/pool.h"
+#include <chck/dl/dl.h>
+#include <chck/lut/lut.h>
+#include <chck/pool/pool.h>
 
 static const size_t NOTINDEX = (size_t)-1;
 
 static struct chck_pool plugins;
 static struct chck_hash_table names;
 static struct chck_hash_table groups;
+
+static struct {
+   void (*loaded)(const struct plugin *plugin);
+   void (*deloaded)(const struct plugin *plugin);
+} callbacks;
 
 static plugin_h
 get_handle(const char *name)
@@ -116,7 +122,7 @@ deload_plugin(struct plugin *p, bool force)
 {
    assert(p);
 
-   if (!p->loaded && !p->handle)
+   if (!p->loaded && !p->dl)
       return true;
 
    struct chck_string *s;
@@ -132,6 +138,9 @@ deload_plugin(struct plugin *p, bool force)
       }
    }
 
+   if (callbacks.deloaded)
+      callbacks.deloaded(p);
+
    chck_iter_pool_for_each_call(&p->needed, chck_string_release);
    chck_iter_pool_release(&p->needed);
 
@@ -139,12 +148,12 @@ deload_plugin(struct plugin *p, bool force)
       unlink_name(p->info.name);
 
    if (p->loaded && p->deinit)
-      p->deinit();
+      p->deinit(p->handle + 1);
 
-   if (p->handle)
-      chck_dl_unload(p->handle);
+   if (p->dl)
+      chck_dl_unload(p->dl);
 
-   p->handle = NULL;
+   p->dl = NULL;
    p->loaded = false;
    return true;
 }
@@ -226,7 +235,7 @@ load_plugin(struct plugin *p)
    assert(p);
 
    // plugins with path need handle, or they point garbage
-   if (!chck_string_is_empty(&p->path) && !p->handle)
+   if (!chck_string_is_empty(&p->path) && !p->dl)
       return false;
 
    if (p->loaded)
@@ -236,10 +245,15 @@ load_plugin(struct plugin *p)
        !load_deps_from_array(p, p->info.after, false))
       goto error0;
 
-   if (p->init && !p->init())
+   p->loaded = true;
+
+   if (p->init && !p->init(p->handle + 1))
       goto error0;
 
-   return (p->loaded = true);
+   if (callbacks.loaded)
+      callbacks.loaded(p);
+
+   return true;
 
 error0:
    wlc_log(WLC_LOG_ERROR, "Plugin '%s' failed to load", p->info.name);
@@ -253,6 +267,13 @@ plugin_release(struct plugin *p)
    assert(p);
    deload_plugin(p, true);
    chck_string_release(&p->path);
+}
+
+void
+set_plugin_callbacks(void (*loaded)(const struct plugin*), void (*deloaded)(const struct plugin*))
+{
+   callbacks.loaded = loaded;
+   callbacks.deloaded = deloaded;
 }
 
 void
@@ -346,8 +367,10 @@ register_plugin(struct plugin *plugin, const struct plugin_info* (*reg)(void))
       goto error0;
 
    plugin_h handle;
-   if (!chck_iter_pool(&plugin->needed, 1, 0, sizeof(struct chck_string)) || !chck_pool_add(&plugins, plugin, &handle))
+   if (!chck_iter_pool(&plugin->needed, 1, 0, sizeof(struct chck_string)) || !(plugin = chck_pool_add(&plugins, plugin, &handle)))
       goto error0;
+
+   plugin->handle = handle;
 
    if (!link_name(plugin->info.name, handle))
       goto error1;
@@ -378,34 +401,78 @@ register_plugin_from_path(const char *path)
 {
    assert(path);
 
-   void *handle;
+   void *dl;
    const char *error;
-   if (!(handle = chck_dl_load(path, &error))) {
+   if (!(dl = chck_dl_load(path, &error))) {
       wlc_log(WLC_LOG_ERROR, "%s", error);
       return false;
    }
 
    void *methods[3];
    const void *names[3] = { "plugin_register", "plugin_init", "plugin_deinit" };
-   for (int32_t i = 0; i < 3; ++i) {
-      if (!(methods[i] = chck_dl_load_symbol(handle, names[i], &error))) {
-         wlc_log(WLC_LOG_ERROR, "%s", error);
-         chck_dl_unload(&handle);
-         return false;
-      }
+   for (int32_t i = 0; i < 3; ++i)
+      methods[i] = chck_dl_load_symbol(dl, names[i], NULL);
+
+   if (!methods[0]) {
+      wlc_log(WLC_LOG_ERROR, "Could not find 'plugin_register' function from: %s", path);
+      chck_dl_unload(dl);
+      return false;
    }
 
    struct plugin p;
    memset(&p, 0, sizeof(p));
    p.init = methods[1];
    p.deinit = methods[2];
-   p.handle = handle;
+   p.dl = dl;
    return (chck_string_set_cstr(&p.path, path, true) && register_plugin(&p, methods[0]));
 }
 
-plugin_h
-import_plugin(const char *name)
+static inline void
+pvlog(plugin_h caller, enum plugin_log_type type, const char *fmt, va_list ap)
 {
+   struct plugin *c;
+   if (!(c = (caller ? chck_pool_get(&plugins, caller - 1) : NULL))) {
+      wlc_vlog((enum wlc_log_type)type, fmt, ap);
+      return;
+   }
+
+   static __thread struct {
+      char *data;
+      size_t size;
+   } buf;
+
+   va_list cpy;
+   va_copy(cpy, ap);
+
+   const size_t len = vsnprintf(NULL, 0, fmt, ap);
+
+   if (len > 0 && len >= buf.size) {
+      void *tmp;
+      if (!(tmp = realloc(buf.data, len + 1)))
+         return;
+
+      buf.data = tmp;
+      buf.size = len + 1;
+   }
+
+   vsnprintf(buf.data, buf.size, fmt, cpy);
+   wlc_log(type, "%s: %s", c->info.name, buf.data);
+}
+
+void
+plog(plugin_h caller, enum plugin_log_type type, const char *fmt, ...)
+{
+   va_list args;
+   va_start(args, fmt);
+   pvlog(caller, type, fmt, args);
+   va_end(args);
+}
+
+plugin_h
+import_plugin(plugin_h caller, const char *name)
+{
+   (void)caller;
+
    if (!name)
       return 0;
 
@@ -414,13 +481,14 @@ import_plugin(const char *name)
 }
 
 bool
-has_methods(plugin_h handle, const struct method_info *methods)
+has_methods(plugin_h caller, plugin_h handle, const struct method_info *methods)
 {
-   if (!handle || !methods)
+   if (!caller || !handle || !methods)
       return false;
 
-   struct plugin *p;
-   if (!(p = chck_pool_get(&plugins, handle - 1)))
+   struct plugin *c, *p;
+   if (!(c = chck_pool_get(&plugins, caller - 1)) ||
+       !(p = chck_pool_get(&plugins, handle - 1)))
       return false;
 
    for (size_t x = 0; methods[x].name; ++x) {
@@ -435,7 +503,7 @@ has_methods(plugin_h handle, const struct method_info *methods)
       }
 
       if (!found) {
-         wlc_log(WLC_LOG_WARN, "No such method %s in %s (%s) or wrong signature", methods[x].name, p->info.name, p->info.version);
+         wlc_log(WLC_LOG_WARN, "%s: No such method %s in %s (%s) or wrong signature", c->info.name, methods[x].name, p->info.name, p->info.version);
          return false;
       }
    }
@@ -444,30 +512,31 @@ has_methods(plugin_h handle, const struct method_info *methods)
 }
 
 void*
-import_method(plugin_h handle, const char *name, const char *signature)
+import_method(plugin_h caller, plugin_h handle, const char *name, const char *signature)
 {
-   if (!handle || !name || !signature)
+   if (!caller || !handle || !name || !signature)
       return NULL;
 
-   struct plugin *p;
-   if (!(p = chck_pool_get(&plugins, handle - 1)))
-      return NULL;
+   struct plugin *c, *p;
+   if (!(c = chck_pool_get(&plugins, caller - 1)) ||
+       !(p = chck_pool_get(&plugins, handle - 1)))
+      return false;
 
    for (uint32_t i = 0; p->info.methods[i].info.name && p->info.methods[i].info.signature; ++i) {
       const struct method *m = &p->info.methods[i];
       if (chck_cstreq(m->info.name, name)) {
          if (!chck_cstreq(m->info.signature, signature)) {
-            wlc_log(WLC_LOG_WARN, "Method '%s' '%s' != '%s' signature mismatch in %s (%s)", name, signature, m->info.signature, p->info.name, p->info.version);
+            wlc_log(WLC_LOG_WARN, "%s: Method '%s' '%s' != '%s' signature mismatch in %s (%s)", c->info.name, name, signature, m->info.signature, p->info.name, p->info.version);
             return NULL;
          }
 
          if (m->deprecated)
-            wlc_log(WLC_LOG_WARN, "Method '%s' is deprecated in %s (%s)", name, p->info.name, p->info.version);
+            wlc_log(WLC_LOG_WARN, "%s: Method '%s' is deprecated in %s (%s)", c->info.name, name, p->info.name, p->info.version);
 
          return m->function;
       }
    }
 
-   wlc_log(WLC_LOG_WARN, "No such method '%s' in %s (%s)", name, p->info.name, p->info.version);
+   wlc_log(WLC_LOG_WARN, "%s: No such method '%s' in %s (%s)", c->info.name, name, p->info.name, p->info.version);
    return NULL;
 }

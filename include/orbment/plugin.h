@@ -5,6 +5,12 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#if __GNUC__
+#  define PLOG_ATTR(x, y) __attribute__((format(printf, x, y)))
+#else
+#  define PLOG_ATTR(x, y)
+#endif
+
 /**
  * Struct abstracting exported method from plugin.
  * Do not use this struct directly, but instead the REGISTER_METHOD macro.
@@ -107,10 +113,24 @@ struct plugin_info {
 typedef size_t plugin_h;
 
 /**
+ * Type of log message.
+ */
+enum plugin_log_type {
+   PLOG_INFO,
+   PLOG_WARN,
+   PLOG_ERROR,
+};
+
+/**
+ * Logging utility.
+ */
+PLOG_ATTR(3, 4) void plog(plugin_h self, enum plugin_log_type, const char *fmt, ...);
+
+/**
  * Imports plugin with name.
  * Returns plugin handle, 0 if no such plugin.
  */
-plugin_h import_plugin(const char *name);
+plugin_h import_plugin(plugin_h self, const char *name);
 
 /**
  * Check if plugin has zero-terminated list of methods.
@@ -119,13 +139,13 @@ plugin_h import_plugin(const char *name);
  * If the method exists in plugin, import_method for that method will always succeeed.
  * Thus this method can be used to check all hard depencies to another plugin.
  */
-bool has_methods(plugin_h plugin, const struct method_info *methods);
+bool has_methods(plugin_h self, plugin_h plugin, const struct method_info *methods);
 
 /**
  * Imports a method from another plugin.
  * Returns NULL if signature does not match with loaded plugin version, or method is not found.
  */
-void* import_method(plugin_h plugin, const char *name, const char *signature);
+void* import_method(plugin_h self, plugin_h plugin, const char *name, const char *signature);
 
 /**
  * Helper macro for registering methods.
@@ -148,11 +168,12 @@ void* import_method(plugin_h plugin, const char *name, const char *signature);
  * d   | double
  * c   | char
  * b   | bool
+ * e   | enum
  * *   | pointer
  * []  | array, you can use element count inside as C allows compile time checks for element sizes.
  * v   | void
  * fun | function, see function struct above.
- * h   | wlc handle
+ * h   | opaque pod type (wlc_handle, plugin_h, etc...)
  *
  * Written as:
  * <return_type>(<arguments>)|<ABI version>

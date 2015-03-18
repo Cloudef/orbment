@@ -10,12 +10,14 @@ struct plugin {
    struct chck_iter_pool needed;
    struct chck_string path;
    struct plugin_info info;
-   bool (*init)(void);
-   bool (*deinit)(void);
-   void *handle;
+   bool (*init)(plugin_h self);
+   void (*deinit)(plugin_h self);
+   plugin_h handle;
+   void *dl;
    bool loaded;
 };
 
+void set_plugin_callbacks(void (*loaded)(const struct plugin*), void (*deloaded)(const struct plugin*));
 void deload_plugins(void);
 void load_plugins(void);
 bool register_plugin(struct plugin *plugin, const struct plugin_info* (*reg)(void));

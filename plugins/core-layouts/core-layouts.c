@@ -17,15 +17,11 @@ static struct {
 
 static void (*relayout)(wlc_handle output);
 
-static const char *layout_signature = "v(*,h[],sz)|1";
 typedef void (*layout_fun_t)(const struct wlc_geometry *r, const wlc_handle *views, size_t memb);
-static bool (*add_layout)(const char *name, const struct function*);
-static void (*remove_layout)(const char *name);
+static bool (*add_layout)(plugin_h, const char *name, const struct function*);
 
-static const char *keybind_signature = "v(h,u32,ip)|1";
 typedef void (*keybind_fun_t)(wlc_handle view, uint32_t time, intptr_t arg);
-static bool (*add_keybind)(const char *name, const char **syntax, const struct function*, intptr_t arg);
-static void (*remove_keybind)(const char *name);
+static bool (*add_keybind)(plugin_h, const char *name, const char **syntax, const struct function*, intptr_t arg);
 
 static void
 key_cb_nmaster_grow(wlc_handle view, uint32_t time, intptr_t arg)
@@ -108,47 +104,25 @@ static const struct {
 };
 
 bool
-plugin_deinit(void)
+plugin_init(plugin_h self)
 {
-   for (size_t i = 0; layouts[i].name; ++i)
-      remove_layout(layouts[i].name);
-
-   for (size_t i = 0; keybinds[i].name; ++i)
-      remove_keybind(keybinds[i].name);
-
-   return true;
-}
-
-bool
-plugin_init(void)
-{
-   plugin_h orbment;
-   if (!(orbment = import_plugin("orbment")))
+   plugin_h orbment, layout;
+   if (!(orbment = import_plugin(self, "orbment")) || !(layout = import_plugin(self, "layout")))
       return false;
 
-   if (!has_methods(orbment,
-            (const struct method_info[]){
-               METHOD("add_layout", "b(c[],fun)|1"),
-               METHOD("remove_layout", "v(c[])|1"),
-               METHOD("add_keybind", "b(c[],c*[],fun,ip)|1"),
-               METHOD("remove_keybind", "v(c[])|1"),
-               METHOD("relayout", "v(h)|1"),
-               {0},
-            }))
+   if (!(add_keybind = import_method(self, orbment, "add_keybind", "b(h,c[],c*[],fun,ip)|1")))
       return false;
 
-   relayout = import_method(orbment, "relayout", "v(h)|1");
-   add_layout = import_method(orbment, "add_layout", "b(c[],fun)|1");
-   remove_layout = import_method(orbment, "remove_layout", "v(c[])|1");
-   add_keybind = import_method(orbment, "add_keybind", "b(c[],c*[],fun,ip)|1");
-   remove_keybind = import_method(orbment, "remove_keybind", "v(c[])|1");
+   if (!(relayout = import_method(self, layout, "relayout", "v(h)|1")) ||
+       !(add_layout = import_method(self, layout, "add_layout", "b(h,c[],fun)|1")))
+      return false;
 
    for (size_t i = 0; layouts[i].name; ++i)
-      if (!add_layout(layouts[i].name, FUN(layouts[i].function, layout_signature)))
+      if (!add_layout(self, layouts[i].name, FUN(layouts[i].function, "v(*,h[],sz)|1")))
          return false;
 
    for (size_t i = 0; keybinds[i].name; ++i)
-      if (!add_keybind(keybinds[i].name, keybinds[i].syntax, FUN(keybinds[i].function, keybind_signature), 0))
+      if (!add_keybind(self, keybinds[i].name, keybinds[i].syntax, FUN(keybinds[i].function, "v(h,u32,ip)|1"), 0))
          return false;
 
    return true;
@@ -157,10 +131,16 @@ plugin_init(void)
 const struct plugin_info*
 plugin_register(void)
 {
+   static const char *requires[] = {
+      "layout",
+      NULL,
+   };
+
    static const struct plugin_info info = {
       .name = "core-layouts",
-      .description = "Provides core set of layouts.",
+      .description = "Core set of layouts.",
       .version = VERSION,
+      .requires = requires,
    };
 
    return &info;

@@ -5,9 +5,7 @@
 #include <png.h>
 #include "config.h"
 
-static const char *compressor_signature = "u8[](p,u8[],sz*)|1";
-static bool (*add_compressor)(const char *type, const char *name, const char *ext, const struct function*);
-static void (*remove_compressor)(const char *type, const char *name);
+static bool (*add_compressor)(plugin_h, const char *type, const char *name, const char *ext, const struct function*);
 
 static void
 write(png_structp p, png_bytep data, png_size_t length)
@@ -80,30 +78,16 @@ error0:
 }
 
 bool
-plugin_deinit(void)
-{
-   remove_compressor("image", "png");
-   return true;
-}
-
-bool
-plugin_init(void)
+plugin_init(plugin_h self)
 {
    plugin_h compressor;
-   if (!(compressor = import_plugin("compressor")))
+   if (!(compressor = import_plugin(self, "compressor")))
       return false;
 
-   if (!has_methods(compressor,
-            (const struct method_info[]){
-               METHOD("add_compressor", "b(c[],c[],c[],fun)|1"),
-               METHOD("remove_compressor", "v(c[],c[])|1"),
-               {0},
-            }))
+   if (!(add_compressor = import_method(self, compressor, "add_compressor", "b(h,c[],c[],c[],fun)|1")))
       return false;
 
-   add_compressor = import_method(compressor, "add_compressor", "b(c[],c[],c[],fun)|1");
-   remove_compressor = import_method(compressor, "remove_compressor", "v(c[],c[])|1");
-   return add_compressor("image", "png", "png", FUN(compress, compressor_signature));
+   return add_compressor(self, "image", "png", "png", FUN(compress, "u8[](p,u8[],sz*)|1"));
 }
 
 const struct plugin_info*
@@ -121,7 +105,7 @@ plugin_register(void)
 
    static const struct plugin_info info = {
       .name = "compressor-png",
-      .description = "Provides compression to png image format.",
+      .description = "Compression to png image format.",
       .version = VERSION,
       .requires = requires,
       .groups = groups,
