@@ -403,17 +403,11 @@ plugin_register(void)
       {0},
    };
 
-   static const char *after[] = {
-      "core-functionality",
-      NULL,
-   };
-
    static const struct plugin_info info = {
       .name = "layout",
       .description = "Layout api.",
       .version = VERSION,
       .methods = methods,
-      .after = after,
    };
 
    return &info;

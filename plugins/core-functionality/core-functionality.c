@@ -450,12 +450,15 @@ plugin_init(plugin_h self)
 {
    plugin.self = self;
 
-   plugin_h orbment;
-   if (!(orbment = import_plugin(self, "orbment")))
+   plugin_h orbment, layout;
+   if (!(orbment = import_plugin(self, "orbment")) || !(layout = import_plugin(self, "layout")))
       return false;
 
    if (!(add_keybind = import_method(self, orbment, "add_keybind", "b(h,c[],c*[],fun,ip)|1")) ||
        !(add_hook = import_method(self, orbment, "add_hook", "b(h,c[],fun)|1")))
+      return false;
+
+   if (!(relayout = import_method(self, layout, "relayout", "v(h)|1")))
       return false;
 
    if (!setup_default_keybinds(self))
@@ -470,10 +473,16 @@ plugin_init(plugin_h self)
 const struct plugin_info*
 plugin_register(void)
 {
+   static const char *requires[] = {
+      "layout",
+      NULL,
+   };
+
    static const struct plugin_info info = {
       .name = "core-functionality",
       .description = "Core functionality.",
       .version = VERSION,
+      .requires = requires,
    };
 
    return &info;
