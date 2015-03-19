@@ -248,6 +248,8 @@ view_created(wlc_handle view)
 
    if (should_focus_on_create(view))
       focus_view(view);
+
+   relayout(wlc_view_get_output(view));
 }
 
 static void
@@ -267,6 +269,8 @@ view_destroyed(wlc_handle view)
          focus_topmost(wlc_view_get_output(view));
       }
    }
+
+   relayout(wlc_view_get_output(view));
 }
 
 static void
