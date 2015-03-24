@@ -6,6 +6,7 @@
 #include <chck/dl/dl.h>
 #include <chck/lut/lut.h>
 #include <chck/pool/pool.h>
+#include <chck/overflow/overflow.h>
 
 static const size_t NOTINDEX = (size_t)-1;
 
@@ -448,7 +449,7 @@ pvlog(plugin_h caller, enum plugin_log_type type, const char *fmt, va_list ap)
 
    if (len > 0 && len >= buf.size) {
       void *tmp;
-      if (!(tmp = realloc(buf.data, len + 1)))
+      if (!(tmp = chck_realloc_add_of(buf.data, len, 1)))
          return;
 
       buf.data = tmp;
