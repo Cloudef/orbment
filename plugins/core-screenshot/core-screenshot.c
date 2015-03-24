@@ -92,7 +92,7 @@ cb_compress(struct work *work)
    fwrite(data, 1, work->image.size, f);
    fclose(f);
 
-   plog(plugin.self, PLOG_ERROR, "Wrote screenshot to %s", name.data);
+   plog(plugin.self, PLOG_INFO, "Wrote screenshot to %s", name.data);
    chck_string_release(&name);
 
    return;
