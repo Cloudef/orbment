@@ -2,6 +2,7 @@
 #include <orbment/plugin.h>
 #include <wlc/wlc.h>
 #include <chck/buffer/buffer.h>
+#include <chck/overflow/overflow.h>
 #include "config.h"
 
 static bool (*add_compressor)(plugin_h, const char *type, const char *name, const char *ext, const struct function*);
@@ -15,8 +16,9 @@ compress(const struct wlc_size *size, uint8_t *rgba, size_t *out_size)
    if (!size || !size->w || !size->h)
       return NULL;
 
+   size_t sz;
    uint8_t *rgb;
-   if (!(rgb = calloc(1, size->w * size->h * 3)))
+   if (chck_mul_ofsz(size->w, size->h, &sz) || !(rgb = calloc(3, sz)))
       return NULL;
 
    for (uint32_t i = 0, c = 0; i < size->w * size->h * 4; i += 4, c += 3)

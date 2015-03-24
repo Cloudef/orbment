@@ -2,6 +2,7 @@
 #include <orbment/plugin.h>
 #include <wlc/wlc.h>
 #include <chck/buffer/buffer.h>
+#include <chck/overflow/overflow.h>
 #include <png.h>
 #include "config.h"
 
@@ -40,7 +41,7 @@ compress(const struct wlc_size *size, uint8_t *rgba, size_t *out_size)
    buf.step = 8192;
 
    png_bytepp rows;
-   if (!(rows = malloc(size->h * sizeof(png_bytep))))
+   if (!(rows = chck_malloc_mul_of(size->h, sizeof(png_bytep))))
       goto error2;
 
    png_set_IHDR(p, info, size->w, size->h, 8,
