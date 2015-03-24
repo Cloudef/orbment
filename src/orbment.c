@@ -161,7 +161,7 @@ add_keybind(plugin_h caller, const char *name, const char **syntax, const struct
       const struct keybind *o;
       if (!(o = keybind_for_syntax(syntax[i]))) {
          chck_hash_table_str_set(&orbment.keybinds.table, syntax[i], strlen(syntax[i]), &index);
-         chck_string_set_format(&mappings, (mappings.size > 0 ? "%s, %s" : "%s%s"), mappings.data, syntax[i]);
+         chck_string_set_format(&mappings, (mappings.size > 0 ? "%s, %s" : "%s%s"), (mappings.data ? mappings.data : ""), syntax[i]);
       } else {
          plog(0, PLOG_WARN, "'%s' is already mapped to keybind '%s'", syntax[i], o->name.data);
       }
