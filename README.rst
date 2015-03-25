@@ -2,7 +2,7 @@
 .. _build: http://build.cloudef.pw/build/loliwm/master/linux%20x86_64
 
 .. image:: http://cloudef.pw/armpit/loliwm-gh.png
-:IRC: #loliwm @ freenode (temporary)
+:IRC: #orbment @ freenode
 :Video: https://www.youtube.com/watch?v=nh_7aqNtrik
 :Build: |build|_
 
@@ -18,20 +18,7 @@ Basic information about what you can currently do in ``orbment``.
 | ``--log FILE``        | Logs output to specified ``FILE``.             |
 +-----------------------+------------------------------------------------+
 
-wlc specific env variables
-
-
-+------------------+------------------------------------------------------+
-| ``WLC_SHM``      | Set 1 to force EGL clients to use shared memory.     |
-+------------------+------------------------------------------------------+
-| ``WLC_OUTPUTS``  | Number of fake outputs in X11 mode.                  |
-+------------------+------------------------------------------------------+
-| ``WLC_BG``       | Set 0 to disable the background GLSL shader.         |
-+------------------+------------------------------------------------------+
-| ``WLC_XWAYLAND`` | Set 0 to disable Xwayland.                           |
-+------------------+------------------------------------------------------+
-| ``WLC_DIM``      | Brightness multiplier for dimmed views (0.5 default) |
-+------------------+------------------------------------------------------+
+See `wlc documentation <https://github.com/Cloudef/wlc>`_ for ``wlc`` specific options.
 
 KEYBINDS
 --------
@@ -82,54 +69,32 @@ You can set your preferred keyboard layout using ``XKB_DEFAULT_LAYOUT``.
 RUNNING ON TTY
 --------------
 
-If you have logind, you can just run ``orbment`` normally.
+If you have ``logind``, you can just run ``orbment`` normally.
 
-Without logind you need to suid the orbment binary to root user.
+Without ``logind`` you need to suid the orbment binary to root user.
 The permissions will be dropped runtime.
 
 BUILDING
 --------
 
-You will need following makedepends:
+See `wlc documentation <https://github.com/Cloudef/wlc>`_ for dependencies.
 
-- cmake
-- git
-
-And the following depends:
-
-- pixman
-- wayland (most likely from git)
-- libxkbcommon
-- udev
-- libinput
-
-You will also need these for building, but they are optional runtime:
-
-- libx11
-- libxcb
-- mesa, nvidia, etc.. (GLESv2, EGL, DRM)
-
-And optionally:
-
-- dbus (for logind support)
-- systemd (for logind support)
-
-For weston-terminal and other wayland clients for testing, you might also want to build weston from git.
-
-You can build bootstrapped version of ``orbment`` with the following steps.
+You can build bootstrapped version of ``orbment`` which also includes ``wlc`` with the following steps.
 
 .. code:: sh
 
-    git submodule update --init --recursive # - initialize and fetch submodules
-    mkdir target && cd target               # - create build target directory
-    cmake -DCMAKE_BUILD_TYPE=Debug ..       # - run CMake (Use -DSOURCE_WLC=ON, to build wlc from repo)
-    make                                    # - compile
+    git submodule update --init --recursive           # - initialize and fetch submodules
+    mkdir target && cd target                         # - create build target directory
+    cmake -DCMAKE_BUILD_TYPE=Debug -DSOURCE_WLC=ON .. # - run CMake
+    make                                              # - compile
 
     # You can now run
     ./src/orbment
 
-For proper packaging ``wlc`` and ``orbment`` should be built separately.
-Instructions later...
+PACKAGING
+---------
+
+For now you can look at the `AUR recipe <https://aur.archlinux.org/packages/orbment-git/>`_  for a example.
 
 SIMILAR SOFTWARE
 ----------------
