@@ -5,9 +5,12 @@ set(sources
 
 configure_file(config.h.in config.h @ONLY)
 
+find_package(XKBCommon REQUIRED)
+
 include_directories(
    ${WLC_INCLUDE_DIRS}
    ${WAYLAND_SERVER_INCLUDE_DIR}
+   ${XKBCOMMON_INCLUDE_DIR}
    ${orbment_SOURCE_DIR}/include
    ${orbment_SOURCE_DIR}/lib/chck/src
    ${CMAKE_CURRENT_BINARY_DIR}
@@ -19,6 +22,7 @@ target_link_libraries(orbment
    chck_orbment
    ${WLC_LIBRARY}
    ${WLC_LIBRARIES}
+   ${XKBCOMMON_LIBRARIES}
    )
 
 # Install rules
