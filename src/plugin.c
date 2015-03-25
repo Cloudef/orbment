@@ -1,5 +1,5 @@
 #include "plugin.h"
-#include <wlc.h>
+#include <wlc/wlc.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
