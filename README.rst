@@ -9,7 +9,7 @@
 OPTIONS
 -------
 
-Basic information about what you can currently do in Orbment.
+Basic information about what you can currently do in ``orbment``.
 
 +-----------------------+------------------------------------------------+
 | ``--prefix MODIFIER`` | Set the modifier to use with the keybinds.     |
@@ -67,7 +67,7 @@ Note that these keybinds are temporary until configuration is added.
 +-----------------+------------------------------------------------------+
 | ``mod-print``   | Takes a screenshot in PNG format.                    |
 +-----------------+------------------------------------------------------+
-| ``mod-esc``     | Quits ``Orbment``.                                   |
+| ``mod-esc``     | Quits ``orbment``.                                   |
 +-----------------+------------------------------------------------------+
 
 KEYBOARD LAYOUT
@@ -116,7 +116,7 @@ And optionally:
 
 For weston-terminal and other wayland clients for testing, you might also want to build weston from git.
 
-You can build bootstrapped version of ``Orbment`` with the following steps.
+You can build bootstrapped version of ``orbment`` with the following steps.
 
 .. code:: sh
 
@@ -128,7 +128,7 @@ You can build bootstrapped version of ``Orbment`` with the following steps.
     # You can now run
     ./src/orbment
 
-For proper packaging ``wlc`` and ``Orbment`` should be built separately.
+For proper packaging ``wlc`` and ``orbment`` should be built separately.
 Instructions later...
 
 SIMILAR SOFTWARE
