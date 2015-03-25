@@ -98,7 +98,7 @@ compose key and cause the \fICaps Lock\fR key to mimic \fIctrl\fR.
 .I \fI$XDG_DATA_HOME/orbment/plugins\fR
 (Fallback: \fI$HOME/.local/share/orbment/plugins\fR)
 .br
-.I \fI/usr/lib/orbment/plugins\fR
+.I \fI@ORBMENT_PLUGINS_PATH@\fR
 .SH SEE ALSO
 \fBxkbcommon\fR,
 \fBwayland\fR,

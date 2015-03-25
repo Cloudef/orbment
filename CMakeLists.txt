@@ -35,5 +35,5 @@ add_subdirectory(lib)
 add_subdirectory(src)
 add_subdirectory(plugins)
 
-install(FILES orbment.1 DESTINATION man/man1)
+configure_file(orbment.1.in man/man1/orbment.1 @ONLY)
 install(DIRECTORY include/orbment DESTINATION include)
