@@ -586,6 +586,36 @@ plugins_init(void)
    return true;
 }
 
+static uint32_t
+parse_prefix(const char *str)
+{
+   static const struct {
+      const char *name;
+      enum wlc_modifier_bit mod;
+   } map[] = {
+      { "shift", WLC_BIT_MOD_SHIFT },
+      { "caps", WLC_BIT_MOD_CAPS },
+      { "ctrl", WLC_BIT_MOD_CTRL },
+      { "alt", WLC_BIT_MOD_ALT },
+      { "mod2", WLC_BIT_MOD_MOD2 },
+      { "mod3", WLC_BIT_MOD_MOD3 },
+      { "logo", WLC_BIT_MOD_LOGO },
+      { "mod5", WLC_BIT_MOD_MOD5 },
+      { NULL, 0 },
+   };
+
+   uint32_t prefix = 0;
+   const char *s = str;
+   for (int i = 0; map[i].name && *s; ++i) {
+      if (!chck_cstreq(map[i].name, s))
+         continue;
+
+      prefix |= map[i].mod;
+   }
+
+   return (prefix ? prefix : orbment.prefix);
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -628,6 +658,16 @@ main(int argc, char *argv[])
    // default to alt on x11 session
    if (!chck_cstr_is_empty(x11))
       orbment.prefix = WLC_BIT_MOD_ALT;
+
+   for (int i = 1; i < argc; ++i) {
+      if (chck_cstreq(argv[i], "--prefix")) {
+         if (i + 1 >= argc) {
+            wlc_log(WLC_LOG_ERROR, "--prefix takes an argument (shift, caps, ctrl, alt, logo, mod2, mod3, mod5)");
+         } else {
+            orbment.prefix = parse_prefix(argv[++i]);
+         }
+      }
+   }
 
    struct sigaction action = {
       .sa_handler = SIG_DFL,
