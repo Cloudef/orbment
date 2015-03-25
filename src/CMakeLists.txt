@@ -1,24 +1,28 @@
-SET(SRC
-   loliwm.c
+set(sources
+   orbment.c
+   plugin.c
    )
 
-# We use wayland-util
-FIND_PACKAGE(Wayland REQUIRED)
+configure_file(config.h.in config.h @ONLY)
 
-# Math lib
-FIND_LIBRARY(MATH_LIBRARY m)
-MARK_AS_ADVANCED(MATH_LIBRARY)
-IF (NOT MATH_LIBRARY)
-   MESSAGE(FATAL_ERROR "Math library was not found")
-ENDIF ()
+include_directories(
+   ${WLC_INCLUDE_DIRS}
+   ${WAYLAND_SERVER_INCLUDE_DIR}
+   ${orbment_SOURCE_DIR}/include
+   ${orbment_SOURCE_DIR}/lib/chck/src
+   ${CMAKE_CURRENT_BINARY_DIR}
+   )
 
-ADD_DEFINITIONS(-std=c99 -D_DEFAULT_SOURCE)
-INCLUDE_DIRECTORIES(${WLC_INCLUDE_DIRS} ${WAYLAND_SERVER_INCLUDE_DIR})
-ADD_EXECUTABLE(loliwm ${SRC})
-TARGET_LINK_LIBRARIES(loliwm ${WLC_LIBRARY} ${WLC_LIBRARIES} ${WAYLAND_SERVER_LIBRARIES} ${MATH_LIBRARY})
+add_executable(orbment ${sources})
+
+target_link_libraries(orbment
+   chck_orbment
+   ${WLC_LIBRARY}
+   ${WLC_LIBRARIES}
+   )
 
 # Install rules
-INSTALL(TARGETS loliwm DESTINATION bin)
+install(TARGETS orbment DESTINATION bin)
 
 if (UNIX)
    # chown to root and setid for group
@@ -28,8 +32,8 @@ if (UNIX)
    #
    # If you have install that does not need permissions to access /dev/input,
    # you can forget about this step totally.
-   INSTALL(CODE "
-   execute_process(COMMAND chown root ${CMAKE_INSTALL_PREFIX}/bin/loliwm)
-   execute_process(COMMAND chmod g+s ${CMAKE_INSTALL_PREFIX}/bin/loliwm)
+   install(CODE "
+   execute_process(COMMAND chown root ${CMAKE_INSTALL_PREFIX}/bin/orbment)
+   execute_process(COMMAND chmod g+s ${CMAKE_INSTALL_PREFIX}/bin/orbment)
    ")
 endif ()

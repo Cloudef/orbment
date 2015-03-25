@@ -1,0 +1,7 @@
+#ifndef __orbment_config__
+#define __orbment_config__
+
+#define VERSION "@ORBMENT_VERSION@"
+#define PLUGINS_PATH "@ORBMENT_PLUGINS_PATH@"
+
+#endif /* __orbment_config__ */
