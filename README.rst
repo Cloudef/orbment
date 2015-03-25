@@ -52,7 +52,7 @@ Note that these keybinds are temporary until configuration is added.
 | ``mod-i, o``    | Shifts the cut of the nmaster layout to shrink or    |
 |                 | expand the view.                                     |
 +-----------------+------------------------------------------------------+
-| ``mod-print``   | Takes a screenshot in PNG format.                    |
+| ``mod-s``       | Takes a screenshot in PNG format.                    |
 +-----------------+------------------------------------------------------+
 | ``mod-esc``     | Quits ``orbment``.                                   |
 +-----------------+------------------------------------------------------+
