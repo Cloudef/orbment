@@ -3,7 +3,7 @@ PROJECT(orbment C)
 set(ORBMENT_NAME "Orbment")
 set(ORBMENT_DESCRIPTION "Modular Wayland Compositor")
 set(ORBMENT_VERSION "0.0.1")
-set(ORBMENT_PLUGINS_PATH "${CMAKE_INSTALL_PREFIX}/lib/orbment" CACHE STRING "Systemwide plugins path")
+set(ORBMENT_PLUGINS_PATH "${CMAKE_INSTALL_PREFIX}/lib/orbment" CACHE STRING "Systemwide plugins path" FORCE)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${orbment_SOURCE_DIR}/CMake)
 
 # Includes
@@ -36,4 +36,5 @@ add_subdirectory(src)
 add_subdirectory(plugins)
 
 configure_file(orbment.1.in man/man1/orbment.1 @ONLY)
+install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/man DESTINATION share)
 install(DIRECTORY include/orbment DESTINATION include)
