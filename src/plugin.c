@@ -326,7 +326,7 @@ exists_in_info_array(const char *name, const char **array, bool check_group, enu
          } else if (msg == group) {
             if (get_group(array[i])) // check if the conflicted package belongs to the group as well
                return false;         // if that is true, we can ignore this conflict.
-            wlc_log(WLC_LOG_ERROR, "Group '%s' conflicts with plugin '%s'", array[i], p->info.name);
+            wlc_log(WLC_LOG_ERROR, "Group '%s' conflicts with plugin '%s'", array[i], (p ? p->info.name : "unknown"));
          }
          return true;
       }
