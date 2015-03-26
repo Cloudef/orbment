@@ -157,8 +157,11 @@ focus_topmost(wlc_handle output)
          continue;
 
       focus_view(views[i - 1]);
-      break;
+      return;
    }
+
+   // There is no topmost
+   focus_view(0);
 }
 
 static void
