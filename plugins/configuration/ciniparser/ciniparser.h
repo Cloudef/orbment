@@ -218,7 +218,7 @@ void ciniparser_unset(dictionary *ini, char *entry);
  * are stored as keys with NULL associated values, this is the only way
  * of querying for the presence of sections in a dictionary.
  */
-int ciniparser_find_entry(dictionary *ini, char *entry) ;
+int ciniparser_find_entry(dictionary *ini, const char *entry) ;
 
 /**
  * @brief    Parse an ini file and return an allocated dictionary object

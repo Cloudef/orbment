@@ -352,7 +352,7 @@ int ciniparser_getboolean(dictionary *d, const char *key, int notfound)
 	return ret;
 }
 
-int ciniparser_find_entry(dictionary *ini, char *entry)
+int ciniparser_find_entry(dictionary *ini, const char *entry)
 {
 	int found = 0;
 
