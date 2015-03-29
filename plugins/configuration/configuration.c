@@ -34,6 +34,7 @@ add_configuration_backend(plugin_h caller, const char *name, const struct functi
 
    plugin.backend.get = get->function;
    plugin.backend.name = name;
+   plugin.backend.handle = caller;
 
    return true;
 }
