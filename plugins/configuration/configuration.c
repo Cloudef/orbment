@@ -54,7 +54,7 @@ get(const char *key, char type, void *value_out)
 
    /* TODO: validate key further */ 
 
-   if (!type || !strchr("i", type)) {
+   if (!type || !strchr("id", type)) {
       plog(plugin.self, PLOG_WARN, "Cannot get key '%s': invalid type character '%c'.", key, type);
       return false;
    }
