@@ -29,30 +29,29 @@ ini_get(const char *key, const char type, void *value_out)
    return true;
 }
 
-static char *
-get_config_path(void)
+static bool
+get_config_path(struct chck_string *path)
 {
    const char *config_dir = xdg_get_path("XDG_CONFIG_HOME", ".config");
    static const char *suffix = "orbment/orbment.ini";
-   struct chck_string path = {0};
 
    if (chck_cstr_is_empty(config_dir))
-      return NULL;
+      return false;
 
-   if (!chck_string_set_format(&path, "%s/%s", config_dir, suffix))
-      return NULL;
+   if (!chck_string_set_format(path, "%s/%s", config_dir, suffix))
+      return false;
 
-   return path.data;
+   return true;
 }
 
 bool
 plugin_init(plugin_h self)
 {
    plugin_h configuration;
-   if (!(configuration = import_plugin(self, "configuration"))) {
+   struct chck_string path = {0};
 
+   if (!(configuration = import_plugin(self, "configuration")))
       return false;
-   }
 
    if (!(add_configuration_backend = import_method(self, configuration, "add_configuration_backend", "b(h,c[],fun)|1")))
       return false;
@@ -60,7 +59,13 @@ plugin_init(plugin_h self)
    if (!add_configuration_backend(self, "INI", FUN(ini_get, "b(c[],c,v)|1")))
       return false;
 
-   dict = ciniparser_load(get_config_path());
+   if (!get_config_path(&path))
+      return false;
+
+   if (!(dict = ciniparser_load(path.data)))
+      plog(self, PLOG_WARN, "Cannot open '%s'.", path.data);
+
+   chck_string_release(&path);
 
    return true;
 }
