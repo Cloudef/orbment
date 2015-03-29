@@ -27,6 +27,9 @@ ini_get(const char *key, const char type, void *value_out)
      case 'd':
          *(double*)value_out = ciniparser_getdouble(dict, key, 0.0);
          break;
+      case 's':
+         *(char**)value_out = ciniparser_getstring(dict, key, "");
+         break;
    }
 
    return true;

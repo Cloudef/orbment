@@ -54,11 +54,12 @@ get(const char *key, char type, void *value_out)
 
    /* TODO: validate key further */ 
 
-   if (!type || !strchr("id", type)) {
+   if (!type || !strchr("ids", type)) { /* Integer, Double, String */
       plog(plugin.self, PLOG_WARN, "Cannot get key '%s': invalid type character '%c'.", key, type);
       return false;
    }
 
+   /* TODO: validate strings, if type == 's' */
    return plugin.backend.get(key, type, value_out);
 }
 
