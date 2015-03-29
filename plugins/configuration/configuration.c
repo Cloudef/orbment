@@ -2,8 +2,8 @@
 #include <chck/string/string.h>
 #include "config.h"
 
-static const char get_sig[] = "b(v,c[],c)|1";
-typedef bool (*get_fun_t)(void *value_out, const char *key, const char type);
+static const char get_sig[] = "b(c[],c,v)|1";
+typedef bool (*get_fun_t)(const char *key, const char type, void *value_out);
 
 struct configuration_backend {
    get_fun_t get;
@@ -38,7 +38,7 @@ add_configuration_backend(const struct function *get)
 }
 
 static bool
-get(void *value_out, const char *key, char type)
+get(const char *key, char type, void *value_out)
 {
    if (!plugin.backend_loaded) {
       plog(plugin.self, PLOG_WARN, "Cannot get key '%s': configuration backend not loaded.", key);
@@ -57,7 +57,7 @@ get(void *value_out, const char *key, char type)
       return false;
    }
 
-   return plugin.backend.get(value_out, key, type);
+   return plugin.backend.get(key, type, value_out);
 }
 
 bool
@@ -74,7 +74,7 @@ plugin_register(void)
 {
    static const struct method methods[] = {
       REGISTER_METHOD(add_configuration_backend, "b(fun)|1"),
-      REGISTER_METHOD(get, "b(v,c[],c)|1"),
+      REGISTER_METHOD(get, "b(c[],c,v)|1"),
       {0}
    };
 
