@@ -73,6 +73,13 @@ plugin_init(plugin_h self)
    return true;
 }
 
+void
+plugin_deinit(plugin_h self)
+{
+   (void)self;
+   ciniparser_freedict(dict);
+}
+
 const struct plugin_info*
 plugin_register(void)
 {
