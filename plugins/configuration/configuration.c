@@ -38,14 +38,14 @@ add_configuration_backend(const struct function *get)
 }
 
 static bool
-get(void* value_out, const char *key, char type)
+get(void *value_out, const char *key, char type)
 {
    if (!plugin.backend_loaded) {
       plog(plugin.self, PLOG_WARN, "Cannot get key '%s': configuration backend not loaded.", key);
       return false;
    }
 
-   if (!key || *key == '\0') {
+   if (chck_cstr_is_empty(key)) {
       plog(plugin.self, PLOG_WARN, "Cannot get NULL/empty key.");
       return false;
    }

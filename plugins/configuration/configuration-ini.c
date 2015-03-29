@@ -1,4 +1,6 @@
 #include <orbment/plugin.h>
+#include <chck/xdg/xdg.h>
+#include <chck/string/string.h>
 #include "ciniparser/ciniparser.h"
 #include "config.h"
 
@@ -8,7 +10,7 @@ static bool (*get)(void *value_out, const char *key, char type);
 static dictionary *dict; 
 
 static bool
-ini_get(void* value_out, const char *key, const char type)
+ini_get(void *value_out, const char *key, const char type)
 {
    if (!dict)
       return false;
@@ -31,18 +33,17 @@ ini_get(void* value_out, const char *key, const char type)
 static char *
 get_config_path(void)
 {
-   const char *xdg_config_dir = getenv("XDG_CONFIG_HOME");
+   const char *config_dir = xdg_get_path("XDG_CONFIG_HOME", ".config");
    static const char *suffix = "orbment/orbment.ini";
+   struct chck_string path = {0};
 
-   if ((xdg_config_dir == NULL) || (*xdg_config_dir == 0))
+   if (chck_cstr_is_empty(config_dir))
       return NULL;
 
-   char *path = malloc(strlen(xdg_config_dir) + 1 + strlen(suffix) + 1);
-   strcpy(path, xdg_config_dir);
-   strcat(path, "/");
-   strcat(path, suffix);
+   if (!chck_string_set_format(&path, "%s/%s", config_dir, suffix))
+      return NULL;
 
-   return path;
+   return path.data;
 }
 
 bool
