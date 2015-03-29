@@ -6,6 +6,8 @@ static const char get_sig[] = "b(c[],c,v)|1";
 typedef bool (*get_fun_t)(const char *key, const char type, void *value_out);
 
 struct configuration_backend {
+   plugin_h handle;
+   const char *name;
    get_fun_t get;
 };
 
@@ -16,10 +18,10 @@ static struct {
 } plugin;
 
 static bool
-add_configuration_backend(const struct function *get)
+add_configuration_backend(plugin_h caller, const char *name, const struct function *get)
 {
    if (plugin.backend_loaded) {
-      plog(plugin.self, PLOG_WARN, "Configuration backend already loaded.");
+      plog(plugin.self, PLOG_WARN, "Configuration backend '%s' already loaded.", plugin.backend.name);
       return false;
    }
 
@@ -33,6 +35,7 @@ add_configuration_backend(const struct function *get)
 
    plugin.backend.get = get->function;
    plugin.backend_loaded = true;
+   plugin.backend.name = name;
 
    return true;
 }
@@ -73,7 +76,7 @@ const struct plugin_info*
 plugin_register(void)
 {
    static const struct method methods[] = {
-      REGISTER_METHOD(add_configuration_backend, "b(fun)|1"),
+      REGISTER_METHOD(add_configuration_backend, "b(h,c[],fun)|1"),
       REGISTER_METHOD(get, "b(c[],c,v)|1"),
       {0}
    };

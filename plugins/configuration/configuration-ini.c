@@ -4,7 +4,7 @@
 #include "ciniparser/ciniparser.h"
 #include "config.h"
 
-static bool (*add_configuration_backend)(const struct function *get);
+static bool (*add_configuration_backend)(plugin_h loader, const char *name, const struct function *get);
 static bool (*get)(const char *key, char type, void *value_out);
 
 static dictionary *dict; 
@@ -55,11 +55,11 @@ plugin_init(plugin_h self)
       return false;
    }
 
-   if (!(add_configuration_backend = import_method(self, configuration, "add_configuration_backend", "b(fun)|1")))
+   if (!(add_configuration_backend = import_method(self, configuration, "add_configuration_backend", "b(h,c[],fun)|1")))
       return false;
    if (!(get = import_method(self, configuration, "get", "b(c[],c,v)|1")))
       return false;
-   if (!add_configuration_backend(FUN(ini_get, "b(c[],c,v)|1")))
+   if (!add_configuration_backend(self, "INI", FUN(ini_get, "b(c[],c,v)|1")))
       return false;
 
    dict = ciniparser_load(get_config_path());
