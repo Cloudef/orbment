@@ -14,13 +14,12 @@ struct configuration_backend {
 static struct {
    plugin_h self;
    struct configuration_backend backend;
-   bool backend_loaded;
 } plugin;
 
 static bool
 add_configuration_backend(plugin_h caller, const char *name, const struct function *get)
 {
-   if (plugin.backend_loaded) {
+   if (plugin.backend.name) {
       plog(plugin.self, PLOG_WARN, "Configuration backend '%s' already loaded.", plugin.backend.name);
       return false;
    }
@@ -34,7 +33,6 @@ add_configuration_backend(plugin_h caller, const char *name, const struct functi
    }
 
    plugin.backend.get = get->function;
-   plugin.backend_loaded = true;
    plugin.backend.name = name;
 
    return true;
@@ -43,7 +41,7 @@ add_configuration_backend(plugin_h caller, const char *name, const struct functi
 static bool
 get(const char *key, char type, void *value_out)
 {
-   if (!plugin.backend_loaded) {
+   if (!plugin.backend.name) {
       plog(plugin.self, PLOG_WARN, "Cannot get key '%s': configuration backend not loaded.", key);
       return false;
    }
@@ -67,7 +65,7 @@ bool
 plugin_init(plugin_h self)
 {
    plugin.self = self;
-   plugin.backend_loaded = false;
+   plugin.backend.name = NULL;
 
    return true;
 }
