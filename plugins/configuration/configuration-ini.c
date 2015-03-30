@@ -30,6 +30,9 @@ ini_get(const char *key, const char type, void *value_out)
       case 's':
          *(char**)value_out = ciniparser_getstring(dict, key, "");
          break;
+      case 'b':
+         *(bool*)value_out = ciniparser_getboolean(dict, key, 0);
+         break;
    }
 
    return true;

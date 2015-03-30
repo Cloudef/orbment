@@ -82,7 +82,7 @@ get(const char *key, char type, void *value_out)
       return false;
    }
 
-   if (!type || !strchr("ids", type)) { /* Integer, Double, String */
+   if (!type || !strchr("idsb", type)) { /* Integer, Double, String, Boolean */
       plog(plugin.self, PLOG_WARN, "Cannot get key '%s': invalid type character '%c'.", key, type);
       return false;
    }
