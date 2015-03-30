@@ -39,6 +39,36 @@ add_configuration_backend(plugin_h caller, const char *name, const struct functi
    return true;
 }
 
+static bool validate_key(const char *key)
+{
+   if (chck_cstr_is_empty(key))
+      return false;
+
+   /* A leading slash is required */
+   if (key[0] != '/')
+      return false;
+
+   for(unsigned i=1; key[i]; i++) {
+      /* a-zA-Z0-9_- only */
+      if (key[i] >= 'a' && key[i] <= 'z')
+         continue;
+      if (key[i] >= 'A' && key[i] <= 'Z')
+         continue;
+      if (key[i] >= '0' && key[i] <= '9')
+         continue;
+      if (key[i] == '-' || key[i] == '_')
+         continue;
+
+      /* Slashes cannot be adjacent, or at the end of the key */
+      if (key[i] == '/' && key[i-1] != '/' && key[i+1] != '\0')
+         continue;
+
+      return false;
+   }
+
+   return true;
+}
+
 static bool
 get(const char *key, char type, void *value_out)
 {
@@ -47,12 +77,10 @@ get(const char *key, char type, void *value_out)
       return false;
    }
 
-   if (chck_cstr_is_empty(key)) {
-      plog(plugin.self, PLOG_WARN, "Cannot get NULL/empty key.");
+   if (!validate_key(key)) {
+      plog(plugin.self, PLOG_WARN, "Cannot get key '%s': invalid key format.", key);
       return false;
    }
-
-   /* TODO: validate key further */ 
 
    if (!type || !strchr("ids", type)) { /* Integer, Double, String */
       plog(plugin.self, PLOG_WARN, "Cannot get key '%s': invalid type character '%c'.", key, type);
