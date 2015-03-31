@@ -8,17 +8,57 @@ static bool (*add_configuration_backend)(plugin_h loader, const char *name, cons
 
 static dictionary *dict; 
 
+static char *
+convert_key(struct chck_string *ini_key, const char *key)
+{
+   if (!chck_string_set_cstr(ini_key, key, true))
+      return NULL;
+
+   /* Skip the required first slash */
+   char *p = &ini_key->data[1];
+
+   /* Replace the first slash with a colon */
+   while (*p++) {
+      if (*p == '/') {
+         *p = ':';
+         break;
+      }
+   }
+
+   /* If there wasn't a slash, this is a global property: prefix with ':' */
+   if (*p == '\0') {
+      ini_key->data[0] = ':';
+      return &ini_key->data[0];
+   }
+
+   /* Replace all subsequent slashes with periods */
+   while (*p++) {
+      if (*p == '/')
+         *p = '.';
+   }
+
+   /* Skip the first slash */
+   return &ini_key->data[1];
+}
+
 static bool
 ini_get(const char *key, const char type, void *value_out)
 {
+   struct chck_string ini_key;
+
    if (!dict)
       return false;
 
-   if (!ciniparser_find_entry(dict, key))
+   if (!(key = convert_key(&ini_key, key)))
       return false;
 
+   if (!ciniparser_find_entry(dict, key)) {
+      chck_string_release(&ini_key);
+      return false;
+   }
+
    if (!value_out)
-      return true;
+      goto return_true;
 
    switch(type) {
       case 'i':
@@ -34,6 +74,9 @@ ini_get(const char *key, const char type, void *value_out)
          *(bool*)value_out = ciniparser_getboolean(dict, key, 0);
          break;
    }
+
+return_true:
+   chck_string_release(&ini_key);
 
    return true;
 }
