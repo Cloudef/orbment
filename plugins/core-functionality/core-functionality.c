@@ -214,21 +214,27 @@ focus_next_or_previous_output(enum direction direction)
 }
 
 static void
+set_active_view_on_output(wlc_handle output, wlc_handle view)
+{
+   size_t memb;
+   const wlc_handle *views = wlc_output_get_views(output, &memb);
+   for (size_t i = 0; i < memb; ++i)
+      wlc_view_set_state(views[i], WLC_BIT_ACTIVATED, (views[i] == view));
+}
+
+static void
 view_move_to_output(wlc_handle view, wlc_handle from, wlc_handle to)
 {
    (void)view;
 
-   focus_topmost(from);
    relayout(from);
    relayout(to);
    wlc_log(WLC_LOG_INFO, "view %zu moved from output %zu to %zu", view, from, to);
 
-   if (wlc_view_get_state(view) & WLC_BIT_ACTIVATED) {
-      size_t memb;
-      const wlc_handle *views = wlc_output_get_views(to, &memb);
-      for (size_t i = 0; i < memb; ++i)
-         wlc_view_set_state(views[i], WLC_BIT_ACTIVATED, (views[i] == plugin.active.view));
-   }
+   if (wlc_view_get_state(view) & WLC_BIT_ACTIVATED)
+      set_active_view_on_output(to, view);
+
+   focus_topmost(from);
 }
 
 static void
@@ -249,8 +255,13 @@ view_created(wlc_handle view)
       wlc_view_set_type(view, BIT_BEMENU, true); // XXX: Hack
    }
 
-   if (should_focus_on_create(view))
-      focus_view(view);
+   if (should_focus_on_create(view)) {
+      if (wlc_view_get_output(view) == wlc_get_focused_output()) {
+         focus_view(view);
+      } else {
+         set_active_view_on_output(wlc_view_get_output(view), view);
+      }
+   }
 
    relayout(wlc_view_get_output(view));
 }
