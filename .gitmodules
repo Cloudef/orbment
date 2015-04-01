@@ -1,6 +1,8 @@
 [submodule "wlc"]
-	path = lib/wlc
-	url = git://github.com/Cloudef/wlc.git
+   path = lib/wlc
+   url = git://github.com/Cloudef/wlc.git
+   branch = master
 [submodule "chck"]
-	path = lib/chck/src
-	url = git://github.com/Cloudef/chck.git
+   path = lib/chck/src
+   url = git://github.com/Cloudef/chck.git
+   branch = master
