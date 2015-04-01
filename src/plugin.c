@@ -248,6 +248,8 @@ load_plugin(struct plugin *p)
 
    p->loaded = true;
 
+   wlc_log(WLC_LOG_INFO, "Loading plugin '%s'", p->info.name);
+
    if (p->init && !p->init(p->handle + 1))
       goto error0;
 
