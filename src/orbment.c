@@ -44,11 +44,15 @@ struct keybind {
    plugin_h owner;
 };
 
+typedef bool (*configuration_get_fun_t)(const char *key, const char type, void *value_out);
+
 static struct {
    struct {
       struct chck_pool pool;
       struct chck_hash_table table;
    } keybinds;
+
+   configuration_get_fun_t configuration_get;
 
    struct chck_iter_pool hooks[HOOK_LAST];
    uint32_t prefix;
@@ -116,6 +120,23 @@ keybind_for_syntax(const char *syntax)
 }
 
 static bool
+add_keybind_mapping(struct chck_string *mappings, const char *syntax, size_t *index)
+{
+   if (chck_cstr_is_empty(syntax))
+      return false;
+
+   const struct keybind *o;
+   if ((o = keybind_for_syntax(syntax))) {
+      plog(0, PLOG_WARN, "'%s' is already mapped to keybind '%s'", syntax, o->name.data);
+      return false;
+   }
+
+   chck_hash_table_str_set(&orbment.keybinds.table, syntax, strlen(syntax), index);
+   chck_string_set_format(mappings, (mappings->size > 0 ? "%s, %s" : "%s%s"), (mappings->data ? mappings->data : ""), syntax);
+   return true;
+}
+
+static bool
 add_keybind(plugin_h caller, const char *name, const char **syntax, const struct function *fun, intptr_t arg)
 {
    if (!name || !fun || !caller)
@@ -154,17 +175,25 @@ add_keybind(plugin_h caller, const char *name, const char **syntax, const struct
       goto error0;
 
    struct chck_string mappings = {0};
-   for (uint32_t i = 0; syntax && syntax[i]; ++i) {
-      if (chck_cstr_is_empty(syntax[i]))
-         continue;
+   bool mapped = false;
 
-      const struct keybind *o;
-      if (!(o = keybind_for_syntax(syntax[i]))) {
-         chck_hash_table_str_set(&orbment.keybinds.table, syntax[i], strlen(syntax[i]), &index);
-         chck_string_set_format(&mappings, (mappings.size > 0 ? "%s, %s" : "%s%s"), (mappings.data ? mappings.data : ""), syntax[i]);
-      } else {
-         plog(0, PLOG_WARN, "'%s' is already mapped to keybind '%s'", syntax[i], o->name.data);
+   if (orbment.configuration_get) {
+      const char *value;
+      struct chck_string key = {0};
+      chck_string_set_format(&key, "/keybindings/%s/mappings", name);
+
+      if (orbment.configuration_get(key.data, 's', &value)) {
+         add_keybind_mapping(&mappings, value, &index);
+         mapped = true;
       }
+
+      chck_string_release(&key);
+   }
+
+   /* If no mapping was set from configuration, try to use default keybindings */
+   if(!mapped) {
+      for (uint32_t i = 0; syntax && syntax[i]; ++i)
+         add_keybind_mapping(&mappings, syntax[i], &index);
    }
 
    plog(0, PLOG_INFO, "Added keybind: %s (%s)", name, (chck_string_is_empty(&mappings) ? "none" : mappings.data));
@@ -508,6 +537,20 @@ plugin_deloaded(const struct plugin *plugin)
    remove_hooks_for_plugin(plugin->handle + 1);
 }
 
+bool
+core_plugin_init(plugin_h self)
+{
+   plugin_h configuration;
+
+   if ((configuration = import_plugin(self, "configuration"))) {
+       orbment.configuration_get = import_method(self, configuration, "get", "b(c[],c,v)|1");
+   } else {
+       orbment.configuration_get = NULL;
+   }
+
+   return true;
+}
+
 static bool
 plugins_init(void)
 {
@@ -522,13 +565,20 @@ plugins_init(void)
          {0},
       };
 
+      static const char *after[] = {
+         "configuration",
+         NULL,
+      };
+
       struct plugin core = {
          .info = {
             .name = "orbment",
             .description = "Hook and input api.",
             .version = VERSION,
             .methods = methods,
-         }
+            .after = after,
+         },
+         .init = core_plugin_init
       };
 
       if (!register_plugin(&core, NULL))
