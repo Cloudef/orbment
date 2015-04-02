@@ -63,14 +63,19 @@ static struct {
 static bool
 syntax_append(struct chck_string *syntax, const char *cstr, bool is_heap)
 {
+   assert(syntax && cstr);
+
    if (syntax->size > 0)
       return chck_string_set_format(syntax, "%s-%s", syntax->data, cstr);
+
    return chck_string_set_cstr(syntax, cstr, is_heap);
 }
 
 static bool
 append_mods(struct chck_string *syntax, struct chck_string *prefixed, uint32_t mods)
 {
+   assert(syntax && prefixed);
+
    if (mods == orbment.prefix && !syntax_append(prefixed, "P", false))
       return false;
 
@@ -103,9 +108,11 @@ static bool
 keybind_exists(const char *name)
 {
    const struct keybind *k;
-   chck_pool_for_each(&orbment.keybinds.pool, k)
+   chck_pool_for_each(&orbment.keybinds.pool, k) {
       if (chck_string_eq_cstr(&k->name, name))
          return true;
+   }
+
    return false;
 }
 
@@ -122,6 +129,8 @@ keybind_for_syntax(const char *syntax)
 static bool
 add_keybind_mapping(struct chck_string *mappings, const char *syntax, size_t *index)
 {
+   assert(mappings && index);
+
    if (chck_cstr_is_empty(syntax))
       return false;
 
