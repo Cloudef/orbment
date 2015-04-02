@@ -96,9 +96,8 @@ get_config_path(struct chck_string *path)
 bool
 plugin_init(plugin_h self)
 {
-   plugin_h configuration;
-   struct chck_string path = {0};
 
+   plugin_h configuration;
    if (!(configuration = import_plugin(self, "configuration")))
       return false;
 
@@ -108,6 +107,7 @@ plugin_init(plugin_h self)
    if (!add_configuration_backend(self, "INI", FUN(ini_get, "b(c[],c,v)|1")))
       return false;
 
+   struct chck_string path = {0};
    if (!get_config_path(&path))
       return false;
 
