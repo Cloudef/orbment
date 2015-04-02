@@ -197,11 +197,11 @@ load_deps_from_group(struct plugin *p, struct chck_iter_pool *pool, bool hard)
 }
 
 static bool
-belongs_to_group(struct plugin *p, const char *name)
+belongs_to_pool(const char **pool, const char *name)
 {
-   assert(p && name);
-   for (uint32_t i = 0; p->info.groups && p->info.groups[i]; ++i) {
-      if (chck_cstreq(p->info.groups[i], name))
+   assert(name);
+   for (uint32_t i = 0; pool && pool[i]; ++i) {
+      if (chck_cstreq(pool[i], name))
          return true;
    }
    return false;
@@ -214,12 +214,17 @@ load_deps_from_array(struct plugin *p, const char **array, bool hard)
 
    for (uint32_t i = 0; array && array[i]; ++i) {
       struct chck_iter_pool *pool;
-      if (!belongs_to_group(p, array[i]) && (pool = get_group(array[i])))
+      if (!belongs_to_pool(p->info.groups, array[i]) && (pool = get_group(array[i])))
          return load_deps_from_group(p, pool, hard);
 
       struct plugin *d;
       if (!(d = get(array[i])) && hard) {
          wlc_log(WLC_LOG_ERROR, "Dependency '%s' for plugin '%s' was not found", array[i], p->info.name);
+         return false;
+      }
+
+      if (d && (belongs_to_pool(d->info.requires, p->info.name) || belongs_to_pool(d->info.after, p->info.name))) {
+         wlc_log(WLC_LOG_ERROR, "Circular dependency detected for plugins '%s' and '%s'", p->info.name, d->info.name);
          return false;
       }
 
