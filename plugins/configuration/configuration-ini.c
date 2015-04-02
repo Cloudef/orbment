@@ -40,7 +40,7 @@ static bool
 ini_get(const char *key, const char type, void *value_out)
 {
    assert(key && type && strchr("idsb", type));
-   struct chck_string ini_key;
+   struct chck_string ini_key = {0};
 
    if (!dict)
       return false;
