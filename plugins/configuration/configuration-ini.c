@@ -80,17 +80,11 @@ static bool
 get_config_path(struct chck_string *path)
 {
    assert(path);
-
-   const char *config_dir = xdg_get_path("XDG_CONFIG_HOME", ".config");
+   char *config_dir = xdg_get_path("XDG_CONFIG_HOME", ".config");
    static const char *suffix = "orbment/orbment.ini";
-
-   if (chck_cstr_is_empty(config_dir))
-      return false;
-
-   if (!chck_string_set_format(path, "%s/%s", config_dir, suffix))
-      return false;
-
-   return true;
+   const bool ret = (!chck_cstr_is_empty(config_dir) && chck_string_set_format(path, "%s/%s", config_dir, suffix));
+   free(config_dir);
+   return ret;
 }
 
 bool
