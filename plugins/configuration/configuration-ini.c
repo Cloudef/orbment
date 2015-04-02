@@ -1,79 +1,77 @@
 #include <orbment/plugin.h>
+#include <stdlib.h>
 #include <assert.h>
 #include <chck/xdg/xdg.h>
 #include <chck/string/string.h>
-#include "ciniparser/ciniparser.h"
+#include "inihck.h"
 #include "config.h"
 
 static bool (*add_configuration_backend)(plugin_h loader, const char *name, const struct function *get);
 
-static dictionary *dict; 
+static struct {
+   struct ini inif;
+   plugin_h self;
+} plugin;
 
-static char *
-convert_key(struct chck_string *ini_key, const char *key)
+static bool
+convert_key(struct chck_string *converted, const char *key)
 {
-   assert(ini_key && key);
-   if (!chck_string_set_cstr(ini_key, key, true))
-      return NULL;
+   assert(converted && key);
 
-   /* Skip the required first slash */
-   char *p = &ini_key->data[1];
+   if (!key[1] || !chck_string_set_cstr(converted, key + 1, true))
+      return false;
 
-   /* Replace the first slash with a colon */
-   if ((p = strchr(p, '/'))) {
-      *p = ':';
-   } else {
-      /* If there wasn't a slash, this is a global property: prefix with ':' */
-      ini_key->data[0] = ':';
-      return &ini_key->data[0];
-   }
+   if (chck_string_is_empty(converted))
+      goto error0;
 
-   /* Replace all subsequent slashes with periods */
-   while ((p = strchr(p, '/')))
-      *p = '.';
+   char *s = strchr(converted->data, '/');
+   for (s = (s ? strchr(s + 1, '/') : NULL); s && *s; s = strchr(s, '/'))
+      *s = '.';
 
-   /* Skip the first slash */
-   return &ini_key->data[1];
+   return true;
+
+error0:
+   chck_string_release(converted);
+   return false;
 }
 
 static bool
-ini_get(const char *key, const char type, void *value_out)
+get(const char *key, const char type, void *value_out)
 {
    assert(key && type && strchr("idsb", type));
-   struct chck_string ini_key = {0};
 
-   if (!dict)
+   struct chck_string converted = {0};
+   if (!convert_key(&converted, key))
       return false;
 
-   if (!(key = convert_key(&ini_key, key)))
-      return false;
+   struct ini_value v;
+   if (!ini_get(&plugin.inif, converted.data, &v))
+      goto not_found;
 
-   if (!ciniparser_find_entry(dict, key)) {
-      chck_string_release(&ini_key);
-      return false;
-   }
+   chck_string_release(&converted);
 
-   if (!value_out)
-      goto return_true;
+   if (chck_cstr_is_empty(v.data))
+      return false;
 
    switch(type) {
-      case 'i':
-         *(int32_t*)value_out = ciniparser_getint(dict, key, 0);
-         break;
-      case 'd':
-         *(double*)value_out = ciniparser_getdouble(dict, key, 0.0);
-         break;
       case 's':
-         *(char**)value_out = ciniparser_getstring(dict, key, "");
+         *(const char**)value_out = v.data;
          break;
-      case 'b':
-         *(bool*)value_out = ciniparser_getboolean(dict, key, 0);
-         break;
+
+      case 'i': return chck_cstr_to_i32(v.data, value_out);
+      case 'd': return chck_cstr_to_d(v.data, value_out);
+      case 'b': return chck_cstr_to_bool(v.data, value_out);
+
+      default:
+         assert(false && "there should always be a valid type");
+         return false;
    }
 
-return_true:
-   chck_string_release(&ini_key);
    return true;
+
+not_found:
+   chck_string_release(&converted);
+   return false;
 }
 
 static bool
@@ -87,9 +85,26 @@ get_config_path(struct chck_string *path)
    return ret;
 }
 
+static void
+throw(struct ini *ini, size_t line_num, size_t position, const char *line, const char *message)
+{
+   (void)ini;
+   plog(plugin.self, PLOG_ERROR, "[%zu, %zu]: %s", line_num, position, message);
+   plog(plugin.self, PLOG_ERROR, "%s", line);
+   plog(plugin.self, PLOG_ERROR, "%*c", (uint32_t)position, '^');
+}
+
+void
+plugin_deinit(plugin_h self)
+{
+   (void)self;
+   ini_release(&plugin.inif);
+}
+
 bool
 plugin_init(plugin_h self)
 {
+   plugin.self = self;
 
    plugin_h configuration;
    if (!(configuration = import_plugin(self, "configuration")))
@@ -98,25 +113,24 @@ plugin_init(plugin_h self)
    if (!(add_configuration_backend = import_method(self, configuration, "add_configuration_backend", "b(h,c[],fun)|1")))
       return false;
 
-   if (!add_configuration_backend(self, "INI", FUN(ini_get, "b(c[],c,v)|1")))
+   if (!add_configuration_backend(self, "INI", FUN(get, "b(c[],c,v)|1")))
+      return false;
+
+   if (!ini(&plugin.inif, '/', 256, throw))
       return false;
 
    struct chck_string path = {0};
    if (!get_config_path(&path))
       return false;
 
-   if (!(dict = ciniparser_load(path.data)))
-      plog(self, PLOG_WARN, "Cannot open '%s'.", path.data);
+   const struct ini_options options = { .escaping = true, .quoted_strings = true, .empty_values = true };
+   const bool ret = ini_parse(&plugin.inif, path.data, &options);
+
+   if (!ret)
+      plog(self, PLOG_ERROR, "Failed to open or validate: %s", path.data);
 
    chck_string_release(&path);
-   return true;
-}
-
-void
-plugin_deinit(plugin_h self)
-{
-   (void)self;
-   ciniparser_freedict(dict);
+   return ret;
 }
 
 const struct plugin_info*
