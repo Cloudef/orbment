@@ -2,6 +2,8 @@
 #include <chck/string/string.h>
 #include "config.h"
 
+static bool (*add_hook)(plugin_h, const char *name, const struct function*);
+
 static const char get_sig[] = "b(c[],c,v)|1";
 typedef bool (*get_fun_t)(const char *key, const char type, void *value_out);
 
@@ -97,12 +99,28 @@ get(const char *key, char type, void *value_out)
    return plugin.backend.get(key, type, value_out);
 }
 
+static void
+plugin_deloaded(plugin_h ph)
+{
+   if (ph != plugin.backend.handle)
+      return;
+
+   memset(&plugin.backend, 0, sizeof(plugin.backend));
+}
+
 bool
 plugin_init(plugin_h self)
 {
    plugin.self = self;
-   plugin.backend.name = NULL;
-   return true;
+
+   plugin_h orbment;
+   if (!(orbment = import_plugin(self, "orbment")))
+      return false;
+
+   if (!(add_hook = import_method(self, orbment, "add_hook", "b(h,c[],fun)|1")))
+      return false;
+
+   return (add_hook(self, "plugin.deloaded", FUN(plugin_deloaded, "v(h)|1")));
 }
 
 const struct plugin_info*
