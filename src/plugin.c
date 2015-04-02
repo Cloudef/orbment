@@ -242,9 +242,11 @@ load_plugin(struct plugin *p)
    if (p->loaded)
       return true;
 
-   if (!load_deps_from_array(p, p->info.requires, true) ||
-       !load_deps_from_array(p, p->info.after, false))
+   if (!load_deps_from_array(p, p->info.requires, true))
       goto error0;
+
+   // optional deps
+   load_deps_from_array(p, p->info.after, false);
 
    p->loaded = true;
 
