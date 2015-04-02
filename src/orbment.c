@@ -550,7 +550,6 @@ bool
 core_plugin_init(plugin_h self)
 {
    plugin_h configuration;
-
    if ((configuration = import_plugin(self, "configuration"))) {
        orbment.configuration_get = import_method(self, configuration, "get", "b(c[],c,v)|1");
    } else {
