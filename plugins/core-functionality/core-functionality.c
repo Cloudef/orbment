@@ -249,8 +249,10 @@ view_created(wlc_handle view)
 {
    if (wlc_view_get_class(view) && chck_cstreq(wlc_view_get_class(view), "bemenu")) {
       // Do not allow more than one bemenu instance
-      if (plugin.active.view && wlc_view_get_type(plugin.active.view) & BIT_BEMENU)
+      if (plugin.active.view && wlc_view_get_type(plugin.active.view) & BIT_BEMENU) {
          wlc_view_close(view);
+         return;
+      }
 
       wlc_view_set_type(view, BIT_BEMENU, true); // XXX: Hack
    }
