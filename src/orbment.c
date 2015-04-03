@@ -573,6 +573,10 @@ plugins_init(void)
          {0},
       };
 
+      // The core is loaded after optional configuration plugin.
+      // This works since core is not really a real plugin, but a meta-plugin.
+      // So it is already initialized before load and can be imported by the configuration plugin as well.
+
       static const char *after[] = {
          "configuration",
          NULL,
