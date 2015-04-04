@@ -187,10 +187,17 @@ add_keybind(plugin_h caller, const char *name, const char **syntax, const struct
    bool mapped = false;
 
    if (orbment.configuration_get) {
-      const char *value;
       struct chck_string key = {0};
-      chck_string_set_format(&key, "/keybindings/%s/mappings", name);
+      int name_start, name_end;
+      chck_string_set_format(&key, "/keybindings/%n%s%n/mappings", &name_start, name, &name_end);
 
+      /* Configuration keys may not contain spaces, so replace spaces with underscores */
+      for (int i = name_start; i < name_end; i++) {
+         if (key.data[i] == ' ')
+            key.data[i] = '_';
+      }
+
+      const char *value;
       if (orbment.configuration_get(key.data, 's', &value)) {
          add_keybind_mapping(&mappings, value, &index);
          mapped = true;
