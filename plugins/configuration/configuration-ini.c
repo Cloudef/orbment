@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <chck/xdg/xdg.h>
 #include <chck/string/string.h>
-#include "inihck.h"
+#include <inihck/inihck.h>
 #include "config.h"
 
 static bool (*add_configuration_backend)(plugin_h loader, const char *name, const struct function *get);
