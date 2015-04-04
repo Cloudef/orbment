@@ -4,6 +4,6 @@ install(TARGETS orbment-plugin-configuration DESTINATION ${ORBMENT_PLUGINS_PATH}
 
 include_directories(${INIHCK_INCLUDE_DIRS})
 add_library(orbment-plugin-configuration-ini SHARED configuration-ini.c)
-target_link_libraries(orbment-plugin-configuration-ini ${INIHCK_LIBRARIES})
+target_link_libraries(orbment-plugin-configuration-ini ${INIHCK_LIBRARY})
 set_target_properties(orbment-plugin-configuration-ini PROPERTIES PREFIX "")
 install(TARGETS orbment-plugin-configuration-ini DESTINATION ${ORBMENT_PLUGINS_PATH})
