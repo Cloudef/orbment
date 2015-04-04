@@ -172,7 +172,7 @@ plugin_init(plugin_h self)
    struct compressor *compressors = list_compressors("image", struct_signature, compress_signature, &memb);
    for (size_t i = 0; i < memb; ++i) {
       struct chck_string name = {0};
-      chck_string_set_format(&name, "take screenshot (%s)", compressors[i].name);
+      chck_string_set_format(&name, "take screenshot %s", compressors[i].name);
       const bool ret = add_keybind(self, name.data, (chck_cstreq(compressors[i].name, "png") ? (const char*[]){ "<SunPrint_Screen>", "<P-s>", NULL } : NULL), FUN(key_cb_screenshot, "v(h,u32,ip)|1"), i);
       chck_string_release(&name);
 
