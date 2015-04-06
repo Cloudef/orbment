@@ -399,6 +399,11 @@ output_resolution(wlc_handle output, const struct wlc_size *from, const struct w
       hook->function(output, from, to);
 }
 
+static void
+ready(void)
+{
+}
+
 static enum hook_type
 hook_type_for_string(const char *type)
 {
@@ -715,6 +720,10 @@ main(int argc, char *argv[])
 
       .keyboard = {
          .key = keyboard_key,
+      },
+
+      .compositor = {
+         .ready = ready,
       },
    };
 
