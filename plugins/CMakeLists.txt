@@ -5,6 +5,7 @@ set(plugins
    core-layouts
    core-screenshot
    configuration
+   autostart
 )
 
 include_directories(

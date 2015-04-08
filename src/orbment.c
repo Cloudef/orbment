@@ -27,6 +27,7 @@ enum hook_type {
    HOOK_VIEW_MOVE_TO_OUTPUT,
    HOOK_VIEW_GEOMETRY_REQUEST,
    HOOK_VIEW_STATE_REQUEST,
+   HOOK_COMPOSITOR_READY,
    HOOK_LAST,
 };
 
@@ -400,8 +401,11 @@ output_resolution(wlc_handle output, const struct wlc_size *from, const struct w
 }
 
 static void
-ready(void)
+compositor_ready(void)
 {
+   struct hook *hook;
+   chck_iter_pool_for_each(&orbment.hooks[HOOK_COMPOSITOR_READY], hook)
+      hook->function();
 }
 
 static enum hook_type
@@ -422,6 +426,7 @@ hook_type_for_string(const char *type)
       { "view.move_to_output", HOOK_VIEW_MOVE_TO_OUTPUT },
       { "view.geometry_request", HOOK_VIEW_GEOMETRY_REQUEST },
       { "view.state_request", HOOK_VIEW_STATE_REQUEST },
+      { "compositor.ready", HOOK_COMPOSITOR_READY },
       { NULL, HOOK_LAST },
    };
 
@@ -517,6 +522,7 @@ add_hook(plugin_h caller, const char *type, const struct function *hook)
       "v(h,h,h)|1", // HOOK_VIEW_MOVE_TO_OUTPUT
       "v(h,*)|1", // HOOK_VIEW_GEOMETRY_REQUEST
       "v(h,e,b)|1", // HOOK_VIEW_STATE_REQUEST
+      "v()|1", // HOOK_COMPOSITOR_READY
    };
 
    if (!chck_cstreq(hook->signature, signatures[t])) {
@@ -723,7 +729,7 @@ main(int argc, char *argv[])
       },
 
       .compositor = {
-         .ready = ready,
+         .ready = compositor_ready,
       },
    };
 
