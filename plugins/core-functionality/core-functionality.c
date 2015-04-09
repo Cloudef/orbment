@@ -406,6 +406,17 @@ key_cb_focus_next_client(wlc_handle view, uint32_t time, intptr_t arg)
    focus_next_or_previous_view(view, NEXT);
 }
 
+static void
+key_cb_focus_view(wlc_handle view, uint32_t time, intptr_t arg)
+{
+   (void)time, (void)arg;
+
+   if (!view)
+      return;
+
+   wlc_view_focus(view);
+}
+
 static const struct {
    const char *name, **syntax;
    keybind_fun_t function;
@@ -442,6 +453,7 @@ static const struct {
    { "move to output 0", (const char*[]){ "<P-z>", NULL }, key_cb_move_to_output, 0 },
    { "move to output 1", (const char*[]){ "<P-x>", NULL }, key_cb_move_to_output, 1 },
    { "move to output 2", (const char*[]){ "<P-c>", NULL }, key_cb_move_to_output, 2 },
+   { "focus view", (const char*[]){ "<B0>", NULL }, key_cb_focus_view, 0 },
    {0},
 };
 

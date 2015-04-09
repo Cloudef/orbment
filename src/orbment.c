@@ -6,6 +6,7 @@
 #include <assert.h>
 #include <time.h>
 #include <dirent.h>
+#include <linux/input.h>
 #include <wlc/wlc.h>
 #include <xkbcommon/xkbcommon.h>
 #include <chck/pool/pool.h>
@@ -324,32 +325,15 @@ view_state_request(wlc_handle view, const enum wlc_view_state_bit state, const b
 }
 
 static bool
-pointer_button(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifiers, uint32_t button, enum wlc_button_state state)
+pass_key(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifiers, const char name[64], bool pressed, bool *out_pass)
 {
-   (void)time, (void)modifiers, (void)button;
+   assert(modifiers && out_pass);
 
-   // XXX: move to core-functionality
-#if 0
-   if (state == WLC_BUTTON_STATE_PRESSED)
-      focus_view(view);
-#endif
-
-   return true;
-}
-
-static bool
-keyboard_key(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifiers, uint32_t key, uint32_t sym, enum wlc_key_state state)
-{
-   (void)time, (void)key;
-
-   bool pass = true;
+   bool handled = false;
+   *out_pass = true;
 
    struct chck_string syntax = {0}, prefixed = {0};
    if (!append_mods(&syntax, &prefixed, modifiers->mods))
-      goto out;
-
-   char name[64];
-   if (xkb_keysym_get_name(sym, name, sizeof(name)) == -1)
       goto out;
 
    syntax_append(&syntax, name, true);
@@ -359,17 +343,51 @@ keyboard_key(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifie
    plog(0, PLOG_INFO, "hit combo: %s %s", syntax.data, prefixed.data);
 
    const struct keybind *k;
-   if (!(k = keybind_for_syntax(prefixed.data)) &&
-       !(k = keybind_for_syntax(syntax.data)))
+   if (!(k = keybind_for_syntax(prefixed.data)) && !(k = keybind_for_syntax(syntax.data)))
        goto out;
 
-   if (state == WLC_KEY_STATE_PRESSED)
+   if (pressed)
       k->function(view, time, k->arg);
-   pass = false;
+
+   *out_pass = false;
+   handled = true;
 
 out:
    chck_string_release(&syntax);
    chck_string_release(&prefixed);
+   return handled;
+}
+
+static bool
+pointer_button(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifiers, uint32_t button, enum wlc_button_state state)
+{
+   (void)time, (void)modifiers, (void)button;
+
+   bool pass = false;
+   struct chck_string name = {0};
+   if (!chck_string_set_format(&name, "B%u", button - BTN_MOUSE))
+      goto out;
+
+   const bool pressed = (state == WLC_BUTTON_STATE_PRESSED);
+   pass_key(view, time, modifiers, name.data, pressed, &pass);
+
+out:
+   chck_string_release(&name);
+   return pass;
+}
+
+static bool
+keyboard_key(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifiers, uint32_t key, uint32_t sym, enum wlc_key_state state)
+{
+   (void)time, (void)key;
+
+   char name[64];
+   if (xkb_keysym_get_name(sym, name, sizeof(name)) == -1)
+      return false;
+
+   bool pass;
+   const bool pressed = (state == WLC_KEY_STATE_PRESSED);
+   pass_key(view, time, modifiers, name, pressed, &pass);
    return pass;
 }
 
