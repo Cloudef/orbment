@@ -52,7 +52,7 @@ do_autostart(void)
 
       const char *null = NULL;
       chck_iter_pool_push_back(&argv, &null); /* NULL indicates end of the array */
-      plog(plugin.self, PLOG_INFO, "spawning '%s'.", command_cstr);
+      plog(plugin.self, PLOG_INFO, "spawning: %s", command_cstr);
       wlc_exec(command.data, chck_iter_pool_to_c_array(&argv, NULL));
       chck_iter_pool_empty(&argv);
    }
