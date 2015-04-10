@@ -46,10 +46,7 @@ do_autostart(void)
       size_t len;
       while ((t = (char*)chck_cstr_tokenize_quoted(command.data, &len, " ", "\"'", &state))) {
          chck_iter_pool_push_back(&argv, &t);
-         /* terminate the previous token with \0 (if this isn't the first token) */
-         if (t != command.data) {
-            *(t-1) = '\0';
-         }
+         t[len] = 0; /* replaces each token with \0 */
       }
 
       plog(plugin.self, PLOG_INFO, "spawning '%s'.", command_cstr);
