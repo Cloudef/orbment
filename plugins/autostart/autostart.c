@@ -96,7 +96,7 @@ plugin_register(void)
 
    static const struct plugin_info info = {
       .name = "autostart",
-      .description = "Autostart programs when orbment starts.",
+      .description = "Launch programs on startup.",
       .version = VERSION,
       .requires = requires
    };
