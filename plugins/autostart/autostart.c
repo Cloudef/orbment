@@ -38,19 +38,21 @@ do_autostart(void)
       const char *command_cstr;
       if (!plugin.configuration_get(key.data, 's', &command_cstr))
          break;
+
       if (!chck_string_set_cstr(&command, command_cstr, true))
          break;
 
       char *t;
-      const char *state = NULL, *null = NULL;
       size_t len;
+      const char *state = NULL;
       while ((t = (char*)chck_cstr_tokenize_quoted(command.data, &len, " ", "\"'", &state))) {
          chck_iter_pool_push_back(&argv, &t);
          t[len] = 0; /* replaces each token with \0 */
       }
 
-      plog(plugin.self, PLOG_INFO, "spawning '%s'.", command_cstr);
+      const char *null = NULL;
       chck_iter_pool_push_back(&argv, &null); /* NULL indicates end of the array */
+      plog(plugin.self, PLOG_INFO, "spawning '%s'.", command_cstr);
       wlc_exec(command.data, chck_iter_pool_to_c_array(&argv, NULL));
       chck_iter_pool_empty(&argv);
    }
