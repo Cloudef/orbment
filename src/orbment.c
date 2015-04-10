@@ -328,10 +328,12 @@ view_state_request(wlc_handle view, const enum wlc_view_state_bit state, const b
 static bool
 pass_key(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifiers, const char name[64], bool pressed, bool *out_pass)
 {
-   assert(modifiers && out_pass);
+   assert(modifiers);
 
    bool handled = false;
-   *out_pass = true;
+
+   if (out_pass)
+      *out_pass = true;
 
    struct chck_string syntax = {0}, prefixed = {0};
    if (!append_mods(&syntax, &prefixed, modifiers->mods))
@@ -350,7 +352,9 @@ pass_key(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifiers, 
    if (pressed)
       k->function(view, time, k->arg);
 
-   *out_pass = false;
+   if (out_pass)
+      *out_pass = false;
+
    handled = true;
 
 out:
@@ -364,17 +368,16 @@ pointer_button(wlc_handle view, uint32_t time, const struct wlc_modifiers *modif
 {
    (void)time, (void)modifiers, (void)button;
 
-   bool pass = false;
    struct chck_string name = {0};
    if (!chck_string_set_format(&name, "B%u", button - BTN_MOUSE))
       goto out;
 
    const bool pressed = (state == WLC_BUTTON_STATE_PRESSED);
-   pass_key(view, time, modifiers, name.data, pressed, &pass);
+   pass_key(view, time, modifiers, name.data, pressed, NULL);
 
 out:
    chck_string_release(&name);
-   return pass;
+   return true;
 }
 
 static bool
