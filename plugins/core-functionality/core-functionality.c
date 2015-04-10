@@ -290,21 +290,6 @@ view_destroyed(wlc_handle view)
 }
 
 static void
-spawn(const char *bin)
-{
-   if (chck_cstr_is_empty(bin))
-      return;
-
-   if (fork() == 0) {
-      setsid();
-      freopen("/dev/null", "w", stdout);
-      freopen("/dev/null", "w", stderr);
-      execlp(bin, bin, NULL);
-      _exit(EXIT_SUCCESS);
-   }
-}
-
-static void
 key_cb_exit(wlc_handle view, uint32_t time, intptr_t arg)
 {
    (void)view, (void)time, (void)arg;
@@ -326,14 +311,14 @@ static void
 key_cb_spawn_terminal(wlc_handle view, uint32_t time, intptr_t arg)
 {
    (void)view, (void)time, (void)arg;
-   spawn(plugin.terminal.data);
+   wlc_exec(plugin.terminal.data, (char *const[]){ plugin.terminal.data, NULL });
 }
 
 static void
 key_cb_spawn_bemenu(wlc_handle view, uint32_t time, intptr_t arg)
 {
    (void)view, (void)time, (void)arg;
-   spawn(DEFAULT_MENU);
+   wlc_exec(DEFAULT_MENU, (char *const[]){ DEFAULT_MENU, NULL });
 }
 
 static void

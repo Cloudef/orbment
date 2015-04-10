@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
+#include <wlc/wlc.h>
 #include <orbment/plugin.h>
 #include <chck/string/string.h>
 #include "config.h"
@@ -19,24 +20,6 @@ static struct {
    bool (*add_hook)(plugin_h, const char *name, const struct function*);
 } plugin;
 
-static void
-spawn(const char *bin)
-{
-   if (chck_cstr_is_empty(bin))
-      return;
-
-   plog(0, PLOG_INFO, "Autostart: spawning '%s'.", bin);
-
-   if (fork() == 0) {
-      setsid();
-      freopen("/dev/null", "w", stdout);
-      freopen("/dev/null", "w", stderr);
-      execlp(bin, bin, NULL);
-      plog(0, PLOG_ERROR, "Autostart: spawning '%s' failed: %s", bin, strerror(errno));
-      _exit(EXIT_SUCCESS);
-   }
-}
-
 void
 do_autostart(void)
 {
@@ -46,11 +29,11 @@ do_autostart(void)
       if (!chck_string_set_format(&key, "/autostart/%u", i))
          break;
 
-      const char *command;
+      char *command;
       if (!plugin.configuration_get(key.data, 's', &command))
          break;
 
-      spawn(command);
+      wlc_exec(command, (char *const[]){ command, NULL });
    }
 
    chck_string_release(&key);
