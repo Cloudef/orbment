@@ -1,4 +1,5 @@
 #include <orbment/plugin.h>
+#include <unistd.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <chck/xdg/xdg.h>
@@ -123,11 +124,17 @@ plugin_init(plugin_h self)
    if (!get_config_path(&path))
       return false;
 
+   if (access(path.data, R_OK)) {
+      plog(self, PLOG_WARN, "Failed to open '%s': %s", path.data, strerror(errno));
+      chck_string_release(&path);
+      return false;
+   }
+
    const struct ini_options options = { .escaping = true, .quoted_strings = true, .empty_values = true };
    const bool ret = ini_parse(&plugin.inif, path.data, &options);
 
    if (!ret)
-      plog(self, PLOG_ERROR, "Failed to open or validate: %s", path.data);
+      plog(self, PLOG_ERROR, "Failed to parse '%s'", path.data);
 
    chck_string_release(&path);
    return ret;
