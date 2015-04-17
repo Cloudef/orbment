@@ -56,7 +56,7 @@ validate_key(const char *key)
    if (key[0] != '/')
       return false;
 
-   for(uint32_t i = 1; key[i]; i++) {
+   for (uint32_t i = 1; key[i]; i++) {
       /* a-zA-Z0-9_- only */
       if (key[i] >= 'a' && key[i] <= 'z')
          continue;
