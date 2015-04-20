@@ -9,7 +9,7 @@
 static bool (*add_compressor)(plugin_h, const char *type, const char *name, const char *ext, const struct function*);
 
 static void
-write(png_structp p, png_bytep data, png_size_t length)
+write_png(png_structp p, png_bytep data, png_size_t length)
 {
    assert(p);
    struct chck_buffer *buf = (struct chck_buffer*)png_get_io_ptr(p);
@@ -18,7 +18,7 @@ write(png_structp p, png_bytep data, png_size_t length)
 }
 
 static uint8_t*
-compress(const struct wlc_size *size, uint8_t *rgba, size_t *out_size)
+compress_png(const struct wlc_size *size, uint8_t *rgba, size_t *out_size)
 {
    if (out_size)
       *out_size = 0;
@@ -54,7 +54,7 @@ compress(const struct wlc_size *size, uint8_t *rgba, size_t *out_size)
       rows[y] = rgba + ((size->h - 1) - y) * size->w * 4;
 
    png_set_rows(p, info, rows);
-   png_set_write_fn(p, &buf, write, NULL);
+   png_set_write_fn(p, &buf, write_png, NULL);
    png_write_png(p, info, PNG_TRANSFORM_IDENTITY, NULL);
    free(rows);
    png_destroy_info_struct(p, &info);
@@ -88,7 +88,7 @@ plugin_init(plugin_h self)
    if (!(add_compressor = import_method(self, compressor, "add_compressor", "b(h,c[],c[],c[],fun)|1")))
       return false;
 
-   return add_compressor(self, "image", "png", "png", FUN(compress, "u8[](p,u8[],sz*)|1"));
+   return add_compressor(self, "image", "png", "png", FUN(compress_png, "u8[](p,u8[],sz*)|1"));
 }
 
 const struct plugin_info*

@@ -8,7 +8,7 @@
 static bool (*add_compressor)(plugin_h, const char *type, const char *name, const char *ext, const struct function*);
 
 static uint8_t*
-compress(const struct wlc_size *size, uint8_t *rgba, size_t *out_size)
+compress_ppm(const struct wlc_size *size, uint8_t *rgba, size_t *out_size)
 {
    if (out_size)
       *out_size = 0;
@@ -66,7 +66,7 @@ plugin_init(plugin_h self)
    if (!(add_compressor = import_method(self, compressor, "add_compressor", "b(h,c[],c[],c[],fun)|1")))
       return false;
 
-   return add_compressor(self, "image", "ppm", "ppm", FUN(compress, "u8[](p,u8[],sz*)|1"));
+   return add_compressor(self, "image", "ppm", "ppm", FUN(compress_ppm, "u8[](p,u8[],sz*)|1"));
 }
 
 const struct plugin_info*
