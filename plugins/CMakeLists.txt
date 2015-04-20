@@ -10,6 +10,7 @@ set(plugins
 
 include_directories(
    ${WLC_INCLUDE_DIRS}
+   ${XKBCOMMON_INCLUDE_DIR}
    ${orbment_SOURCE_DIR}/include
    ${orbment_SOURCE_DIR}/lib/chck/src
    ${orbment_SOURCE_DIR}/src # for common.h
