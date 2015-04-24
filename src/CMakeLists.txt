@@ -15,10 +15,13 @@ if (UNIX)
    endif ()
 endif (UNIX)
 
+add_definitions(
+   ${WLC_DEFINITIONS}
+   ${XKBCOMMON_DEFINTIONS}
+   )
 include_directories(
    ${WLC_INCLUDE_DIRS}
-   ${WAYLAND_SERVER_INCLUDE_DIR}
-   ${XKBCOMMON_INCLUDE_DIR}
+   ${XKBCOMMON_INCLUDE_DIRS}
    ${orbment_SOURCE_DIR}/include
    ${orbment_SOURCE_DIR}/lib/chck/src
    ${CMAKE_CURRENT_BINARY_DIR}
@@ -28,7 +31,6 @@ add_executable(orbment ${sources})
 
 target_link_libraries(orbment
    chck_orbment
-   ${WLC_LIBRARY}
    ${WLC_LIBRARIES}
    ${XKBCOMMON_LIBRARIES}
    ${DL_LIBRARY}

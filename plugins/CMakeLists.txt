@@ -8,6 +8,8 @@ set(plugins
    autostart
 )
 
+add_definitions(${WLC_DEFINITIONS})
+
 include_directories(
    ${WLC_INCLUDE_DIRS}
    ${XKBCOMMON_INCLUDE_DIR}
