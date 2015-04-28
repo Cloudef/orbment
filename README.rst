@@ -91,6 +91,10 @@ You can build bootstrapped version of ``orbment`` which also includes ``wlc`` wi
     # You can now run
     ./src/orbment
 
+If built in Debug mode, ``./plugins`` is added to plugin search paths, and you can run ``orbment`` straight
+from the build directory and it will find the core plugins. This is useful for testing development version,
+bootstrapping or developing plugins.
+
 PACKAGING
 ---------
 
