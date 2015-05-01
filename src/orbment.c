@@ -760,6 +760,16 @@ main(int argc, char *argv[])
    if (!wlc_init(&interface, argc, argv))
       return EXIT_FAILURE;
 
+   {
+      struct sigaction action = {
+         .sa_handler = SIG_DFL,
+         .sa_flags = SA_NOCLDWAIT
+      };
+
+      // do not care about childs
+      sigaction(SIGCHLD, &action, NULL);
+   }
+
    // default to alt on x11 session
    if (!chck_cstr_is_empty(x11))
       orbment.prefix = WLC_BIT_MOD_ALT;
@@ -773,14 +783,6 @@ main(int argc, char *argv[])
          }
       }
    }
-
-   struct sigaction action = {
-      .sa_handler = SIG_DFL,
-      .sa_flags = SA_NOCLDWAIT
-   };
-
-   // do not care about childs
-   sigaction(SIGCHLD, &action, NULL);
 
    if (!plugins_init())
       return EXIT_FAILURE;
