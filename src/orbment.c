@@ -717,6 +717,14 @@ parse_prefix(const char *str)
    return (prefix ? prefix : orbment.prefix);
 }
 
+static void
+sigterm(int signal)
+{
+   (void)signal;
+   wlc_log(WLC_LOG_INFO, "Got %s", (signal == SIGTERM ? "SIGTERM" : "SIGINT"));
+   wlc_terminate();
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -768,6 +776,15 @@ main(int argc, char *argv[])
 
       // do not care about childs
       sigaction(SIGCHLD, &action, NULL);
+   }
+
+   {
+      struct sigaction action = {
+         .sa_handler = sigterm,
+      };
+
+      sigaction(SIGTERM, &action, NULL);
+      sigaction(SIGINT, &action, NULL);
    }
 
    // default to alt on x11 session
