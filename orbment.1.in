@@ -29,7 +29,9 @@ basic usage until more flexible mechanisms are added.
 Some plugins can also add their own keybinds.  These additional keybinds are
 displayed in the log.  (See \fI\-\-log\fR)
 .IP \fBmod-return\fR
-Opens a new terminal emulator client.
+Opens a new terminal emulator client.  (The client can be set via the
+\fBTERMINAL\fR environment otherwise orbment will fallback on
+\fBweston-terminal\fR.)
 .IP \fBmod-p\fR
 Opens \fBbemenu-run\fR (similar to \fBdmenu_run\fR) for starting applications.
 .IP \fBmod-w\fR
