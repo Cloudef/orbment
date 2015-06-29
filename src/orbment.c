@@ -343,7 +343,7 @@ pass_key(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifiers, 
    syntax_append(&prefixed, name, true);
    chck_string_set_format(&syntax, "<%s>", syntax.data);
    chck_string_set_format(&prefixed, "<%s>", prefixed.data);
-   plog(0, PLOG_INFO, "hit combo: %s %s", syntax.data, prefixed.data);
+   plog(0, PLOG_INFO, "%s combo: %s %s", (pressed ? "pressed" : "released"), syntax.data, prefixed.data);
 
    const struct keybind *k;
    if (!(k = keybind_for_syntax(prefixed.data)) && !(k = keybind_for_syntax(syntax.data)))
