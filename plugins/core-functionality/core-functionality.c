@@ -1,5 +1,6 @@
 #include <unistd.h>
 #include <stdlib.h>
+#include <limits.h>
 #include <orbment/plugin.h>
 #include <chck/math/math.h>
 #include <chck/string/string.h>
@@ -31,6 +32,36 @@ get_next_view(wlc_handle view, size_t offset, enum direction dir)
    wlc_handle *views = wlc_output_get_mutable_views(wlc_view_get_output(view), &memb);
    for (i = 0; i < memb && views[i] != view; ++i);
    return (memb > 0 ? views[(dir == PREV ? chck_clampsz(i - offset, 0, memb - 1) : i + offset) % memb] : 0);
+}
+
+static uint32_t
+rotate_mask(uint32_t wlc_mask, size_t offset, enum direction dir)
+{
+   // can't shift with this offset
+   assert(sizeof(wlc_mask) * CHAR_BIT >= offset);
+
+   // Not sure where to get this magic number, it's the amount of spaces we use.
+   const uint32_t amountofspaces = 10;
+
+   // Circular shift from https://en.wikipedia.org/wiki/Circular_shift
+   // Modified to shift only a subsection of the bits
+
+   // Bitmask for the spaces in range, toggled bits define the spaces to shift, untoggled bits are left alone
+   const uint32_t spacesmask = (uint32_t)((uint64_t)1 << amountofspaces ) - 1;
+   // Take the spaces in range and bitrotate them while ignoring spaces outside of the range
+   const uint32_t spacesv = wlc_mask & spacesmask;
+
+   uint32_t newmask;
+   if (PREV == dir)
+      newmask = (spacesv >> offset) | (spacesv << (amountofspaces - offset));
+   else
+      newmask = (spacesv << offset) | (spacesv >> (amountofspaces - offset));
+
+   // drop the duplicated bits that got shifted beyond our range
+   // preserve the tags that aren't spaces
+   newmask = (newmask & spacesmask) | (~spacesmask & wlc_mask);
+
+   return newmask;
 }
 
 static wlc_handle
@@ -177,6 +208,15 @@ move_to_space(wlc_handle view, uint32_t index)
 {
    wlc_view_set_mask(view, (1<<index));
    focus_space(index);
+}
+
+static void
+focus_next_or_previous_space(enum direction direction)
+{
+   const wlc_handle output = wlc_get_focused_output();
+   wlc_output_set_mask(output, rotate_mask(wlc_output_get_mask(output), 1, direction));
+   focus_topmost(output);
+   relayout(output);
 }
 
 static wlc_handle
@@ -341,6 +381,22 @@ key_cb_focus_space(wlc_handle view, uint32_t time, intptr_t arg)
 }
 
 static void
+key_cb_focus_previous_space(wlc_handle view, uint32_t time, intptr_t arg)
+{
+   (void)view, (void)time, (void)arg;
+
+   focus_next_or_previous_space(PREV);
+}
+
+static void
+key_cb_focus_next_space(wlc_handle view, uint32_t time, intptr_t arg)
+{
+   (void)view, (void)time, (void)arg;
+
+   focus_next_or_previous_space(NEXT);
+}
+
+static void
 key_cb_move_to_output(wlc_handle view, uint32_t time, intptr_t arg)
 {
    (void)time;
@@ -425,6 +481,8 @@ static const struct {
    { "focus space 7", (const char*[]){ "<P-8>", "<P-KP_8>", NULL }, key_cb_focus_space, 7 },
    { "focus space 8", (const char*[]){ "<P-9>", "<P-KP_9>", NULL }, key_cb_focus_space, 8 },
    { "focus space 9", (const char*[]){ "<P-0>", "<P-KP_0>", NULL }, key_cb_focus_space, 9 },
+   { "focus left space", (const char*[]){ "<P-Left>", NULL }, key_cb_focus_previous_space, 0 },
+   { "focus right space", (const char*[]){ "<P-Right>", NULL }, key_cb_focus_next_space, 0 },
    { "move to space 0", (const char*[]){ "<P-F1>", NULL }, key_cb_move_to_space, 0 },
    { "move to space 1", (const char*[]){ "<P-F2>", NULL }, key_cb_move_to_space, 1 },
    { "move to space 2", (const char*[]){ "<P-F3>", NULL }, key_cb_move_to_space, 2 },
