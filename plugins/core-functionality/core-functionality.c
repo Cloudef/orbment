@@ -384,7 +384,6 @@ static void
 key_cb_focus_previous_space(wlc_handle view, uint32_t time, intptr_t arg)
 {
    (void)view, (void)time, (void)arg;
-
    focus_next_or_previous_space(PREV);
 }
 
@@ -392,7 +391,6 @@ static void
 key_cb_focus_next_space(wlc_handle view, uint32_t time, intptr_t arg)
 {
    (void)view, (void)time, (void)arg;
-
    focus_next_or_previous_space(NEXT);
 }
 
