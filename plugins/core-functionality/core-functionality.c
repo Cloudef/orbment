@@ -35,33 +35,33 @@ get_next_view(wlc_handle view, size_t offset, enum direction dir)
 }
 
 static uint32_t
-rotate_mask(uint32_t wlc_mask, size_t offset, enum direction dir)
+rotate_mask(uint32_t mask, size_t offset, enum direction dir)
 {
-   // can't shift with this offset
-   assert(sizeof(wlc_mask) * CHAR_BIT >= offset);
+   // Shifting with the total bits or more of mask variable causes UB
+   assert(sizeof(mask) * CHAR_BIT >= offset);
 
-   // Not sure where to get this magic number, it's the amount of spaces we use.
-   const uint32_t amountofspaces = 10;
+   // XXX: Hardcoded to rotate range of 10 spaces.
+   //      Not yet sure how Orbment space handling eventually works.
+   //      But right now this is convenient due to Orbment giving you keybindings to 10 spaces.
+   const uint32_t range = 10;
 
    // Circular shift from https://en.wikipedia.org/wiki/Circular_shift
    // Modified to shift only a subsection of the bits
 
    // Bitmask for the spaces in range, toggled bits define the spaces to shift, untoggled bits are left alone
-   const uint32_t spacesmask = (uint32_t)((uint64_t)1 << amountofspaces ) - 1;
+   const uint32_t whitemask = (uint32_t)((uint64_t)1 << range) - 1;
+
    // Take the spaces in range and bitrotate them while ignoring spaces outside of the range
-   const uint32_t spacesv = wlc_mask & spacesmask;
+   const uint32_t spaces = mask & whitemask;
 
    uint32_t newmask;
    if (PREV == dir)
-      newmask = (spacesv >> offset) | (spacesv << (amountofspaces - offset));
+      newmask = (spaces >> offset) | (spaces << (range - offset));
    else
-      newmask = (spacesv << offset) | (spacesv >> (amountofspaces - offset));
+      newmask = (spaces << offset) | (spaces >> (range - offset));
 
-   // drop the duplicated bits that got shifted beyond our range
-   // preserve the tags that aren't spaces
-   newmask = (newmask & spacesmask) | (~spacesmask & wlc_mask);
-
-   return newmask;
+   // Truncate bitmask to the range and append the bits outside of the range.
+   return (newmask & whitemask) | (~whitemask & mask);
 }
 
 static wlc_handle
