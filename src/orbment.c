@@ -209,7 +209,7 @@ add_keybind(plugin_h caller, const char *name, const char **syntax, const struct
    }
 
    /* If no mapping was set from configuration, try to use default keybindings */
-   if(!mapped) {
+   if (!mapped) {
       for (uint32_t i = 0; syntax && syntax[i]; ++i)
          add_keybind_mapping(&mappings, syntax[i], &index);
    }
@@ -347,7 +347,7 @@ pass_key(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifiers, 
 
    const struct keybind *k;
    if (!(k = keybind_for_syntax(prefixed.data)) && !(k = keybind_for_syntax(syntax.data)))
-       goto out;
+      goto out;
 
    if (pressed)
       k->function(view, time, k->arg);
@@ -590,9 +590,9 @@ core_plugin_init(plugin_h self)
 {
    plugin_h configuration;
    if ((configuration = import_plugin(self, "configuration"))) {
-       orbment.configuration_get = import_method(self, configuration, "get", "b(c[],c,v)|1");
+      orbment.configuration_get = import_method(self, configuration, "get", "b(c[],c,v)|1");
    } else {
-       orbment.configuration_get = NULL;
+      orbment.configuration_get = NULL;
    }
 
    return true;
