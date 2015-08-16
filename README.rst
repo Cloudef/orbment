@@ -12,9 +12,6 @@ OPTIONS
 Basic information about what you can currently do in ``orbment``.
 
 +-----------------------+------------------------------------------------+
-| ``--prefix MODIFIER`` | Set the modifier to use with the keybinds.     |
-|                       | shift, caps, ctrl, alt, logo, mod2, mod3, mod5 |
-+-----------------------+------------------------------------------------+
 | ``--log FILE``        | Logs output to specified ``FILE``.             |
 +-----------------------+------------------------------------------------+
 
