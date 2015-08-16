@@ -281,14 +281,11 @@ plugin_deloaded(plugin_h ph)
 }
 
 static bool
-pass_key(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifiers, const char name[64], bool pressed, bool *out_pass)
+pass_key(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifiers, const char name[64], bool pressed)
 {
    assert(modifiers);
 
    bool handled = false;
-
-   if (out_pass)
-      *out_pass = true;
 
    struct chck_string syntax = {0}, prefixed = {0};
    if (!append_mods(&syntax, &prefixed, modifiers->mods))
@@ -307,9 +304,6 @@ pass_key(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifiers, 
    if (pressed)
       k->function(view, time, k->arg);
 
-   if (out_pass)
-      *out_pass = false;
-
    handled = true;
 
 out:
@@ -327,25 +321,24 @@ keyboard_key(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifie
    if (xkb_keysym_get_name(sym, name, sizeof(name)) == -1)
       return false;
 
-   bool pass;
    const bool pressed = (state == WLC_KEY_STATE_PRESSED);
-   pass_key(view, time, modifiers, name, pressed, &pass);
-   return pass;
+   return pass_key(view, time, modifiers, name, pressed);
 }
 
 static bool
 pointer_button(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifiers, uint32_t button, enum wlc_button_state state)
 {
+   bool handled = false;
    struct chck_string name = {0};
    if (!chck_string_set_format(&name, "B%u", button - BTN_MOUSE))
       goto out;
 
    const bool pressed = (state == WLC_BUTTON_STATE_PRESSED);
-   pass_key(view, time, modifiers, name.data, pressed, NULL);
+   handled = pass_key(view, time, modifiers, name.data, pressed);
 
 out:
    chck_string_release(&name);
-   return true;
+   return handled;
 }
 
 static const char*
