@@ -338,7 +338,7 @@ pointer_button(wlc_handle view, uint32_t time, const struct wlc_modifiers *modif
 
 out:
    chck_string_release(&name);
-   return handled;
+   return (modifiers->mods ? handled : false);
 }
 
 static const char*
