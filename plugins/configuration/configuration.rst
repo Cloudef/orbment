@@ -8,6 +8,8 @@ The ``configuration`` plugin exposes a common API intended for use by other
 plugins, and also handles common tasks such as validation. Actual data storage
 is handled by format-specific plugins.
 
+configuration-ini is the reference implementation for configuration backend.
+
 ``configuration`` API
 ---------------------
 
@@ -28,8 +30,8 @@ is handled by format-specific plugins.
 
   * ``caller``: The handle of the configuration backend plugin.
   * ``name``: A human-readable format name, e.g. 'INI'.
-  * ``get``: A format-specific implementation of the ``get`` function, described
-    above.
+  * ``load``: Returns list of key/value pairs to the configuration plugin.
+  * ``save``: Stores list of key/value pairs.
 
   Returns a boolean value; ``true`` indicates success.
 
