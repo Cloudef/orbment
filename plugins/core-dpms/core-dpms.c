@@ -178,6 +178,11 @@ plugin_init(plugin_h self)
 const struct plugin_info*
 plugin_register(void)
 {
+   static const char *requires[] = {
+      "keybind",
+      NULL,
+   };
+
    static const char *after[] = {
       "configuration",
       NULL,
@@ -187,6 +192,7 @@ plugin_register(void)
       .name = "core-dpsm",
       .description = "Core display power management.",
       .version = VERSION,
+      .requires = requires,
       .after = after,
    };
 
