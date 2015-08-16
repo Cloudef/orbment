@@ -228,7 +228,7 @@ plugin_register(void)
 
    static const struct plugin_info info = {
       .name = "configuration",
-      .description = "Configuration API.",
+      .description = "Configuration api.",
       .version = VERSION,
       .methods = methods,
       .groups = groups
