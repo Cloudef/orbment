@@ -5,6 +5,7 @@ set(plugins
    core-functionality
    core-layouts
    core-screenshot
+   core-dpms
    configuration
    autostart
 )
