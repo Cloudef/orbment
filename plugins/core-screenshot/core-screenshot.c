@@ -154,12 +154,12 @@ plugin_init(plugin_h self)
 {
    plugin.self = self;
 
-   plugin_h orbment, compressor;
-   if (!(orbment = import_plugin(self, "orbment")) ||
+   plugin_h keybind, compressor;
+   if (!(keybind = import_plugin(self, "keybind")) ||
        !(compressor = import_plugin(self, "compressor")))
       return false;
 
-   if (!(add_keybind = import_method(self, orbment, "add_keybind", "b(h,c[],c*[],fun,ip)|1")) ||
+   if (!(add_keybind = import_method(self, keybind, "add_keybind", "b(h,c[],c*[],fun,ip)|1")) ||
        !(list_compressors = import_method(self, compressor, "list_compressors", "*(c[],c[],c[],sz*)|1")))
       return false;
 
@@ -185,6 +185,7 @@ const struct plugin_info*
 plugin_register(void)
 {
    static const char *requires[] = {
+      "keybind",
       "compressor",
       NULL,
    };

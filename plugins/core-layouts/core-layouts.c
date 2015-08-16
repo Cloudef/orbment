@@ -106,12 +106,12 @@ static const struct {
 bool
 plugin_init(plugin_h self)
 {
-   plugin_h orbment, layout;
-   if (!(orbment = import_plugin(self, "orbment")) ||
+   plugin_h keybind, layout;
+   if (!(keybind = import_plugin(self, "keybind")) ||
        !(layout = import_plugin(self, "layout")))
       return false;
 
-   if (!(add_keybind = import_method(self, orbment, "add_keybind", "b(h,c[],c*[],fun,ip)|1")) ||
+   if (!(add_keybind = import_method(self, keybind, "add_keybind", "b(h,c[],c*[],fun,ip)|1")) ||
        !(relayout = import_method(self, layout, "relayout", "v(h)|1")) ||
        !(add_layout = import_method(self, layout, "add_layout", "b(h,c[],fun)|1")))
       return false;
@@ -131,6 +131,7 @@ const struct plugin_info*
 plugin_register(void)
 {
    static const char *requires[] = {
+      "keybind",
       "layout",
       NULL,
    };

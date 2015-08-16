@@ -367,12 +367,13 @@ plugin_init(plugin_h self)
 {
    plugin.self = self;
 
-   plugin_h orbment;
-   if (!(orbment = import_plugin(self, "orbment")))
+   plugin_h orbment, keybind;
+   if (!(orbment = import_plugin(self, "orbment")) ||
+       !(keybind = import_plugin(self, "keybind")))
       return false;
 
-   if (!(add_keybind = import_method(self, orbment, "add_keybind", "b(h,c[],c*[],fun,ip)|1")) ||
-       !(add_hook = import_method(self, orbment, "add_hook", "b(h,c[],fun)|1")))
+   if (!(add_hook = import_method(self, orbment, "add_hook", "b(h,c[],fun)|1")) ||
+       !(add_keybind = import_method(self, keybind, "add_keybind", "b(h,c[],c*[],fun,ip)|1")))
       return false;
 
    for (size_t i = 0; keybinds[i].name; ++i)
@@ -395,11 +396,17 @@ plugin_register(void)
       {0},
    };
 
+   static const char *requires[] = {
+      "keybind",
+      NULL,
+   };
+
    static const struct plugin_info info = {
       .name = "layout",
       .description = "Layout api.",
       .version = VERSION,
       .methods = methods,
+      .requires = requires,
    };
 
    return &info;

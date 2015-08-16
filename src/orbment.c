@@ -6,11 +6,8 @@
 #include <assert.h>
 #include <time.h>
 #include <dirent.h>
-#include <linux/input.h>
 #include <wlc/wlc.h>
-#include <xkbcommon/xkbcommon.h>
 #include <chck/pool/pool.h>
-#include <chck/lut/lut.h>
 #include <chck/xdg/xdg.h>
 #include "plugin.h"
 #include "common.h"
@@ -21,6 +18,7 @@ enum hook_type {
    HOOK_PLUGIN_DELOADED,
    HOOK_OUTPUT_CREATED,
    HOOK_OUTPUT_DESTROYED,
+   HOOK_OUTPUT_FOCUS,
    HOOK_OUTPUT_RESOLUTION,
    HOOK_VIEW_CREATED,
    HOOK_VIEW_DESTROYED,
@@ -28,436 +26,23 @@ enum hook_type {
    HOOK_VIEW_MOVE_TO_OUTPUT,
    HOOK_VIEW_GEOMETRY_REQUEST,
    HOOK_VIEW_STATE_REQUEST,
+   HOOK_KEYBOARD_KEY,
+   HOOK_POINTER_BUTTON,
+   HOOK_POINTER_SCROLL,
+   HOOK_POINTER_MOTION,
+   HOOK_TOUCH_TOUCH,
    HOOK_COMPOSITOR_READY,
    HOOK_LAST,
 };
 
 struct hook {
-   void (*function)();
+   void *function;
    plugin_h owner;
 };
-
-typedef void (*keybind_fun_t)(wlc_handle view, uint32_t time, intptr_t arg);
-struct keybind {
-   struct chck_string name;
-   const char **defaults;
-   keybind_fun_t function;
-   intptr_t arg;
-   plugin_h owner;
-};
-
-typedef bool (*configuration_get_fun_t)(const char *key, const char type, void *value_out);
 
 static struct {
-   struct {
-      struct chck_pool pool;
-      struct chck_hash_table table;
-   } keybinds;
-
-   configuration_get_fun_t configuration_get;
-
    struct chck_iter_pool hooks[HOOK_LAST];
-   uint32_t prefix;
-} orbment = {
-   .prefix = WLC_BIT_MOD_LOGO,
-};
-
-static bool
-syntax_append(struct chck_string *syntax, const char *cstr, bool is_heap)
-{
-   assert(syntax && cstr);
-
-   if (syntax->size > 0)
-      return chck_string_set_format(syntax, "%s-%s", syntax->data, cstr);
-
-   return chck_string_set_cstr(syntax, cstr, is_heap);
-}
-
-static bool
-append_mods(struct chck_string *syntax, struct chck_string *prefixed, uint32_t mods)
-{
-   assert(syntax && prefixed);
-
-   if (mods == orbment.prefix && !syntax_append(prefixed, "P", false))
-      return false;
-
-   static const struct {
-      const char *name;
-      enum wlc_modifier_bit mod;
-   } map[] = {
-      { "S", WLC_BIT_MOD_SHIFT },
-      { "C", WLC_BIT_MOD_CTRL },
-      { "M", WLC_BIT_MOD_ALT },
-      { "L", WLC_BIT_MOD_LOGO },
-      { "M2", WLC_BIT_MOD_MOD2 },
-      { "M3", WLC_BIT_MOD_MOD3 },
-      { "M5", WLC_BIT_MOD_MOD5 },
-      { NULL, 0 },
-   };
-
-   for (uint32_t i = 0; map[i].name; ++i) {
-      if (!(mods & map[i].mod))
-         continue;
-
-      if (!syntax_append(syntax, map[i].name, false))
-         return false;
-   }
-
-   return true;
-}
-
-static bool
-keybind_exists(const char *name)
-{
-   const struct keybind *k;
-   chck_pool_for_each(&orbment.keybinds.pool, k) {
-      if (chck_string_eq_cstr(&k->name, name))
-         return true;
-   }
-
-   return false;
-}
-
-static const struct keybind*
-keybind_for_syntax(const char *syntax)
-{
-   size_t *index;
-   if (chck_cstr_is_empty(syntax) || !(index = chck_hash_table_str_get(&orbment.keybinds.table, syntax, strlen(syntax))) || *index == NOTINDEX)
-      return NULL;
-
-   return chck_pool_get(&orbment.keybinds.pool, *index);
-}
-
-static bool
-add_keybind_mapping(struct chck_string *mappings, const char *syntax, size_t *index)
-{
-   assert(mappings && index);
-
-   if (chck_cstr_is_empty(syntax))
-      return false;
-
-   const struct keybind *o;
-   if ((o = keybind_for_syntax(syntax))) {
-      plog(0, PLOG_WARN, "'%s' is already mapped to keybind '%s'", syntax, o->name.data);
-      return false;
-   }
-
-   chck_hash_table_str_set(&orbment.keybinds.table, syntax, strlen(syntax), index);
-   chck_string_set_format(mappings, (mappings->size > 0 ? "%s, %s" : "%s%s"), (mappings->data ? mappings->data : ""), syntax);
-   return true;
-}
-
-static bool
-add_keybind(plugin_h caller, const char *name, const char **syntax, const struct function *fun, intptr_t arg)
-{
-   if (!name || !fun || !caller)
-      return false;
-
-   static const char *signature = "v(h,u32,ip)|1";
-
-   if (!chck_cstreq(fun->signature, signature)) {
-      plog(0, PLOG_WARN, "Wrong signature provided for '%s keybind' function. (%s != %s)", name, signature, fun->signature);
-      return false;
-   }
-
-   if (keybind_exists(name)) {
-      plog(0, PLOG_WARN, "Keybind with name '%s' already exists", name);
-      return false;
-   }
-
-   if (!orbment.keybinds.pool.items.member && !chck_pool(&orbment.keybinds.pool, 32, 0, sizeof(struct keybind)))
-      return false;
-
-   if (!orbment.keybinds.table.lut.table && !chck_hash_table(&orbment.keybinds.table, NOTINDEX, 256, sizeof(size_t)))
-      return false;
-
-   struct keybind k = {
-      .defaults = syntax,
-      .function = fun->function,
-      .arg = arg,
-      .owner = caller,
-   };
-
-   if (!chck_string_set_cstr(&k.name, name, true))
-      return false;
-
-   size_t index;
-   if (!chck_pool_add(&orbment.keybinds.pool, &k, &index))
-      goto error0;
-
-   struct chck_string mappings = {0};
-   bool mapped = false;
-
-   if (orbment.configuration_get) {
-      struct chck_string key = {0};
-      int name_start, name_end;
-      chck_string_set_format(&key, "/keybindings/%n%s%n/mappings", &name_start, name, &name_end);
-
-      /* Configuration keys may not contain spaces, so replace spaces with underscores */
-      for (int i = name_start; i < name_end; i++) {
-         if (key.data[i] == ' ')
-            key.data[i] = '_';
-      }
-
-      const char *value;
-      if (orbment.configuration_get(key.data, 's', &value)) {
-         add_keybind_mapping(&mappings, value, &index);
-         mapped = true;
-      }
-
-      chck_string_release(&key);
-   }
-
-   /* If no mapping was set from configuration, try to use default keybindings */
-   if (!mapped) {
-      for (uint32_t i = 0; syntax && syntax[i]; ++i)
-         add_keybind_mapping(&mappings, syntax[i], &index);
-   }
-
-   plog(0, PLOG_INFO, "Added keybind: %s (%s)", name, (chck_string_is_empty(&mappings) ? "none" : mappings.data));
-   chck_string_release(&mappings);
-   return true;
-
-error0:
-   chck_string_release(&k.name);
-   return false;
-}
-
-static void
-keybind_release(struct keybind *keybind)
-{
-   if (!keybind)
-      return;
-
-   chck_string_release(&keybind->name);
-}
-
-static void
-remove_keybind(plugin_h caller, const char *name)
-{
-   struct keybind *k;
-   chck_pool_for_each(&orbment.keybinds.pool, k) {
-      if (k->owner != caller || !chck_string_eq_cstr(&k->name, name))
-         continue;
-
-      plog(0, PLOG_INFO, "Removed keybind: %s", k->name.data);
-      keybind_release(k);
-      chck_pool_remove(&orbment.keybinds.pool, _I - 1);
-      break;
-   }
-}
-
-static void
-remove_keybinds_for_plugin(plugin_h caller)
-{
-   struct keybind *k;
-   chck_pool_for_each(&orbment.keybinds.pool, k) {
-      if (k->owner != caller)
-         continue;
-
-      plog(0, PLOG_INFO, "Removed keybind: %s", k->name.data);
-      keybind_release(k);
-      chck_pool_remove(&orbment.keybinds.pool, _I - 1);
-   }
-}
-
-static void
-remove_keybinds(void)
-{
-   chck_pool_for_each_call(&orbment.keybinds.pool, keybind_release);
-   chck_pool_release(&orbment.keybinds.pool);
-   chck_hash_table_release(&orbment.keybinds.table);
-}
-
-static bool
-view_created(wlc_handle view)
-{
-   plog(0, PLOG_INFO, "new view: %zu (%zu)", view, wlc_view_get_parent(view));
-
-   struct hook *hook;
-   chck_iter_pool_for_each(&orbment.hooks[HOOK_VIEW_CREATED], hook)
-      hook->function(view);
-
-   return true;
-}
-
-static void
-view_destroyed(wlc_handle view)
-{
-   struct hook *hook;
-   chck_iter_pool_for_each(&orbment.hooks[HOOK_VIEW_DESTROYED], hook)
-      hook->function(view);
-
-   plog(0, PLOG_INFO, "view destroyed: %zu", view);
-}
-
-static void
-view_focus(wlc_handle view, bool focus)
-{
-   struct hook *hook;
-   chck_iter_pool_for_each(&orbment.hooks[HOOK_VIEW_FOCUS], hook)
-      hook->function(view, focus);
-}
-
-static void
-view_move_to_output(wlc_handle view, wlc_handle from, wlc_handle to)
-{
-   struct hook *hook;
-   chck_iter_pool_for_each(&orbment.hooks[HOOK_VIEW_MOVE_TO_OUTPUT], hook)
-      hook->function(view, from, to);
-}
-
-static void
-view_geometry_request(wlc_handle view, const struct wlc_geometry *geometry)
-{
-   struct hook *hook;
-   chck_iter_pool_for_each(&orbment.hooks[HOOK_VIEW_GEOMETRY_REQUEST], hook)
-      hook->function(view, geometry);
-}
-
-static void
-view_state_request(wlc_handle view, const enum wlc_view_state_bit state, const bool toggle)
-{
-   plog(0, PLOG_INFO, "STATE: %d (%d)", state, toggle);
-
-   struct hook *hook;
-   chck_iter_pool_for_each(&orbment.hooks[HOOK_VIEW_STATE_REQUEST], hook)
-      hook->function(view, state, toggle);
-}
-
-static bool
-pass_key(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifiers, const char name[64], bool pressed, bool *out_pass)
-{
-   assert(modifiers);
-
-   bool handled = false;
-
-   if (out_pass)
-      *out_pass = true;
-
-   struct chck_string syntax = {0}, prefixed = {0};
-   if (!append_mods(&syntax, &prefixed, modifiers->mods))
-      goto out;
-
-   syntax_append(&syntax, name, true);
-   syntax_append(&prefixed, name, true);
-   chck_string_set_format(&syntax, "<%s>", syntax.data);
-   chck_string_set_format(&prefixed, "<%s>", prefixed.data);
-   plog(0, PLOG_INFO, "%s combo: %s %s", (pressed ? "pressed" : "released"), syntax.data, prefixed.data);
-
-   const struct keybind *k;
-   if (!(k = keybind_for_syntax(prefixed.data)) && !(k = keybind_for_syntax(syntax.data)))
-      goto out;
-
-   if (pressed)
-      k->function(view, time, k->arg);
-
-   if (out_pass)
-      *out_pass = false;
-
-   handled = true;
-
-out:
-   chck_string_release(&syntax);
-   chck_string_release(&prefixed);
-   return handled;
-}
-
-static bool
-pointer_button(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifiers, uint32_t button, enum wlc_button_state state)
-{
-   (void)time, (void)modifiers, (void)button;
-
-   struct chck_string name = {0};
-   if (!chck_string_set_format(&name, "B%u", button - BTN_MOUSE))
-      goto out;
-
-   const bool pressed = (state == WLC_BUTTON_STATE_PRESSED);
-   pass_key(view, time, modifiers, name.data, pressed, NULL);
-
-out:
-   chck_string_release(&name);
-   return true;
-}
-
-static bool
-keyboard_key(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifiers, uint32_t key, uint32_t sym, enum wlc_key_state state)
-{
-   (void)time, (void)key;
-
-   char name[64];
-   if (xkb_keysym_get_name(sym, name, sizeof(name)) == -1)
-      return false;
-
-   bool pass;
-   const bool pressed = (state == WLC_KEY_STATE_PRESSED);
-   pass_key(view, time, modifiers, name, pressed, &pass);
-   return pass;
-}
-
-static bool
-output_created(wlc_handle output)
-{
-   struct hook *hook;
-   chck_iter_pool_for_each(&orbment.hooks[HOOK_OUTPUT_CREATED], hook)
-      hook->function(output);
-
-   return true;
-}
-
-static void
-output_destroyed(wlc_handle output)
-{
-   struct hook *hook;
-   chck_iter_pool_for_each(&orbment.hooks[HOOK_OUTPUT_DESTROYED], hook)
-      hook->function(output);
-}
-
-static void
-output_resolution(wlc_handle output, const struct wlc_size *from, const struct wlc_size *to)
-{
-   struct hook *hook;
-   chck_iter_pool_for_each(&orbment.hooks[HOOK_OUTPUT_RESOLUTION], hook)
-      hook->function(output, from, to);
-}
-
-static void
-compositor_ready(void)
-{
-   struct hook *hook;
-   chck_iter_pool_for_each(&orbment.hooks[HOOK_COMPOSITOR_READY], hook)
-      hook->function();
-}
-
-static enum hook_type
-hook_type_for_string(const char *type)
-{
-   struct {
-      const char *name;
-      enum hook_type type;
-   } map[] = {
-      { "plugin.loaded", HOOK_PLUGIN_LOADED },
-      { "plugin.deloaded", HOOK_PLUGIN_DELOADED },
-      { "output.created", HOOK_OUTPUT_CREATED },
-      { "output.destroyed", HOOK_OUTPUT_DESTROYED },
-      { "output.resolution", HOOK_OUTPUT_RESOLUTION },
-      { "view.created", HOOK_VIEW_CREATED },
-      { "view.destroyed", HOOK_VIEW_DESTROYED },
-      { "view.focus", HOOK_VIEW_FOCUS },
-      { "view.move_to_output", HOOK_VIEW_MOVE_TO_OUTPUT },
-      { "view.geometry_request", HOOK_VIEW_GEOMETRY_REQUEST },
-      { "view.state_request", HOOK_VIEW_STATE_REQUEST },
-      { "compositor.ready", HOOK_COMPOSITOR_READY },
-      { NULL, HOOK_LAST },
-   };
-
-   for (uint32_t i = 0; map[i].name; ++i) {
-      if (chck_cstreq(type, map[i].name))
-         return map[i].type;
-   }
-
-   return HOOK_LAST;
-}
+} orbment;
 
 static void
 remove_hooks_for_plugin(plugin_h caller)
@@ -472,6 +57,255 @@ remove_hooks_for_plugin(plugin_h caller)
          break;
       }
    }
+}
+
+static void
+plugin_loaded(const struct plugin *plugin)
+{
+   assert(plugin);
+
+   struct hook *hook;
+   chck_iter_pool_for_each(&orbment.hooks[HOOK_PLUGIN_LOADED], hook) {
+      void (*fun)() = hook->function;
+      fun(plugin->handle + 1);
+   }
+}
+
+static void
+plugin_deloaded(const struct plugin *plugin)
+{
+   assert(plugin);
+
+   struct hook *hook;
+   chck_iter_pool_for_each(&orbment.hooks[HOOK_PLUGIN_DELOADED], hook) {
+      void (*fun)() = hook->function;
+      fun(plugin->handle + 1);
+   }
+
+   remove_hooks_for_plugin(plugin->handle + 1);
+}
+
+static bool
+output_created(wlc_handle output)
+{
+   bool created = true;
+   struct hook *hook;
+   chck_iter_pool_for_each(&orbment.hooks[HOOK_OUTPUT_CREATED], hook) {
+      bool (*fun)() = hook->function;
+      if (!fun(output))
+         created = false;
+   }
+   return created;
+}
+
+static void
+output_destroyed(wlc_handle output)
+{
+   struct hook *hook;
+   chck_iter_pool_for_each(&orbment.hooks[HOOK_OUTPUT_DESTROYED], hook) {
+      void (*fun)() = hook->function;
+      fun(output);
+   }
+}
+
+static void
+output_focus(wlc_handle output, bool focus)
+{
+   struct hook *hook;
+   chck_iter_pool_for_each(&orbment.hooks[HOOK_OUTPUT_FOCUS], hook) {
+      void (*fun)() = hook->function;
+      fun(output, focus);
+   }
+}
+
+static void
+output_resolution(wlc_handle output, const struct wlc_size *from, const struct wlc_size *to)
+{
+   struct hook *hook;
+   chck_iter_pool_for_each(&orbment.hooks[HOOK_OUTPUT_RESOLUTION], hook) {
+      void (*fun)() = hook->function;
+      fun(output, from, to);
+   }
+}
+
+static bool
+view_created(wlc_handle view)
+{
+   plog(0, PLOG_INFO, "new view: %zu (%zu)", view, wlc_view_get_parent(view));
+
+   bool created = true;
+   struct hook *hook;
+   chck_iter_pool_for_each(&orbment.hooks[HOOK_VIEW_CREATED], hook) {
+      bool (*fun)() = hook->function;
+      if (!fun(view))
+         created = false;
+   }
+   return created;
+}
+
+static void
+view_destroyed(wlc_handle view)
+{
+   struct hook *hook;
+   chck_iter_pool_for_each(&orbment.hooks[HOOK_VIEW_DESTROYED], hook) {
+      void (*fun)() = hook->function;
+      fun(view);
+   }
+
+   plog(0, PLOG_INFO, "view destroyed: %zu", view);
+}
+
+static void
+view_focus(wlc_handle view, bool focus)
+{
+   struct hook *hook;
+   chck_iter_pool_for_each(&orbment.hooks[HOOK_VIEW_FOCUS], hook) {
+      void (*fun)() = hook->function;
+      fun(view, focus);
+   }
+}
+
+static void
+view_move_to_output(wlc_handle view, wlc_handle from, wlc_handle to)
+{
+   struct hook *hook;
+   chck_iter_pool_for_each(&orbment.hooks[HOOK_VIEW_MOVE_TO_OUTPUT], hook) {
+      void (*fun)() = hook->function;
+      fun(view, from, to);
+   }
+}
+
+static void
+view_geometry_request(wlc_handle view, const struct wlc_geometry *geometry)
+{
+   struct hook *hook;
+   chck_iter_pool_for_each(&orbment.hooks[HOOK_VIEW_GEOMETRY_REQUEST], hook) {
+      void (*fun)() = hook->function;
+      fun(view, geometry);
+   }
+}
+
+static void
+view_state_request(wlc_handle view, const enum wlc_view_state_bit state, const bool toggle)
+{
+   plog(0, PLOG_INFO, "STATE: %d (%d)", state, toggle);
+
+   struct hook *hook;
+   chck_iter_pool_for_each(&orbment.hooks[HOOK_VIEW_STATE_REQUEST], hook) {
+      void (*fun)() = hook->function;
+      fun(view, state, toggle);
+   }
+}
+
+static bool
+keyboard_key(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifiers, uint32_t key, uint32_t sym, enum wlc_key_state state)
+{
+   struct hook *hook;
+   bool handled = false;
+   chck_iter_pool_for_each(&orbment.hooks[HOOK_KEYBOARD_KEY], hook) {
+      bool (*fun)() = hook->function;
+      if (fun(view, time, modifiers, key, sym, state))
+         handled = true;
+   }
+   return handled;
+}
+
+static bool
+pointer_button(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifiers, uint32_t button, enum wlc_button_state state)
+{
+   struct hook *hook;
+   bool handled = false;
+   chck_iter_pool_for_each(&orbment.hooks[HOOK_POINTER_BUTTON], hook) {
+      bool (*fun)() = hook->function;
+      if (fun(view, time, modifiers, button, state))
+         handled = true;
+   }
+   return handled;
+}
+
+static bool
+pointer_scroll(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifiers, uint8_t axis_bits, double amount[2])
+{
+   struct hook *hook;
+   bool handled = false;
+   chck_iter_pool_for_each(&orbment.hooks[HOOK_POINTER_SCROLL], hook) {
+      bool (*fun)() = hook->function;
+      if (fun(view, time, modifiers, axis_bits, amount))
+         handled = true;
+   }
+   return handled;
+}
+
+static bool
+pointer_motion(wlc_handle view, uint32_t time, const struct wlc_origin *motion)
+{
+   struct hook *hook;
+   bool handled = false;
+   chck_iter_pool_for_each(&orbment.hooks[HOOK_POINTER_MOTION], hook) {
+      bool (*fun)() = hook->function;
+      if (fun(view, time, motion))
+         handled = true;
+   }
+   return handled;
+}
+
+static bool
+touch_touch(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifiers, enum wlc_touch_type type, int32_t slot, const struct wlc_origin *touch)
+{
+   struct hook *hook;
+   bool handled = false;
+   chck_iter_pool_for_each(&orbment.hooks[HOOK_TOUCH_TOUCH], hook) {
+      bool (*fun)() = hook->function;
+      if (fun(view, time, modifiers, type, slot, touch))
+         handled = true;
+   }
+   return handled;
+}
+
+static void
+compositor_ready(void)
+{
+   struct hook *hook;
+   chck_iter_pool_for_each(&orbment.hooks[HOOK_COMPOSITOR_READY], hook) {
+      void (*fun)() = hook->function;
+      fun();
+   }
+}
+
+static enum hook_type
+hook_type_for_string(const char *type)
+{
+   struct {
+      const char *name;
+      enum hook_type type;
+   } map[] = {
+      { "plugin.loaded", HOOK_PLUGIN_LOADED },
+      { "plugin.deloaded", HOOK_PLUGIN_DELOADED },
+      { "output.created", HOOK_OUTPUT_CREATED },
+      { "output.destroyed", HOOK_OUTPUT_DESTROYED },
+      { "output.focus", HOOK_OUTPUT_FOCUS },
+      { "output.resolution", HOOK_OUTPUT_RESOLUTION },
+      { "view.created", HOOK_VIEW_CREATED },
+      { "view.destroyed", HOOK_VIEW_DESTROYED },
+      { "view.focus", HOOK_VIEW_FOCUS },
+      { "view.move_to_output", HOOK_VIEW_MOVE_TO_OUTPUT },
+      { "view.geometry_request", HOOK_VIEW_GEOMETRY_REQUEST },
+      { "view.state_request", HOOK_VIEW_STATE_REQUEST },
+      { "keyboard.key", HOOK_KEYBOARD_KEY },
+      { "pointer.button", HOOK_POINTER_BUTTON },
+      { "pointer.scroll", HOOK_POINTER_SCROLL },
+      { "pointer.motion", HOOK_POINTER_MOTION },
+      { "touch.touch", HOOK_TOUCH_TOUCH },
+      { "compositor.ready", HOOK_COMPOSITOR_READY },
+      { NULL, HOOK_LAST },
+   };
+
+   for (uint32_t i = 0; map[i].name; ++i) {
+      if (chck_cstreq(type, map[i].name))
+         return map[i].type;
+   }
+
+   return HOOK_LAST;
 }
 
 static void
@@ -534,15 +368,21 @@ add_hook(plugin_h caller, const char *type, const struct function *hook)
    static const char *signatures[HOOK_LAST] = {
       "v(h)|1", // HOOK_PLUGIN_LOADED
       "v(h)|1", // HOOK_PLUGIN_DELOADED
-      "v(h)|1", // HOOK_OUTPUT_CREATED
+      "b(h)|1", // HOOK_OUTPUT_CREATED
       "v(h)|1", // HOOK_OUTPUT_DESTROYED
+      "v(h,b)|1", // HOOK_OUTPUT_FOCUS
       "v(h,*,*)|1", // HOOK_OUTPUT_RESOLUTION
-      "v(h)|1", // HOOK_VIEW_CREATED
+      "b(h)|1", // HOOK_VIEW_CREATED
       "v(h)|1", // HOOK_VIEW_DESTROYED
       "v(h,b)|1", // HOOK_VIEW_FOCUS
       "v(h,h,h)|1", // HOOK_VIEW_MOVE_TO_OUTPUT
       "v(h,*)|1", // HOOK_VIEW_GEOMETRY_REQUEST
       "v(h,e,b)|1", // HOOK_VIEW_STATE_REQUEST
+      "b(h,u32,*,u32,u32,e)|1", // HOOK_KEYBOARD_KEY
+      "b(h,u32,*,u32,e)|1", // HOOK_POINTER_BUTTON
+      "b(h,u32,*,u8,d[2])|1", // HOOK_POINTER_SCROLL
+      "b(h,u32,*)|1", // HOOK_POINTER_MOTION
+      "b(h,u32,*,e,i32,*)|1", // HOOK_TOUCH_TOUCH
       "v(v)|1", // HOOK_COMPOSITOR_READY
    };
 
@@ -562,42 +402,6 @@ add_hook(plugin_h caller, const char *type, const struct function *hook)
    return chck_iter_pool_push_back(&orbment.hooks[t], &h);
 }
 
-static void
-plugin_loaded(const struct plugin *plugin)
-{
-   assert(plugin);
-
-   struct hook *hook;
-   chck_iter_pool_for_each(&orbment.hooks[HOOK_PLUGIN_LOADED], hook)
-      hook->function(plugin->handle + 1);
-}
-
-static void
-plugin_deloaded(const struct plugin *plugin)
-{
-   assert(plugin);
-
-   struct hook *hook;
-   chck_iter_pool_for_each(&orbment.hooks[HOOK_PLUGIN_DELOADED], hook)
-      hook->function(plugin->handle + 1);
-
-   remove_keybinds_for_plugin(plugin->handle + 1);
-   remove_hooks_for_plugin(plugin->handle + 1);
-}
-
-bool
-core_plugin_init(plugin_h self)
-{
-   plugin_h configuration;
-   if ((configuration = import_plugin(self, "configuration"))) {
-      orbment.configuration_get = import_method(self, configuration, "get", "b(c[],c,v)|1");
-   } else {
-      orbment.configuration_get = NULL;
-   }
-
-   return true;
-}
-
 static bool
 plugins_init(void)
 {
@@ -605,31 +409,18 @@ plugins_init(void)
 
    {
       static const struct method methods[] = {
-         REGISTER_METHOD(add_keybind, "b(h,c[],c*[],fun,ip)|1"),
-         REGISTER_METHOD(remove_keybind, "v(h,c[])|1"),
          REGISTER_METHOD(add_hook, "b(h,c[],fun)|1"),
          REGISTER_METHOD(remove_hook, "v(h,c[])|1"),
          {0},
       };
 
-      // The core is loaded after optional configuration plugin.
-      // This works since core is not really a real plugin, but a meta-plugin.
-      // So it is already initialized before load and can be imported by the configuration plugin as well.
-
-      static const char *after[] = {
-         "configuration",
-         NULL,
-      };
-
       struct plugin core = {
          .info = {
             .name = "orbment",
-            .description = "Hook and input api.",
+            .description = "Hook api.",
             .version = VERSION,
             .methods = methods,
-            .after = after,
          },
-         .init = core_plugin_init
       };
 
       if (!register_plugin(&core, NULL))
@@ -687,36 +478,6 @@ plugins_init(void)
    return true;
 }
 
-static uint32_t
-parse_prefix(const char *str)
-{
-   static const struct {
-      const char *name;
-      enum wlc_modifier_bit mod;
-   } map[] = {
-      { "shift", WLC_BIT_MOD_SHIFT },
-      { "caps", WLC_BIT_MOD_CAPS },
-      { "ctrl", WLC_BIT_MOD_CTRL },
-      { "alt", WLC_BIT_MOD_ALT },
-      { "mod2", WLC_BIT_MOD_MOD2 },
-      { "mod3", WLC_BIT_MOD_MOD3 },
-      { "logo", WLC_BIT_MOD_LOGO },
-      { "mod5", WLC_BIT_MOD_MOD5 },
-      { NULL, 0 },
-   };
-
-   uint32_t prefix = 0;
-   const char *s = str;
-   for (int i = 0; map[i].name && *s; ++i) {
-      if (!chck_cstreq(map[i].name, s))
-         continue;
-
-      prefix |= map[i].mod;
-   }
-
-   return (prefix ? prefix : orbment.prefix);
-}
-
 static void
 sigterm(int signal)
 {
@@ -734,6 +495,7 @@ main(int argc, char *argv[])
       .output = {
          .created = output_created,
          .destroyed = output_destroyed,
+         .focus = output_focus,
          .resolution = output_resolution,
       },
 
@@ -749,21 +511,24 @@ main(int argc, char *argv[])
          },
       },
 
-      .pointer = {
-         .button = pointer_button,
-      },
-
       .keyboard = {
          .key = keyboard_key,
+      },
+
+      .pointer = {
+         .button = pointer_button,
+         .motion = pointer_motion,
+         .scroll = pointer_scroll,
+      },
+
+      .touch = {
+         .touch = touch_touch,
       },
 
       .compositor = {
          .ready = compositor_ready,
       },
    };
-
-   // get before wlc_init, as it may set DISPLAY for xwayland
-   const char *x11 = getenv("DISPLAY");
 
    if (!wlc_init(&interface, argc, argv))
       return EXIT_FAILURE;
@@ -787,20 +552,6 @@ main(int argc, char *argv[])
       sigaction(SIGINT, &action, NULL);
    }
 
-   // default to alt on x11 session
-   if (!chck_cstr_is_empty(x11))
-      orbment.prefix = WLC_BIT_MOD_ALT;
-
-   for (int i = 1; i < argc; ++i) {
-      if (chck_cstreq(argv[i], "--prefix")) {
-         if (i + 1 >= argc) {
-            wlc_log(WLC_LOG_ERROR, "--prefix takes an argument (shift, caps, ctrl, alt, logo, mod2, mod3, mod5)");
-         } else {
-            orbment.prefix = parse_prefix(argv[++i]);
-         }
-      }
-   }
-
    if (!plugins_init())
       return EXIT_FAILURE;
 
@@ -808,7 +559,6 @@ main(int argc, char *argv[])
    wlc_run();
 
    remove_hooks();
-   remove_keybinds();
    deload_plugins();
 
    memset(&orbment, 0, sizeof(orbment));

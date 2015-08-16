@@ -284,15 +284,13 @@ view_focus(wlc_handle view, bool focus)
       wlc_view_set_state(view, WLC_BIT_ACTIVATED, focus);
 }
 
-static void
+static bool
 view_created(wlc_handle view)
 {
    if (wlc_view_get_class(view) && chck_cstreq(wlc_view_get_class(view), "bemenu")) {
       // Do not allow more than one bemenu instance
-      if (plugin.active.view && wlc_view_get_type(plugin.active.view) & BIT_BEMENU) {
-         wlc_view_close(view);
-         return;
-      }
+      if (plugin.active.view && wlc_view_get_type(plugin.active.view) & BIT_BEMENU)
+         return false;
 
       wlc_view_set_type(view, BIT_BEMENU, true); // XXX: Hack
    }
@@ -306,6 +304,7 @@ view_created(wlc_handle view)
    }
 
    relayout(wlc_view_get_output(view));
+   return true;
 }
 
 static void
@@ -523,20 +522,21 @@ plugin_init(plugin_h self)
 {
    plugin.self = self;
 
-   plugin_h orbment, layout;
+   plugin_h orbment, keybind, layout;
    if (!(orbment = import_plugin(self, "orbment")) ||
+       !(keybind = import_plugin(self, "keybind")) ||
        !(layout = import_plugin(self, "layout")))
       return false;
 
    if (!(add_hook = import_method(self, orbment, "add_hook", "b(h,c[],fun)|1")) ||
-       !(add_keybind = import_method(self, orbment, "add_keybind", "b(h,c[],c*[],fun,ip)|1")) ||
+       !(add_keybind = import_method(self, keybind, "add_keybind", "b(h,c[],c*[],fun,ip)|1")) ||
        !(relayout = import_method(self, layout, "relayout", "v(h)|1")))
       return false;
 
    if (!setup_default_keybinds(self))
       return false;
 
-   return (add_hook(self, "view.created", FUN(view_created, "v(h)|1")) &&
+   return (add_hook(self, "view.created", FUN(view_created, "b(h)|1")) &&
            add_hook(self, "view.destroyed", FUN(view_destroyed, "v(h)|1")) &&
            add_hook(self, "view.focus", FUN(view_focus, "v(h,b)|1")) &&
            add_hook(self, "view.move_to_output", FUN(view_move_to_output, "v(h,h,h)|1")));
@@ -546,6 +546,7 @@ const struct plugin_info*
 plugin_register(void)
 {
    static const char *requires[] = {
+      "keybind",
       "layout",
       NULL,
    };

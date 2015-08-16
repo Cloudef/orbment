@@ -1,4 +1,5 @@
 set(plugins
+   keybind
    layout
    compressor
    core-functionality
