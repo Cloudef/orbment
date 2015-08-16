@@ -543,7 +543,7 @@ add_hook(plugin_h caller, const char *type, const struct function *hook)
       "v(h,h,h)|1", // HOOK_VIEW_MOVE_TO_OUTPUT
       "v(h,*)|1", // HOOK_VIEW_GEOMETRY_REQUEST
       "v(h,e,b)|1", // HOOK_VIEW_STATE_REQUEST
-      "v()|1", // HOOK_COMPOSITOR_READY
+      "v(v)|1", // HOOK_COMPOSITOR_READY
    };
 
    if (!chck_cstreq(hook->signature, signatures[t])) {

@@ -8,21 +8,14 @@
 #include "config.h"
 #include <wlc/wlc.h>
 
-typedef bool (*configuration_get_fun_t)(const char *key, const char type, void *value_out);
-
-struct autostart_backend {
-   plugin_h handle;
-   const char *name;
-   configuration_get_fun_t get;
-};
+static bool (*configuration_get)(const char *key, const char type, void *value_out);
+static bool (*add_hook)(plugin_h, const char *name, const struct function*);
 
 static struct {
    plugin_h self;
-   configuration_get_fun_t configuration_get;
-   bool (*add_hook)(plugin_h, const char *name, const struct function*);
 } plugin;
 
-void
+static void
 do_autostart(void)
 {
    struct chck_string key = {0}, command = {0};
@@ -36,7 +29,7 @@ do_autostart(void)
          break;
 
       const char *command_cstr;
-      if (!plugin.configuration_get(key.data, 's', &command_cstr))
+      if (!configuration_get(key.data, 's', &command_cstr))
          break;
 
       if (!chck_string_set_cstr(&command, command_cstr, true))
@@ -67,29 +60,22 @@ plugin_init(plugin_h self)
 {
    plugin.self = self;
 
-   plugin_h configuration;
-   if ((configuration = import_plugin(self, "configuration"))) {
-      plugin.configuration_get = import_method(self, configuration, "get", "b(c[],c,v)|1");
-   } else {
-      plog(plugin.self, PLOG_ERROR, "Cannot load autostart commands: plugin 'configuration' not loaded.");
-      return false;
-   }
-
-   plugin_h orbment;
-   if (!(orbment = import_plugin(self, "orbment")))
+   plugin_h orbment, configuration;
+   if (!(orbment = import_plugin(self, "orbment")) ||
+       !(configuration = import_plugin(self, "configuration")))
       return false;
 
-   if (!(plugin.add_hook = import_method(self, orbment, "add_hook", "b(h,c[],fun)|1")))
+   if (!(add_hook = import_method(self, orbment, "add_hook", "b(h,c[],fun)|1")) ||
+       !(configuration_get = import_method(self, configuration, "get", "b(c[],c,v)|1")))
       return false;
 
-   return (plugin.add_hook(self, "compositor.ready", FUN(do_autostart, "v()|1")));
+   return add_hook(self, "compositor.ready", FUN(do_autostart, "v(v)|1"));
 }
 
 const struct plugin_info*
 plugin_register(void)
 {
    static const char *requires[] = {
-      "orbment",
       "configuration",
       NULL,
    };
