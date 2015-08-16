@@ -146,7 +146,7 @@ remove_layout(plugin_h caller, const char *name)
       if (l->owner != caller || !chck_string_eq_cstr(&l->name, name))
          continue;
 
-      remove_layout_ptr(l, _I -1);
+      remove_layout_ptr(l, _I - 1);
       break;
    }
 }
@@ -159,7 +159,7 @@ remove_layouts_for_plugin(plugin_h caller)
       if (l->owner != caller)
          continue;
 
-      remove_layout_ptr(l, _I -1);
+      remove_layout_ptr(l, _I - 1);
       --_I;
    }
 }
@@ -268,40 +268,40 @@ cycle_output(wlc_handle output, enum direction dir)
 
    switch (dir) {
       case NEXT:
-         {
-            size_t last = NOTINDEX;
-            for (size_t i = 0; i < memb; ++i) {
-               if (!is_tiled(views[i]) || wlc_view_get_mask(views[i]) != wlc_output_get_mask(output))
-                  continue;
+      {
+         size_t last = NOTINDEX;
+         for (size_t i = 0; i < memb; ++i) {
+            if (!is_tiled(views[i]) || wlc_view_get_mask(views[i]) != wlc_output_get_mask(output))
+               continue;
 
-               if (last != NOTINDEX) {
-                  wlc_handle tmp = views[last];
-                  views[last] = views[i];
-                  views[i] = tmp;
-               }
-
-               last = i;
+            if (last != NOTINDEX) {
+               wlc_handle tmp = views[last];
+               views[last] = views[i];
+               views[i] = tmp;
             }
+
+            last = i;
          }
-         break;
+      }
+      break;
 
       case PREV:
-         {
-            size_t last = NOTINDEX;
-            for (size_t i = memb; i > 0; --i) {
-               if (!is_tiled(views[i - 1]) || wlc_view_get_mask(views[i - 1]) != wlc_output_get_mask(output))
-                  continue;
+      {
+         size_t last = NOTINDEX;
+         for (size_t i = memb; i > 0; --i) {
+            if (!is_tiled(views[i - 1]) || wlc_view_get_mask(views[i - 1]) != wlc_output_get_mask(output))
+               continue;
 
-               if (last != NOTINDEX) {
-                  wlc_handle tmp = views[last];
-                  views[last] = views[i - 1];
-                  views[i - 1] = tmp;
-               }
-
-               last = i - 1;
+            if (last != NOTINDEX) {
+               wlc_handle tmp = views[last];
+               views[last] = views[i - 1];
+               views[i - 1] = tmp;
             }
+
+            last = i - 1;
          }
-         break;
+      }
+      break;
    }
    relayout(output);
 }
@@ -340,11 +340,11 @@ view_state_request(wlc_handle view, const enum wlc_view_state_bit state, const b
       case WLC_BIT_MAXIMIZED:
          if (toggle)
             relayout(wlc_view_get_output(view));
-      break;
+         break;
       case WLC_BIT_FULLSCREEN:
          relayout(wlc_view_get_output(view));
-      break;
-      default:break;
+         break;
+      default: break;
    }
 }
 

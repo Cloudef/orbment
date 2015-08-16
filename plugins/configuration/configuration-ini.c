@@ -54,7 +54,7 @@ get(const char *key, const char type, void *value_out)
    if (chck_cstr_is_empty(v.data))
       return false;
 
-   switch(type) {
+   switch (type) {
       case 's':
          *(const char**)value_out = v.data;
          break;

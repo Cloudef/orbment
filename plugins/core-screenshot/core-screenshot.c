@@ -30,7 +30,6 @@ static struct {
    plugin_h self;
 } plugin;
 
-
 struct image {
    uint8_t *data;
    size_t size;

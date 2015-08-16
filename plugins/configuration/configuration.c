@@ -68,7 +68,7 @@ validate_key(const char *key)
          continue;
 
       /* Slashes cannot be adjacent, or at the end of the key */
-      if (key[i] == '/' && key[i-1] != '/' && key[i+1] != '\0')
+      if (key[i] == '/' && key[i - 1] != '/' && key[i + 1] != '\0')
          continue;
 
       return false;

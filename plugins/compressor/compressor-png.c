@@ -45,10 +45,10 @@ compress_png(const struct wlc_size *size, uint8_t *rgba, size_t *out_size)
       goto error2;
 
    png_set_IHDR(p, info, size->w, size->h, 8,
-         PNG_COLOR_TYPE_RGBA,
-         PNG_INTERLACE_NONE,
-         PNG_COMPRESSION_TYPE_DEFAULT,
-         PNG_FILTER_TYPE_DEFAULT);
+                PNG_COLOR_TYPE_RGBA,
+                PNG_INTERLACE_NONE,
+                PNG_COMPRESSION_TYPE_DEFAULT,
+                PNG_FILTER_TYPE_DEFAULT);
 
    for (size_t y = 0; y < size->h; ++y)
       rows[y] = rgba + ((size->h - 1) - y) * size->w * 4;
