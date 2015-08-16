@@ -1,6 +1,7 @@
 #include <orbment/plugin.h>
 #include <chck/math/math.h>
 #include <chck/pool/pool.h>
+#include <chck/lut/lut.h>
 #include <chck/string/string.h>
 #include "common.h"
 #include "config.h"
@@ -22,31 +23,55 @@ static struct {
       // there usually isn't many layouts so linear search is fast enough.
       // contigous arrays are very fast.
       struct chck_iter_pool pool;
-      size_t index;
+      struct chck_hash_table active;
    } layouts;
-
-   struct {
-      const struct layout *layout;
-   } active;
 
    plugin_h self;
 } plugin;
 
-static void
-next_layout(size_t offset, enum direction dir)
+static size_t
+layout_index_for_output(wlc_handle output)
 {
-   const size_t index = plugin.layouts.index, memb = plugin.layouts.pool.items.count;
-   plugin.layouts.index = (dir == PREV ? chck_clampsz(index - offset, 0, memb - 1) : index + offset) % chck_maxsz(memb, 1);
-   plugin.active.layout = chck_iter_pool_get(&plugin.layouts.pool, plugin.layouts.index);
+   if (!plugin.layouts.active.lut.table)
+      return 0;
+
+   const char *name = wlc_output_get_name(output);
+   const size_t *index = chck_hash_table_str_get(&plugin.layouts.active, name, strlen(name));
+   return (index ? *index : 0);
+}
+
+static struct layout*
+layout_for_output(wlc_handle output)
+{
+   return chck_iter_pool_get(&plugin.layouts.pool, layout_index_for_output(output));
+}
+
+static void
+set_index_for_output(wlc_handle output, size_t index)
+{
+   if (!plugin.layouts.active.lut.table && !chck_hash_table(&plugin.layouts.active, 0, 8, sizeof(size_t)))
+      return;
+
+   const char *name = wlc_output_get_name(output);
+   chck_hash_table_str_set(&plugin.layouts.active, name, strlen(name), &index);
+}
+
+static void
+next_layout(wlc_handle output, size_t offset, enum direction dir)
+{
+   size_t index = layout_index_for_output(output), memb = plugin.layouts.pool.items.count;
+   index = (dir == PREV ? chck_clampsz(index - offset, 0, memb - 1) : index + offset) % chck_maxsz(memb, 1);
+   set_index_for_output(output, index);
 }
 
 static bool
 layout_exists(const char *name)
 {
    const struct layout *l;
-   chck_iter_pool_for_each(&plugin.layouts.pool, l)
+   chck_iter_pool_for_each(&plugin.layouts.pool, l) {
       if (chck_string_eq_cstr(&l->name, name))
          return true;
+   }
    return false;
 }
 
@@ -83,10 +108,6 @@ add_layout(plugin_h caller, const char *name, const struct function *fun)
       goto error0;
 
    plog(plugin.self, PLOG_INFO, "Added layout: %s", name);
-
-   if (!plugin.active.layout)
-      next_layout(1, NEXT);
-
    return true;
 
 error0:
@@ -104,6 +125,20 @@ layout_release(struct layout *layout)
 }
 
 static void
+remove_layout_ptr(struct layout *layout, size_t index)
+{
+   plog(plugin.self, PLOG_INFO, "Removed layout: %s", layout->name.data);
+   layout_release(layout);
+   chck_iter_pool_remove(&plugin.layouts.pool, index);
+
+   size_t *i;
+   chck_hash_table_for_each(&plugin.layouts.active, i) {
+      if (*i >= index)
+         *i = 0;
+   }
+}
+
+static void
 remove_layout(plugin_h caller, const char *name)
 {
    struct layout *l;
@@ -111,13 +146,7 @@ remove_layout(plugin_h caller, const char *name)
       if (l->owner != caller || !chck_string_eq_cstr(&l->name, name))
          continue;
 
-      plog(plugin.self, PLOG_INFO, "Removed layout: %s", l->name.data);
-      layout_release(l);
-      chck_iter_pool_remove(&plugin.layouts.pool, _I - 1);
-
-      if (plugin.layouts.index >= _I - 1)
-         next_layout(1, PREV);
-
+      remove_layout_ptr(l, _I -1);
       break;
    }
 }
@@ -130,13 +159,7 @@ remove_layouts_for_plugin(plugin_h caller)
       if (l->owner != caller)
          continue;
 
-      plog(plugin.self, PLOG_INFO, "Removed layout: %s", l->name.data);
-      layout_release(l);
-      chck_iter_pool_remove(&plugin.layouts.pool, _I - 1);
-
-      if (plugin.layouts.index >= _I - 1)
-         next_layout(1, PREV);
-
+      remove_layout_ptr(l, _I -1);
       --_I;
    }
 }
@@ -146,8 +169,7 @@ remove_layouts(void)
 {
    chck_iter_pool_for_each_call(&plugin.layouts.pool, layout_release);
    chck_iter_pool_release(&plugin.layouts.pool);
-   plugin.layouts.index = 0;
-   plugin.active.layout = NULL;
+   chck_hash_table_release(&plugin.layouts.active);
 }
 
 static void
@@ -209,7 +231,8 @@ relayout(wlc_handle output)
          layout_parent(views[i], parent, &wlc_view_get_geometry(views[i])->size);
    }
 
-   if (plugin.active.layout) {
+   struct layout *layout;
+   if ((layout = layout_for_output(output))) {
       struct chck_iter_pool tiled = {{0}};
       if (!chck_iter_pool(&tiled, memb, memb, sizeof(wlc_handle)))
          return;
@@ -223,7 +246,7 @@ relayout(wlc_handle output)
          }
       }
 
-      plugin.active.layout->function(&(struct wlc_geometry){ { 0, 0 }, *r }, tiled.items.buffer, tiled.items.count);
+      layout->function(&(struct wlc_geometry){ { 0, 0 }, *r }, tiled.items.buffer, tiled.items.count);
       chck_iter_pool_release(&tiled);
    }
 }
@@ -336,7 +359,7 @@ static void
 key_cb_next_layout(wlc_handle view, uint32_t time, intptr_t arg)
 {
    (void)view, (void)time, (void)arg;
-   next_layout(1, NEXT);
+   next_layout(wlc_get_focused_output(), 1, NEXT);
    relayout(wlc_get_focused_output());
 }
 
