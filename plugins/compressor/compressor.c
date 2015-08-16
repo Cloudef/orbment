@@ -160,10 +160,7 @@ list_compressors(const char *type, const char *stsign, const char *funsign, size
       return NULL;
    }
 
-   if (out_memb)
-      *out_memb = plugin.compressors[t].items.count;
-
-   return plugin.compressors[t].items.buffer;
+   return chck_iter_pool_to_c_array(&plugin.compressors[t], out_memb);
 }
 
 static void
