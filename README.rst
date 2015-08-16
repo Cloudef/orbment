@@ -6,6 +6,10 @@
 :Video: https://www.youtube.com/watch?v=nh_7aqNtrik
 :Build: |build|_
 
+Orbment is modular compositor for Wayland with flexible plugin architecture where plugins may co-operate with each other.
+The core consist of 2 C source files which provide plugin management, api and hooks.
+Core plugins are used to provide functionality you would expect from bare bones tiling window manager.
+
 OPTIONS
 -------
 
