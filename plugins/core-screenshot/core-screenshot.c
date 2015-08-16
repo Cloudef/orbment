@@ -55,8 +55,6 @@ static void
 cb_did_compress(struct work *work)
 {
    assert(work);
-
-
 }
 
 static void
@@ -148,7 +146,6 @@ void
 plugin_deinit(plugin_h self)
 {
    (void)self;
-
    chck_tqueue_release(&plugin.tqueue);
 }
 
@@ -162,10 +159,8 @@ plugin_init(plugin_h self)
        !(compressor = import_plugin(self, "compressor")))
       return false;
 
-   if (!(add_keybind = import_method(self, orbment, "add_keybind", "b(h,c[],c*[],fun,ip)|1")))
-      return false;
-
-   if (!(list_compressors = import_method(self, compressor, "list_compressors", "*(c[],c[],c[],sz*)|1")))
+   if (!(add_keybind = import_method(self, orbment, "add_keybind", "b(h,c[],c*[],fun,ip)|1")) ||
+       !(list_compressors = import_method(self, compressor, "list_compressors", "*(c[],c[],c[],sz*)|1")))
       return false;
 
    size_t memb;
