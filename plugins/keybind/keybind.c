@@ -35,7 +35,7 @@ static uint32_t
 parse_prefix(const char *str)
 {
    // default prefix
-   const uint32_t def = WLC_BIT_MOD_LOGO;
+   const uint32_t def = (wlc_get_backend_type() == WLC_BACKEND_X11 ? WLC_BIT_MOD_ALT : WLC_BIT_MOD_LOGO);
 
    if (!str)
       return def;
