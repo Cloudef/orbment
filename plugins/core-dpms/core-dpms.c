@@ -165,7 +165,7 @@ plugin_init(plugin_h self)
          return false;
 
    if (!add_hook(self, "keyboard.key", FUN(keyboard_key, "b(h,u32,*,u32,u32,e)|1")) ||
-       !add_hook(self, "pointer.button", FUN(pointer_button, "b(h,u32,*,u32,e)|1")) ||
+       !add_hook(self, "pointer.button", FUN(pointer_button, "b(h,u32,*,u32,e,*)|1")) ||
        !add_hook(self, "pointer.scroll", FUN(activity, "b(h,u32,*,u8,d[2])|1")) ||
        !add_hook(self, "pointer.motion", FUN(activity, "b(h,u32,*)|1")) ||
        !add_hook(self, "touch.touch", FUN(activity, "b(h,u32,*,e,i32,*)|1")))

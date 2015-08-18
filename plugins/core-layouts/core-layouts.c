@@ -55,7 +55,7 @@ nmaster(const struct wlc_geometry *r, const wlc_handle *views, size_t memb)
          .size = { (memb > 1 ? (toggle ? slave : r->size.w - slave) : r->size.w), (toggle ? (y == 0 ? fheight : height) : r->size.h) },
       };
 
-      wlc_view_set_geometry(views[i], &g);
+      wlc_view_set_geometry(views[i], 0, &g);
 
       if (toggle)
          y += (y == 0 ? fheight : height);
@@ -72,7 +72,7 @@ grid(const struct wlc_geometry *r, const wlc_handle *views, size_t memb)
    uint32_t w = r->size.w / 2, h = r->size.h / chck_maxu32((1 + memb) / 2, 1);
    for (size_t i = 0; i < memb; ++i) {
       struct wlc_geometry g = { { r->origin.x + (toggle ? w : 0), r->origin.y + y }, { (!toggle && i == memb - 1 ? r->size.w : w), h } };
-      wlc_view_set_geometry(views[i], &g);
+      wlc_view_set_geometry(views[i], 0, &g);
       y = y + (!(toggle = !toggle) ? h : 0);
    }
 }
@@ -81,7 +81,7 @@ static void
 monocle(const struct wlc_geometry *r, const wlc_handle *views, size_t memb)
 {
    for (size_t i = 0; i < memb; ++i)
-      wlc_view_set_geometry(views[i], r);
+      wlc_view_set_geometry(views[i], 0, r);
 }
 
 static const struct {

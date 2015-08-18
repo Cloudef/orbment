@@ -195,7 +195,7 @@ layout_parent(wlc_handle view, wlc_handle parent, const struct wlc_size *size)
    g.size.h = chck_minf(ch, u->size.h * 0.8);
    g.origin.x = p->size.w * 0.5 - g.size.w * 0.5;
    g.origin.y = p->size.h * 0.5 - g.size.h * 0.5;
-   wlc_view_set_geometry(view, &g);
+   wlc_view_set_geometry(view, 0, &g);
 }
 
 static void
@@ -214,16 +214,16 @@ relayout(wlc_handle output)
       if (wlc_view_get_type(views[i]) & BIT_BEMENU) {
          struct wlc_geometry g = *wlc_view_get_geometry(views[i]);
          g.origin = (struct wlc_origin){ 0, 0 };
-         wlc_view_set_geometry(views[i], &g);
+         wlc_view_set_geometry(views[i], 0, &g);
       }
 
       if (wlc_view_get_state(views[i]) & WLC_BIT_FULLSCREEN)
-         wlc_view_set_geometry(views[i], &(struct wlc_geometry){ { 0, 0 }, *r });
+         wlc_view_set_geometry(views[i], 0, &(struct wlc_geometry){ { 0, 0 }, *r });
 
       if (wlc_view_get_type(views[i]) & WLC_BIT_SPLASH) {
          struct wlc_geometry g = *wlc_view_get_geometry(views[i]);
          g.origin = (struct wlc_origin){ r->w * 0.5 - g.size.w * 0.5, r->h * 0.5 - g.size.h * 0.5 };
-         wlc_view_set_geometry(views[i], &g);
+         wlc_view_set_geometry(views[i], 0, &g);
       }
 
       wlc_handle parent;
@@ -327,7 +327,7 @@ view_geometry_request(wlc_handle view, const struct wlc_geometry *geometry)
    if (is_managed(view) && !is_or(view) && (parent = wlc_view_get_parent(view))) {
       layout_parent(view, parent, &geometry->size);
    } else {
-      wlc_view_set_geometry(view, geometry);
+      wlc_view_set_geometry(view, 0, geometry);
    }
 }
 

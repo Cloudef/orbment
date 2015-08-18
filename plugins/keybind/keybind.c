@@ -326,8 +326,10 @@ keyboard_key(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifie
 }
 
 static bool
-pointer_button(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifiers, uint32_t button, enum wlc_button_state state)
+pointer_button(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifiers, uint32_t button, enum wlc_button_state state, const struct wlc_origin *origin)
 {
+   (void)origin;
+
    bool handled = false;
    struct chck_string name = {0};
    if (!chck_string_set_format(&name, "B%u", button - BTN_MOUSE))
@@ -376,7 +378,7 @@ plugin_init(plugin_h self)
 
    return (add_hook(self, "plugin.deloaded", FUN(plugin_deloaded, "v(h)|1")) &&
            add_hook(self, "keyboard.key", FUN(keyboard_key, "b(h,u32,*,u32,u32,e)|1")) &&
-           add_hook(self, "pointer.button", FUN(pointer_button, "b(h,u32,*,u32,e)|1")));
+           add_hook(self, "pointer.button", FUN(pointer_button, "b(h,u32,*,u32,e,*)|1")));
 }
 
 const struct plugin_info*

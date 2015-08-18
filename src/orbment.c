@@ -211,13 +211,13 @@ keyboard_key(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifie
 }
 
 static bool
-pointer_button(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifiers, uint32_t button, enum wlc_button_state state)
+pointer_button(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifiers, uint32_t button, enum wlc_button_state state, const struct wlc_origin *origin)
 {
    struct hook *hook;
    bool handled = false;
    chck_iter_pool_for_each(&orbment.hooks[HOOK_POINTER_BUTTON], hook) {
       bool (*fun)() = hook->function;
-      if (fun(view, time, modifiers, button, state))
+      if (fun(view, time, modifiers, button, state, origin))
          handled = true;
    }
    return handled;
@@ -379,7 +379,7 @@ add_hook(plugin_h caller, const char *type, const struct function *hook)
       "v(h,*)|1", // HOOK_VIEW_GEOMETRY_REQUEST
       "v(h,e,b)|1", // HOOK_VIEW_STATE_REQUEST
       "b(h,u32,*,u32,u32,e)|1", // HOOK_KEYBOARD_KEY
-      "b(h,u32,*,u32,e)|1", // HOOK_POINTER_BUTTON
+      "b(h,u32,*,u32,e,*)|1", // HOOK_POINTER_BUTTON
       "b(h,u32,*,u8,d[2])|1", // HOOK_POINTER_SCROLL
       "b(h,u32,*)|1", // HOOK_POINTER_MOTION
       "b(h,u32,*,e,i32,*)|1", // HOOK_TOUCH_TOUCH
