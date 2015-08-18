@@ -292,9 +292,13 @@ pass_key(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifiers, 
       goto out;
 
    syntax_append(&syntax, name, true);
-   syntax_append(&prefixed, name, true);
    chck_string_set_format(&syntax, "<%s>", syntax.data);
-   chck_string_set_format(&prefixed, "<%s>", prefixed.data);
+
+   if (!chck_string_is_empty(&prefixed)) {
+      syntax_append(&prefixed, name, true);
+      chck_string_set_format(&prefixed, "<%s>", prefixed.data);
+   }
+
    plog(plugin.self, PLOG_INFO, "%s combo: %s %s", (pressed ? "pressed" : "released"), syntax.data, prefixed.data);
 
    const struct keybind *k;
