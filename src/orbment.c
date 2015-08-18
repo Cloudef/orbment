@@ -265,6 +265,8 @@ touch_touch(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifier
 static void
 compositor_ready(void)
 {
+   wlc_log(WLC_LOG_INFO, "-!- Orbment is ready");
+
    struct hook *hook;
    chck_iter_pool_for_each(&orbment.hooks[HOOK_COMPOSITOR_READY], hook) {
       void (*fun)() = hook->function;
@@ -555,7 +557,7 @@ main(int argc, char *argv[])
    if (!plugins_init())
       return EXIT_FAILURE;
 
-   plog(0, PLOG_INFO, "orbment started");
+   plog(0, PLOG_INFO, "-!- Orbment started");
    wlc_run();
 
    remove_hooks();
