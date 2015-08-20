@@ -24,19 +24,45 @@ static struct {
    plugin_h self;
 } plugin;
 
+static bool
+contains_fullscreen_view(wlc_handle output)
+{
+   size_t memb;
+   const wlc_handle *views = wlc_output_get_views(output, &memb);
+   for (size_t i = 0; i < memb; ++i) {
+      if (wlc_view_get_state(views[i]) & WLC_BIT_FULLSCREEN)
+         return true;
+   }
+
+   return false;
+}
+
 static int
 timer_cb_sleep(void *arg)
 {
    (void)arg;
 
-   plog(plugin.self, PLOG_INFO, "Going to sleep");
-
    size_t memb;
    const wlc_handle *outputs = wlc_get_outputs(&memb);
+
+   if (!plugin.force) {
+      for (size_t i = 0; i < memb; ++i) {
+         if (contains_fullscreen_view(outputs[i]))
+            goto restart;
+      }
+   }
+
+   plog(plugin.self, PLOG_INFO, "Going to sleep");
+
    for (size_t i = 0; i < memb; ++i)
       wlc_output_set_sleep(outputs[i], true);
 
    plugin.force = false;
+   return 1;
+
+restart:
+   plog(plugin.self, PLOG_INFO, "Preventing sleep");
+   wlc_event_source_timer_update(plugin.timers.sleep, 1000 * plugin.delay);
    return 1;
 }
 
