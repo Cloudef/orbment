@@ -44,8 +44,8 @@ static inline void
 cb_log(enum wlc_log_type type, const char *str)
 {
    assert(str);
-   type = (type == WLC_LOG_WAYLAND ? WLC_LOG_INFO : type);
-   plog(0, type, "%s: %s", (type == WLC_LOG_WAYLAND ? "wayland" : "wlc"), str);
+   const enum plugin_log_type ntype = (type == WLC_LOG_WAYLAND ? PLOG_INFO : (enum plugin_log_type)type);
+   plog(0, ntype, "%s: %s", (type == WLC_LOG_WAYLAND ? "wayland" : "wlc"), str);
 }
 
 void
