@@ -103,6 +103,8 @@ log_close(void)
 {
    if (logger.file && logger.file != stdout && logger.file != stderr)
       fclose(logger.file);
+
+   logger.file = NULL;
 }
 
 void
