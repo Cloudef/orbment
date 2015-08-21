@@ -10,6 +10,15 @@
 #include <wlc/wlc.h>
 #include "plugin.h"
 
+#if defined(__linux__)
+#  include <linux/version.h>
+// FIXME: detect runtime instead
+#  if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 4, 0)
+#     include <sys/prctl.h> /* for yama */
+#     define HAS_YAMA_PRCTL 1
+#  endif
+#endif
+
 static struct {
    FILE *file;
 } logger;

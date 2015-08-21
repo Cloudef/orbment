@@ -5,14 +5,6 @@
 #include "plugin.h"
 #include "log.h"
 
-#if defined(__linux__)
-#  include <linux/version.h>
-#  if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 4, 0)
-#     include <sys/prctl.h> /* for yama */
-#     define HAS_YAMA_PRCTL 1
-#  endif
-#endif
-
 #if defined(__linux__) && defined(__GNUC__)
 #  include <fenv.h>
 int feenableexcept(int excepts);
