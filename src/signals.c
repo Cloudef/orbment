@@ -23,7 +23,7 @@ int feenableexcept(int excepts);
 #  include <xmmintrin.h>
 #endif
 
-#if !NDEBUG
+#ifndef NDEBUG
 
 static void
 fpehandler(int signal)
