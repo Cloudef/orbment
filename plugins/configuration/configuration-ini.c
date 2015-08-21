@@ -51,8 +51,7 @@ convert_key(struct chck_string *converted, const char *key)
    if (!key[1] || !chck_string_set_format(converted, "/%s", key))
       return false;
 
-   char *s = converted->data + 1;
-   for (s = strchr(converted->data, '.'); s && *s; s = strchr(s, '.'))
+   for (char *s = strchr(converted->data, '.'); s && *s; s = strchr(s, '.'))
       *s = '/';
 
    return true;
