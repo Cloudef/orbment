@@ -109,8 +109,8 @@ main(int argc, char *argv[])
    wlc_run();
    plugin_remove_all();
    hooks_remove_all();
-   log_close();
 
    plog(0, PLOG_INFO, "-- Orbment is gone, bye bye! --");
+   log_close();
    return EXIT_SUCCESS;
 }
