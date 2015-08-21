@@ -269,7 +269,7 @@ view_move_to_output(wlc_handle view, wlc_handle from, wlc_handle to)
 
    relayout(from);
    relayout(to);
-   wlc_log(WLC_LOG_INFO, "view %zu moved from output %zu to %zu", view, from, to);
+   plog(plugin.self, PLOG_INFO, "view %zu moved from output %zu to %zu", view, from, to);
 
    if (wlc_view_get_state(view) & WLC_BIT_ACTIVATED)
       set_active_view_on_output(to, view);

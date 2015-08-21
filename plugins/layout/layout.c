@@ -6,6 +6,8 @@
 #include "common.h"
 #include "config.h"
 
+static const size_t NOTINDEX = (size_t)-1;
+
 typedef void (*keybind_fun_t)(wlc_handle view, uint32_t time, intptr_t arg);
 static bool (*add_keybind)(plugin_h, const char *name, const char **syntax, const struct function*, intptr_t arg);
 static bool (*add_hook)(plugin_h, const char *name, const struct function*);

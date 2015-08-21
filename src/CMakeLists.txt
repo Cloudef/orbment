@@ -1,6 +1,9 @@
 set(sources
-   orbment.c
+   log.c
    plugin.c
+   hooks.c
+   signals.c
+   orbment.c
    )
 
 configure_file(config.h.in config.h @ONLY)

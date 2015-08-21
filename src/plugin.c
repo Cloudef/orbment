@@ -1,12 +1,11 @@
 #include "plugin.h"
-#include <wlc/wlc.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <assert.h>
 #include <chck/dl/dl.h>
 #include <chck/lut/lut.h>
 #include <chck/pool/pool.h>
+#include <chck/string/string.h>
 #include <chck/overflow/overflow.h>
+#include "log.h"
 
 static const size_t NOTINDEX = (size_t)-1;
 
@@ -133,7 +132,7 @@ deload_plugin(struct plugin *p, bool force)
          if (force) {
             deload_plugin(d, force);
          } else {
-            wlc_log(WLC_LOG_ERROR, "Could not deload plugin, needed by '%s'", s->data);
+            plog(0, PLOG_ERROR, "Could not deload plugin, needed by '%s'", s->data);
             return false;
          }
       }
@@ -219,12 +218,12 @@ load_deps_from_array(struct plugin *p, const char **array, bool hard)
 
       struct plugin *d;
       if (!(d = get(array[i])) && hard) {
-         wlc_log(WLC_LOG_ERROR, "Dependency '%s' for plugin '%s' was not found", array[i], p->info.name);
+         plog(0, PLOG_ERROR, "Dependency '%s' for plugin '%s' was not found", array[i], p->info.name);
          return false;
       }
 
       if (d && (belongs_to_pool(d->info.requires, p->info.name) || belongs_to_pool(d->info.after, p->info.name))) {
-         wlc_log(WLC_LOG_ERROR, "Circular dependency detected for plugins '%s' and '%s'", p->info.name, d->info.name);
+         plog(0, PLOG_ERROR, "Circular dependency detected for plugins '%s' and '%s'", p->info.name, d->info.name);
          return false;
       }
 
@@ -255,7 +254,7 @@ load_plugin(struct plugin *p)
 
    p->loaded = true;
 
-   wlc_log(WLC_LOG_INFO, "Loading plugin '%s'", p->info.name);
+   plog(0, PLOG_INFO, "Loading plugin '%s'", p->info.name);
 
    if (p->init && !p->init(p->handle + 1))
       goto error0;
@@ -266,7 +265,7 @@ load_plugin(struct plugin *p)
    return true;
 
 error0:
-   wlc_log(WLC_LOG_ERROR, "Plugin '%s' failed to load", p->info.name);
+   plog(0, PLOG_INFO, "Plugin '%s' failed to load", p->info.name);
    deload_plugin(p, false);
    return false;
 }
@@ -279,15 +278,36 @@ plugin_release(struct plugin *p)
    chck_string_release(&p->path);
 }
 
+static inline void
+pvlog(plugin_h caller, enum plugin_log_type type, const char *fmt, va_list ap)
+{
+   struct plugin *c;
+   if (!(c = (caller ? chck_pool_get(&plugins, caller - 1) : NULL))) {
+      logv(type, NULL, fmt, ap);
+      return;
+   }
+
+   logv(type, c->info.name, fmt, ap);
+}
+
 void
-set_plugin_callbacks(void (*loaded)(const struct plugin*), void (*deloaded)(const struct plugin*))
+plog(plugin_h caller, enum plugin_log_type type, const char *fmt, ...)
+{
+   va_list args;
+   va_start(args, fmt);
+   pvlog(caller, type, fmt, args);
+   va_end(args);
+}
+
+void
+plugin_set_callbacks(void (*loaded)(const struct plugin*), void (*deloaded)(const struct plugin*))
 {
    callbacks.loaded = loaded;
    callbacks.deloaded = deloaded;
 }
 
 void
-deload_plugins(void)
+plugin_remove_all(void)
 {
    struct plugin *p;
    chck_pool_for_each(&plugins, p)
@@ -295,11 +315,11 @@ deload_plugins(void)
 
    chck_pool_release(&plugins);
    chck_hash_table_release(&names);
-   wlc_log(WLC_LOG_INFO, "Deloaded plugins");
+   plog(0, PLOG_INFO, "Deloaded plugins");
 }
 
 void
-load_plugins(void)
+plugin_load_all(void)
 {
    struct plugin *p;
    size_t loaded = 0, count = plugins.items.count;
@@ -311,7 +331,7 @@ load_plugins(void)
       ++loaded;
    }
 
-   wlc_log(WLC_LOG_INFO, "Loaded %zu/%zu plugins", loaded, count);
+   plog(0, PLOG_INFO, "Loaded %zu/%zu plugins", loaded, count);
 }
 
 enum conflict_msg {
@@ -329,13 +349,13 @@ exists_in_info_array(const char *name, const char **array, bool check_group, enu
       struct plugin *p;
       if ((p = get(array[i])) || (check_group && get_group(array[i]))) {
          if (msg == registered) {
-            wlc_log(WLC_LOG_ERROR, "%s with name '%s' is already registered", (p ? "Plugin" : "Group"), array[i]);
+            plog(0, PLOG_ERROR, "%s with name '%s' is already registered", (p ? "Plugin" : "Group"), array[i]);
          } else if (msg == conflict) {
-            wlc_log(WLC_LOG_ERROR, "Plugin '%s' conflicts with %s '%s'", (p ? "plugin" : "group"), name, array[i]);
+            plog(0, PLOG_ERROR, "Plugin '%s' conflicts with %s '%s'", (p ? "plugin" : "group"), name, array[i]);
          } else if (msg == group) {
             if (get_group(array[i])) // check if the conflicted package belongs to the group as well
                return false;         // if that is true, we can ignore this conflict.
-            wlc_log(WLC_LOG_ERROR, "Group '%s' conflicts with plugin '%s'", array[i], (p ? p->info.name : "unknown"));
+            plog(0, PLOG_ERROR, "Group '%s' conflicts with plugin '%s'", array[i], (p ? p->info.name : "unknown"));
          }
          return true;
       }
@@ -345,7 +365,7 @@ exists_in_info_array(const char *name, const char **array, bool check_group, enu
 }
 
 bool
-register_plugin(struct plugin *plugin, const struct plugin_info* (*reg)(void))
+plugin_register(struct plugin *plugin, const struct plugin_info* (*reg)(void))
 {
    assert(plugin);
 
@@ -355,13 +375,13 @@ register_plugin(struct plugin *plugin, const struct plugin_info* (*reg)(void))
          goto error0;
 
       if (!info->name || !info->description) {
-         wlc_log(WLC_LOG_ERROR, "Plugin with no name or description is not allowed");
+         plog(0, PLOG_ERROR, "Plugin with no name or description is not allowed");
          goto error0;
       }
 
       struct plugin *p;
       if ((p = get(info->name))) {
-         wlc_log(WLC_LOG_ERROR, "Plugin with name '%s' is already registered", info->name);
+         plog(0, PLOG_ERROR, "Plugin with name '%s' is already registered", info->name);
          goto error0;
       }
 
@@ -392,7 +412,7 @@ register_plugin(struct plugin *plugin, const struct plugin_info* (*reg)(void))
       }
    }
 
-   wlc_log(WLC_LOG_INFO, "registered plugin %s (%s) %s", plugin->info.name, plugin->info.version, plugin->info.description);
+   plog(0, PLOG_INFO, "registered plugin %s (%s) %s", plugin->info.name, plugin->info.version, plugin->info.description);
    return true;
 
 error2:
@@ -407,14 +427,14 @@ error0:
 }
 
 bool
-register_plugin_from_path(const char *path)
+plugin_register_from_path(const char *path)
 {
    assert(path);
 
    void *dl;
    const char *error;
    if (!(dl = chck_dl_load(path, &error))) {
-      wlc_log(WLC_LOG_ERROR, "%s", error);
+      plog(0, PLOG_ERROR, "%s", error);
       return false;
    }
 
@@ -424,7 +444,7 @@ register_plugin_from_path(const char *path)
       methods[i] = chck_dl_load_symbol(dl, names[i], NULL);
 
    if (!methods[0]) {
-      wlc_log(WLC_LOG_ERROR, "Could not find 'plugin_register' function from: %s", path);
+      plog(0, PLOG_ERROR, "Could not find 'plugin_register' function from: %s", path);
       chck_dl_unload(dl);
       return false;
    }
@@ -434,48 +454,7 @@ register_plugin_from_path(const char *path)
    p.init = methods[1];
    p.deinit = methods[2];
    p.dl = dl;
-   return (chck_string_set_cstr(&p.path, path, true) && register_plugin(&p, methods[0]));
-}
-
-static inline void
-pvlog(plugin_h caller, enum plugin_log_type type, const char *fmt, va_list ap)
-{
-   struct plugin *c;
-   if (!(c = (caller ? chck_pool_get(&plugins, caller - 1) : NULL))) {
-      wlc_vlog((enum wlc_log_type)type, fmt, ap);
-      return;
-   }
-
-   static __thread struct {
-      char *data;
-      size_t size;
-   } buf;
-
-   va_list cpy;
-   va_copy(cpy, ap);
-
-   const size_t len = vsnprintf(NULL, 0, fmt, ap);
-
-   if (len > 0 && len >= buf.size) {
-      void *tmp;
-      if (!(tmp = chck_realloc_add_of(buf.data, len, 1)))
-         return;
-
-      buf.data = tmp;
-      buf.size = len + 1;
-   }
-
-   vsnprintf(buf.data, buf.size, fmt, cpy);
-   wlc_log(type, "%s: %s", c->info.name, buf.data);
-}
-
-void
-plog(plugin_h caller, enum plugin_log_type type, const char *fmt, ...)
-{
-   va_list args;
-   va_start(args, fmt);
-   pvlog(caller, type, fmt, args);
-   va_end(args);
+   return (chck_string_set_cstr(&p.path, path, true) && plugin_register(&p, methods[0]));
 }
 
 plugin_h
@@ -513,7 +492,7 @@ has_methods(plugin_h caller, plugin_h handle, const struct method_info *methods)
       }
 
       if (!found) {
-         wlc_log(WLC_LOG_WARN, "%s: No such method %s in %s (%s) or wrong signature", c->info.name, methods[x].name, p->info.name, p->info.version);
+         plog(0, PLOG_WARN, "%s: No such method %s in %s (%s) or wrong signature", c->info.name, methods[x].name, p->info.name, p->info.version);
          return false;
       }
    }
@@ -536,17 +515,17 @@ import_method(plugin_h caller, plugin_h handle, const char *name, const char *si
       const struct method *m = &p->info.methods[i];
       if (chck_cstreq(m->info.name, name)) {
          if (!chck_cstreq(m->info.signature, signature)) {
-            wlc_log(WLC_LOG_WARN, "%s: Method '%s' '%s' != '%s' signature mismatch in %s (%s)", c->info.name, name, signature, m->info.signature, p->info.name, p->info.version);
+            plog(0, PLOG_WARN, "%s: Method '%s' '%s' != '%s' signature mismatch in %s (%s)", c->info.name, name, signature, m->info.signature, p->info.name, p->info.version);
             return NULL;
          }
 
          if (m->deprecated)
-            wlc_log(WLC_LOG_WARN, "%s: Method '%s' is deprecated in %s (%s)", c->info.name, name, p->info.name, p->info.version);
+            plog(0, PLOG_WARN, "%s: Method '%s' is deprecated in %s (%s)", c->info.name, name, p->info.name, p->info.version);
 
          return m->function;
       }
    }
 
-   wlc_log(WLC_LOG_WARN, "%s: No such method '%s' in %s (%s)", c->info.name, name, p->info.name, p->info.version);
+   plog(0, PLOG_WARN, "%s: No such method '%s' in %s (%s)", c->info.name, name, p->info.name, p->info.version);
    return NULL;
 }

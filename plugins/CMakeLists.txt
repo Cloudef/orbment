@@ -19,6 +19,7 @@ include_directories(
    ${orbment_SOURCE_DIR}/lib/chck/src
    ${orbment_SOURCE_DIR}/src # for common.h
    ${CMAKE_BINARY_DIR}/src # for config.h
+   ${CMAKE_CURRENT_SOURCE_DIR} # for common.h
    )
 
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/plugins)

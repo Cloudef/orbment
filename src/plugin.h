@@ -17,10 +17,10 @@ struct plugin {
    bool loaded;
 };
 
-void set_plugin_callbacks(void (*loaded)(const struct plugin*), void (*deloaded)(const struct plugin*));
-void deload_plugins(void);
-void load_plugins(void);
-bool register_plugin(struct plugin *plugin, const struct plugin_info* (*reg)(void));
-bool register_plugin_from_path(const char *path);
+void plugin_set_callbacks(void (*loaded)(const struct plugin*), void (*deloaded)(const struct plugin*));
+void plugin_remove_all(void);
+void plugin_load_all(void);
+bool plugin_register(struct plugin *plugin, const struct plugin_info* (*reg)(void));
+bool plugin_register_from_path(const char *path);
 
 #endif /* __orbment_plugin_private_h__ */

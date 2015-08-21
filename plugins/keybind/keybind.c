@@ -9,6 +9,8 @@
 
 #include <linux/input.h>
 
+static const size_t NOTINDEX = (size_t)-1;
+
 static bool (*add_hook)(plugin_h, const char *name, const struct function*);
 static bool (*configuration_get)(const char *key, const char type, void *value_out);
 

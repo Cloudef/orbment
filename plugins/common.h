@@ -3,8 +3,6 @@
 
 #include <wlc/wlc.h>
 
-static const size_t NOTINDEX = (size_t)-1;
-
 // XXX: hack
 enum {
    BIT_BEMENU = 1<<5,
