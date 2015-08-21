@@ -243,8 +243,6 @@ output_resolution(wlc_handle output, const struct wlc_size *from, const struct w
 static bool
 view_created(wlc_handle view)
 {
-   plog(0, PLOG_INFO, "new view: %zu (%zu)", view, wlc_view_get_parent(view));
-
    bool created = true;
    struct hook *hook;
    chck_iter_pool_for_each(&hooks[HOOK_VIEW_CREATED], hook) {
@@ -264,8 +262,6 @@ view_destroyed(wlc_handle view)
       void (*fun)() = hook->function;
       fun(view);
    }
-
-   plog(0, PLOG_INFO, "view destroyed: %zu", view);
 }
 
 static void
