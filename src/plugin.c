@@ -439,9 +439,9 @@ plugin_register_from_path(const char *path)
    }
 
    void *methods[3];
-   const void *names[3] = { "plugin_register", "plugin_init", "plugin_deinit" };
+   const void *functions[3] = { "plugin_register", "plugin_init", "plugin_deinit" };
    for (int32_t i = 0; i < 3; ++i)
-      methods[i] = chck_dl_load_symbol(dl, names[i], NULL);
+      methods[i] = chck_dl_load_symbol(dl, functions[i], NULL);
 
    if (!methods[0]) {
       plog(0, PLOG_ERROR, "Could not find 'plugin_register' function from: %s", path);
