@@ -55,6 +55,8 @@ do_autostart(void)
    chck_iter_pool_release(&argv);
 }
 
+#pragma GCC diagnostic ignored "-Wmissing-prototypes"
+
 bool
 plugin_init(plugin_h self)
 {
@@ -72,7 +74,7 @@ plugin_init(plugin_h self)
    return add_hook(self, "compositor.ready", FUN(do_autostart, "v(v)|1"));
 }
 
-const struct plugin_info*
+PCONST const struct plugin_info*
 plugin_register(void)
 {
    static const char *requires[] = {

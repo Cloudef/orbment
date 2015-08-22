@@ -383,7 +383,7 @@ compositor_ready(void)
    }
 }
 
-const struct wlc_interface*
+PCONST const struct wlc_interface*
 hooks_get_interface(void)
 {
    static const struct wlc_interface interface = {

@@ -56,6 +56,8 @@ error0:
    return NULL;
 }
 
+#pragma GCC diagnostic ignored "-Wmissing-prototypes"
+
 bool
 plugin_init(plugin_h self)
 {
@@ -69,7 +71,7 @@ plugin_init(plugin_h self)
    return add_compressor(self, "image", "ppm", "ppm", FUN(compress_ppm, "u8[](p,u8[],sz*)|1"));
 }
 
-const struct plugin_info*
+PCONST const struct plugin_info*
 plugin_register(void)
 {
    static const char *requires[] = {

@@ -248,7 +248,7 @@ relayout(wlc_handle output)
          }
       }
 
-      layout->function(&(struct wlc_geometry){ { 0, 0 }, *r }, tiled.items.buffer, tiled.items.count);
+      layout->function(&(struct wlc_geometry){ { 0, 0 }, *r }, (void*)tiled.items.buffer, tiled.items.count);
       chck_iter_pool_release(&tiled);
    }
 }
@@ -380,6 +380,8 @@ static const struct {
    {0},
 };
 
+#pragma GCC diagnostic ignored "-Wmissing-prototypes"
+
 void
 plugin_deinit(plugin_h self)
 {
@@ -411,7 +413,7 @@ plugin_init(plugin_h self)
            add_hook(self, "view.state_request", FUN(view_state_request, "v(h,e,b)|1")));
 }
 
-const struct plugin_info*
+PCONST const struct plugin_info*
 plugin_register(void)
 {
    static const struct method methods[] = {

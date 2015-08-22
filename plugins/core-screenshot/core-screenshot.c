@@ -50,9 +50,10 @@ work_release(struct work *work)
    free(work->image.data);
 }
 
-static void
+PPURE static void
 cb_did_compress(struct work *work)
 {
+   (void)work;
    assert(work);
 }
 
@@ -141,6 +142,8 @@ key_cb_screenshot(wlc_handle view, uint32_t time, intptr_t arg)
    wlc_output_get_pixels(wlc_get_focused_output(), cb_pixels, info);
 }
 
+#pragma GCC diagnostic ignored "-Wmissing-prototypes"
+
 void
 plugin_deinit(plugin_h self)
 {
@@ -180,7 +183,7 @@ plugin_init(plugin_h self)
    return true;
 }
 
-const struct plugin_info*
+PCONST const struct plugin_info*
 plugin_register(void)
 {
    static const char *requires[] = {

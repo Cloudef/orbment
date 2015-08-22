@@ -57,7 +57,7 @@ convert_key(struct chck_string *converted, const char *key)
    return true;
 }
 
-bool
+static bool
 save(const char *stsign, struct pair *pairs, size_t memb)
 {
    (void)pairs, (void)memb;
@@ -71,7 +71,7 @@ save(const char *stsign, struct pair *pairs, size_t memb)
    return false;
 }
 
-struct pair*
+static struct pair*
 load(const char *stsign, size_t *out_memb)
 {
    if (out_memb)
@@ -138,6 +138,8 @@ error0:
    return NULL;
 }
 
+#pragma GCC diagnostic ignored "-Wmissing-prototypes"
+
 bool
 plugin_init(plugin_h self)
 {
@@ -156,7 +158,7 @@ plugin_init(plugin_h self)
    return true;
 }
 
-const struct plugin_info*
+PCONST const struct plugin_info*
 plugin_register(void)
 {
    static const char *requires[] = {

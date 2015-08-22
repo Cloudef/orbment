@@ -34,7 +34,7 @@ get_next_view(wlc_handle view, size_t offset, enum direction dir)
    return (memb > 0 ? views[(dir == PREV ? chck_clampsz(i - offset, 0, memb - 1) : i + offset) % memb] : 0);
 }
 
-static uint32_t
+PPURE static uint32_t
 rotate_mask(uint32_t mask, size_t offset, enum direction dir)
 {
    // Shifting with the total bits or more of mask variable causes UB
@@ -510,6 +510,8 @@ setup_default_keybinds(plugin_h self)
    return true;
 }
 
+#pragma GCC diagnostic ignored "-Wmissing-prototypes"
+
 void
 plugin_deinit(plugin_h self)
 {
@@ -542,7 +544,7 @@ plugin_init(plugin_h self)
            add_hook(self, "view.move_to_output", FUN(view_move_to_output, "v(h,h,h)|1")));
 }
 
-const struct plugin_info*
+PCONST const struct plugin_info*
 plugin_register(void)
 {
    static const char *requires[] = {

@@ -103,6 +103,8 @@ static const struct {
    {0},
 };
 
+#pragma GCC diagnostic ignored "-Wmissing-prototypes"
+
 bool
 plugin_init(plugin_h self)
 {
@@ -127,7 +129,7 @@ plugin_init(plugin_h self)
    return true;
 }
 
-const struct plugin_info*
+PCONST const struct plugin_info*
 plugin_register(void)
 {
    static const char *requires[] = {

@@ -67,6 +67,10 @@ sigterm(int signal)
    wlc_terminate();
 }
 
+
+#ifdef NDEBUG
+PCONST
+#endif
 void
 signals_setup_debug(void)
 {

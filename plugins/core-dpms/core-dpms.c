@@ -160,6 +160,8 @@ default_delay:
    return 60 * 5; // 5 mins
 }
 
+#pragma GCC diagnostic ignored "-Wmissing-prototypes"
+
 void
 plugin_deinit(plugin_h self)
 {
@@ -201,7 +203,7 @@ plugin_init(plugin_h self)
    return wlc_event_source_timer_update(plugin.timers.sleep, 1000 * plugin.delay);
 }
 
-const struct plugin_info*
+PCONST const struct plugin_info*
 plugin_register(void)
 {
    static const char *requires[] = {

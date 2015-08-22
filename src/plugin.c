@@ -195,7 +195,7 @@ load_deps_from_group(struct plugin *p, struct chck_iter_pool *pool, bool hard)
    return true;
 }
 
-static bool
+PPURE static bool
 belongs_to_pool(const char **pool, const char *name)
 {
    assert(name);

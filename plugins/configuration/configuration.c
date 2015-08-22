@@ -28,7 +28,7 @@ static struct {
    struct configuration_backend backend;
 } plugin;
 
-static bool
+PPURE static bool
 validate_key(const char *key)
 {
    if (chck_cstr_is_empty(key))
@@ -187,6 +187,8 @@ plugin_deloaded(plugin_h ph)
    memset(&plugin.backend, 0, sizeof(plugin.backend));
 }
 
+#pragma GCC diagnostic ignored "-Wmissing-prototypes"
+
 void
 plugin_deinit(plugin_h self)
 {
@@ -212,7 +214,7 @@ plugin_init(plugin_h self)
    return (add_hook(self, "plugin.deloaded", FUN(plugin_deloaded, "v(h)|1")));
 }
 
-const struct plugin_info*
+PCONST const struct plugin_info*
 plugin_register(void)
 {
    static const struct method methods[] = {

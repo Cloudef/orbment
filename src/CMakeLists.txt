@@ -8,8 +8,6 @@ set(sources
 
 configure_file(config.h.in config.h @ONLY)
 
-find_package(XKBCommon REQUIRED)
-
 find_library(MATH_LIBRARY m)
 mark_as_advanced(MATH_LIBRARY)
 if (NOT MATH_LIBRARY)
@@ -26,25 +24,19 @@ endif (UNIX)
 
 add_definitions(
    ${WLC_DEFINITIONS}
-   ${XKBCOMMON_DEFINTIONS}
    )
 include_directories(
    ${WLC_INCLUDE_DIRS}
-   ${XKBCOMMON_INCLUDE_DIRS}
    ${orbment_SOURCE_DIR}/include
    ${orbment_SOURCE_DIR}/lib/chck/src
    ${CMAKE_CURRENT_BINARY_DIR}
    )
 
 add_executable(orbment ${sources})
-
-target_link_libraries(orbment
-   chck_orbment
-   ${WLC_LIBRARIES}
-   ${XKBCOMMON_LIBRARIES}
-   ${MATH_LIBRARY}
-   ${DL_LIBRARY}
-   )
+target_link_libraries(orbment chck_orbment ${WLC_LIBRARIES} ${DL_LIBRARY} ${MATH_LIBRARY})
 
 # Install rules
 install(TARGETS orbment DESTINATION bin)
+
+set(ORBMENT_LIBRARIES "" CACHE STRING "Libraries for linking Orbment plugins")
+set(ORBMENT_INCLUDE_DIRS "${orbment_SOURCE_DIR}/include" CACHE STRING "Include directories of Orbment")

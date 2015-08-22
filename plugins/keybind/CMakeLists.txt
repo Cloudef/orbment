@@ -1,3 +1,7 @@
+find_package(XKBCommon REQUIRED)
+add_definitions(${XKBCOMMON_DEFINTIONS})
+include_directories(${XKBCOMMON_INCLUDE_DIRS})
 add_library(orbment-plugin-keybind SHARED keybind.c)
+target_link_libraries(orbment-plugin-keybind ${ORBMENT_LIBRARIES})
 set_target_properties(orbment-plugin-keybind PROPERTIES PREFIX "")
 install(TARGETS orbment-plugin-keybind DESTINATION ${ORBMENT_PLUGINS_PATH})

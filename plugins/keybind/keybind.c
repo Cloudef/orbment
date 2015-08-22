@@ -361,6 +361,8 @@ load_prefix(plugin_h self)
    return (configuration_get("/keybindings/prefix", 's', &prefix) ? prefix : NULL);
 }
 
+#pragma GCC diagnostic ignored "-Wmissing-prototypes"
+
 void
 plugin_deinit(plugin_h self)
 {
@@ -387,7 +389,7 @@ plugin_init(plugin_h self)
            add_hook(self, "pointer.button", FUN(pointer_button, "b(h,u32,*,u32,e,*)|1")));
 }
 
-const struct plugin_info*
+PCONST const struct plugin_info*
 plugin_register(void)
 {
    static const struct method methods[] = {
