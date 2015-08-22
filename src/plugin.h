@@ -20,7 +20,7 @@ struct plugin {
 void plugin_set_callbacks(void (*loaded)(const struct plugin*), void (*deloaded)(const struct plugin*));
 void plugin_remove_all(void);
 void plugin_load_all(void);
-bool plugin_register(struct plugin *plugin, const struct plugin_info* (*reg)(void));
-bool plugin_register_from_path(const char *path);
+PNONULLV(1) bool plugin_register(struct plugin *plugin, const struct plugin_info* (*reg)(void));
+PNONULL bool plugin_register_from_path(const char *path);
 
 #endif /* __orbment_plugin_private_h__ */

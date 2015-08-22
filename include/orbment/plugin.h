@@ -1,15 +1,10 @@
 #ifndef __orbment_plugin_h__
 #define __orbment_plugin_h__
 
+#include <orbment/defines.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
-
-#if __GNUC__
-#  define PLOG_ATTR(x, y) __attribute__((format(printf, x, y)))
-#else
-#  define PLOG_ATTR(x, y)
-#endif
 
 /**
  * Struct abstracting exported method from plugin.
@@ -124,13 +119,13 @@ enum plugin_log_type {
 /**
  * Logging utility.
  */
-PLOG_ATTR(3, 4) void plog(plugin_h self, enum plugin_log_type, const char *fmt, ...);
+PNONULL PLOG_ATTR(3, 4) void plog(plugin_h self, enum plugin_log_type, const char *fmt, ...);
 
 /**
  * Imports plugin with name.
  * Returns plugin handle, 0 if no such plugin.
  */
-plugin_h import_plugin(plugin_h self, const char *name);
+PNONULL plugin_h import_plugin(plugin_h self, const char *name);
 
 /**
  * Check if plugin has zero-terminated list of methods.
@@ -139,13 +134,13 @@ plugin_h import_plugin(plugin_h self, const char *name);
  * If the method exists in plugin, import_method for that method will always succeeed.
  * Thus this method can be used to check all hard depencies to another plugin.
  */
-bool has_methods(plugin_h self, plugin_h plugin, const struct method_info *methods);
+PNONULL bool has_methods(plugin_h self, plugin_h plugin, const struct method_info *methods);
 
 /**
  * Imports a method from another plugin.
  * Returns NULL if signature does not match with loaded plugin version, or method is not found.
  */
-void* import_method(plugin_h self, plugin_h plugin, const char *name, const char *signature);
+PNONULL void* import_method(plugin_h self, plugin_h plugin, const char *name, const char *signature);
 
 /**
  * Helper macro for registering methods.
