@@ -119,7 +119,7 @@ enum plugin_log_type {
 /**
  * Logging utility.
  */
-PNONULL PLOG_ATTR(3, 4) void plog(plugin_h self, enum plugin_log_type, const char *fmt, ...);
+PNONULLV(3) PLOG_ATTR(3, 4) void plog(plugin_h self, enum plugin_log_type, const char *fmt, ...);
 
 /**
  * Imports plugin with name.
