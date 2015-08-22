@@ -10,6 +10,12 @@ configure_file(config.h.in config.h @ONLY)
 
 find_package(XKBCommon REQUIRED)
 
+find_library(MATH_LIBRARY m)
+mark_as_advanced(MATH_LIBRARY)
+if (NOT MATH_LIBRARY)
+   message(FATAL_ERROR "libm is needed")
+endif ()
+
 if (UNIX)
    find_library(DL_LIBRARY dl)
    mark_as_advanced(DL_LIBRARY)
@@ -36,6 +42,7 @@ target_link_libraries(orbment
    chck_orbment
    ${WLC_LIBRARIES}
    ${XKBCOMMON_LIBRARIES}
+   ${MATH_LIBRARY}
    ${DL_LIBRARY}
    )
 
