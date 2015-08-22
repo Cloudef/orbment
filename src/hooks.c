@@ -207,6 +207,10 @@ output_created(wlc_handle output)
       if (!fun(output))
          created = false;
    }
+
+   if (!created)
+      plog(0, PLOG_ERROR, "output.created hook failed for output %" PRIuWLC, output);
+
    return created;
 }
 
@@ -250,6 +254,9 @@ view_created(wlc_handle view)
       if (!fun(view))
          created = false;
    }
+
+   if (!created)
+      plog(0, PLOG_ERROR, "view.created hook failed for view %" PRIuWLC, view);
 
    return created;
 }
