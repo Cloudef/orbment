@@ -13,3 +13,7 @@ add_subproject(wlc Wlc)
 set(INIHCK_BUILD_STATIC ON CACHE STRING "Build inihck statically if not found systemwide" FORCE)
 set(INIHCK_BUILD_TESTS OFF CACHE STRING "Do not build inihck tests" FORCE)
 add_subproject(inihck)
+
+set(PI9_BUILD_STATIC ON CACHE BOOL "Build pi9 statically if not found systemwide" FORCE)
+set(PI9_BUILD_BINARIES OFF CACHE BOOL "Skip pi9 binaries" FORCE)
+add_subproject(pi9)

@@ -1,5 +1,6 @@
 set(plugins
    keybind
+   vfs
    layout
    compressor
    core-input

@@ -9,4 +9,7 @@
 [submodule "lib/chck"]
    path = lib/chck
    url = git://github.com/Cloudef/chck.git
+[submodule "pi9"]
+   path = lib/pi9
+   url = git://github.com/Cloudef/pi9.git
    branch = master

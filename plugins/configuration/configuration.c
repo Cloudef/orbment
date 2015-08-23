@@ -1,10 +1,14 @@
 #include <orbment/plugin.h>
 #include <chck/string/string.h>
+#include <chck/math/math.h>
 #include <chck/lut/lut.h>
 #include <assert.h>
 #include "config.h"
 
 static bool (*add_hook)(plugin_h, const char *name, const struct function*);
+static bool (*add_node)(plugin_h, const char *container, const char *path, const char *type, void *arg, const struct function *read, const struct function *write, const struct function *clunk, const struct function *size);
+static bool (*add_fs)(plugin_h, const char *name);
+static bool (*reply)(uint16_t tag, const void *src, size_t size, size_t nmemb, void *stream);
 
 static const char *load_sig = "*(c[],sz*)|1";
 static const char *save_sig = "b(c[],*,sz)|1";
@@ -27,6 +31,19 @@ static struct {
    struct chck_hash_table table;
    struct configuration_backend backend;
 } plugin;
+
+static bool
+cb_key_read(void *arg, uint16_t tag, uint32_t fid, uint64_t offset, uint32_t count, void *stream)
+{
+   (void)fid;
+   const char *key = arg;
+   const char *data = chck_hash_table_str_get(&plugin.table, key, strlen(key));
+   data = (data ? *(const char**)data : NULL);
+   const size_t len = (data ? strlen(data) : 0);
+   offset = chck_minsz(len, offset);
+   count = chck_minsz(len - offset, count);
+   return (reply ? reply(tag, data + offset, 1, count, stream) : false);
+}
 
 PPURE static bool
 validate_key(const char *key)
@@ -96,6 +113,12 @@ load_config(void)
    }
 
    free(pairs);
+
+   if (add_node) {
+      void *v;
+      chck_hash_table_for_each(&plugin.table, v)
+         add_node(plugin.self, "configuration", _I.str_key + 1, "file", (void*)_I.str_key, FUN(cb_key_read, "b(*,u16,u32,u64,u32,*)|1"), NULL, NULL, NULL);
+   }
 }
 
 static bool
@@ -188,6 +211,27 @@ plugin_deloaded(plugin_h ph)
    memset(&plugin.backend, 0, sizeof(plugin.backend));
 }
 
+static bool
+vfs_init(plugin_h self)
+{
+   plugin_h vfs;
+   if (!(vfs = import_plugin(self, "vfs")))
+      return false;
+
+   if (!(add_fs = import_method(self, vfs, "add_fs", "b(h,c[])|1")) ||
+       !(add_node = import_method(self, vfs, "add_node", "b(h,c[],c[],c[],*,fun,fun,fun,fun)|1")) ||
+       !(reply = import_method(self, vfs, "reply", "b(u16,*,sz,sz,*)|1")))
+      goto fail;
+
+   return add_fs(self, "configuration");
+
+fail:
+   add_fs = NULL;
+   add_node = NULL;
+   reply = NULL;
+   return false;
+}
+
 #pragma GCC diagnostic ignored "-Wmissing-prototypes"
 
 void
@@ -204,6 +248,8 @@ bool
 plugin_init(plugin_h self)
 {
    plugin.self = self;
+
+   vfs_init(self);
 
    plugin_h orbment;
    if (!(orbment = import_plugin(self, "orbment")))
@@ -229,12 +275,18 @@ plugin_register(void)
       NULL,
    };
 
+   static const char *after[] = {
+      "vfs",
+      NULL,
+   };
+
    static const struct plugin_info info = {
       .name = "configuration",
       .description = "Configuration api.",
       .version = VERSION,
       .methods = methods,
-      .groups = groups
+      .groups = groups,
+      .after = after,
    };
 
    return &info;

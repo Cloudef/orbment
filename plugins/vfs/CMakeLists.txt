@@ -1,0 +1,5 @@
+include_directories(${pi9_SOURCE_DIR}/src)
+add_library(orbment-plugin-vfs SHARED vfs.c fs.c)
+target_link_libraries(orbment-plugin-vfs pi9)
+set_target_properties(orbment-plugin-vfs PROPERTIES PREFIX "")
+install(TARGETS orbment-plugin-vfs DESTINATION ${ORBMENT_PLUGINS_PATH})
