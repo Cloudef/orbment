@@ -77,7 +77,7 @@ For example \%\fBcompose:ralt,ctrl:nocaps\fR would set \fIralt\fR to the compose
 .I \fI$XDG_DATA_HOME/orbment/plugins\fR
 (Fallback: \fI$HOME/.local/share/orbment/plugins\fR)
 .br
-.I \fI@ORBMENT_PLUGINS_PATH@\fR
+.I \fI@ORBMENT_PLUGINS_FULL_PATH@\fR
 .SH SEE ALSO
 \fBxkbcommon\fR,
 \fBwayland\fR,
