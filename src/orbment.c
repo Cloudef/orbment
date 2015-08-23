@@ -29,8 +29,8 @@ register_plugins_from_path(void)
 
 #ifndef NDEBUG
       // allows running without install, as long as you build in debug mode
-      // NOTE: does not load plugins from PLUGINS_PATH, just from $PWD/plugins
-      const char *paths[] = { "plugins", xdg.data, NULL };
+      // NOTE: $PWD/plugins is first in load order
+      const char *paths[] = { "plugins", PLUGINS_PATH, xdg.data, NULL };
 #else
       const char *paths[] = { PLUGINS_PATH, xdg.data, NULL };
 #endif
