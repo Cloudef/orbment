@@ -7,6 +7,8 @@ include(subproject)
 add_subdirectory(lib)
 
 # CPack
+set(CPACK_GENERATOR "7Z")
+set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
 set(CPACK_PACKAGE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/pkg")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Modular Wayland compositor")
 set(CPACK_ERROR_ON_ABSOLUTE_INSTALL_DESTINATION ON)
@@ -16,7 +18,7 @@ include(GNUInstallDirs)
 include(FeatureSummary)
 include(CPack)
 set(ORBMENT_PLUGINS_FULL_PATH "${CMAKE_INSTALL_FULL_LIBDIR}/orbment" CACHE STRING "Systemwide plugins path (absolute)" FORCE)
-set(ORBMENT_PLUGINS_PATH "${CMAKE_INSTALL_FULL_LIBDIR}/orbment" CACHE STRING "Systemwide plugins path" FORCE)
+set(ORBMENT_PLUGINS_PATH "${CMAKE_INSTALL_LIBDIR}/orbment" CACHE STRING "Systemwide plugins path" FORCE)
 
 # Compiler options
 if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
