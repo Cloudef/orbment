@@ -84,10 +84,10 @@ You can build bootstrapped version of ``orbment`` which also includes ``wlc`` wi
 
 .. code:: sh
 
-    git submodule update --init --recursive           # - initialize and fetch submodules
-    mkdir target && cd target                         # - create build target directory
-    cmake -DCMAKE_BUILD_TYPE=Debug -DSOURCE_WLC=ON .. # - run CMake
-    make                                              # - compile
+    git submodule update --init --recursive              # - initialize and fetch submodules
+    mkdir target && cd target                            # - create build target directory
+    cmake -DCMAKE_BUILD_TYPE=Upstream -DSOURCE_WLC=ON .. # - run CMake
+    make                                                 # - compile
 
     # You can now run
     ./src/orbment
