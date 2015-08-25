@@ -5,6 +5,7 @@
 #include <chck/lut/lut.h>
 #include <chck/string/string.h>
 #include <chck/unicode/unicode.h>
+#include <ctype.h>
 #include "common.h"
 #include "config.h"
 
