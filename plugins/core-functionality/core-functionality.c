@@ -29,7 +29,7 @@ static wlc_handle
 get_next_view(wlc_handle view, size_t offset, enum direction dir)
 {
    size_t memb, i;
-   wlc_handle *views = wlc_output_get_mutable_views(wlc_view_get_output(view), &memb);
+   wlc_handle *views = wlc_output_get_mutable_views((view ? wlc_view_get_output(view) : wlc_get_focused_output()), &memb);
    for (i = 0; i < memb && views[i] != view; ++i);
    return (memb > 0 ? views[(dir == PREV ? chck_clampsz(i - offset, 0, memb - 1) : i + offset) % memb] : 0);
 }
@@ -171,6 +171,10 @@ static void
 focus_next_or_previous_view(wlc_handle view, enum direction direction)
 {
    wlc_handle first = get_next_view(view, 0, direction), v = first, old = plugin.active.view;
+
+   if (!first)
+      return;
+
    do {
       while ((v = get_next_view(v, 1, direction)) && v != first && wlc_view_get_mask(v) != wlc_output_get_mask(wlc_view_get_output(view)));
       if (wlc_view_get_mask(v) == wlc_output_get_mask(wlc_get_focused_output()))
@@ -426,10 +430,6 @@ static void
 key_cb_focus_previous_client(wlc_handle view, uint32_t time, intptr_t arg)
 {
    (void)time, (void)arg;
-
-   if (!view)
-      return;
-
    focus_next_or_previous_view(view, PREV);
 }
 
@@ -437,10 +437,6 @@ static void
 key_cb_focus_next_client(wlc_handle view, uint32_t time, intptr_t arg)
 {
    (void)time, (void)arg;
-
-   if (!view)
-      return;
-
    focus_next_or_previous_view(view, NEXT);
 }
 
