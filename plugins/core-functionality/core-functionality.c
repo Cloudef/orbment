@@ -21,6 +21,10 @@ static struct {
       wlc_handle view;
    } active;
 
+   struct {
+      bool follow_focus;
+   } config;
+
    struct chck_string terminal;
    plugin_h self;
 } plugin;
@@ -333,6 +337,13 @@ view_destroyed(wlc_handle view)
 }
 
 static void
+pointer_motion(wlc_handle view, uint32_t time, const struct wlc_origin *motion)
+{
+   (void)time, (void)motion;
+   focus_view(view);
+}
+
+static void
 key_cb_exit(wlc_handle view, uint32_t time, intptr_t arg)
 {
    (void)view, (void)time, (void)arg;
@@ -506,6 +517,21 @@ setup_default_keybinds(plugin_h self)
    return true;
 }
 
+static void
+load_config(plugin_h self)
+{
+   plugin_h configuration;
+   bool (*configuration_get)(const char *key, const char type, void *value_out);
+   if (!(configuration = import_plugin(self, "configuration")) ||
+       !(configuration_get = import_method(self, configuration, "get", "b(c[],c,v)|1")))
+      return;
+
+   configuration_get("/core/follow-focus", 'b', &plugin.config.follow_focus);
+
+   if (plugin.config.follow_focus)
+      add_hook(self, "pointer.motion", FUN(pointer_motion, "b(h,u32,*)|1"));
+}
+
 #pragma GCC diagnostic ignored "-Wmissing-prototypes"
 
 void
@@ -534,6 +560,7 @@ plugin_init(plugin_h self)
    if (!setup_default_keybinds(self))
       return false;
 
+   load_config(self);
    return (add_hook(self, "view.created", FUN(view_created, "b(h)|1")) &&
            add_hook(self, "view.destroyed", FUN(view_destroyed, "v(h)|1")) &&
            add_hook(self, "view.focus", FUN(view_focus, "v(h,b)|1")) &&
@@ -549,11 +576,17 @@ plugin_register(void)
       NULL,
    };
 
+   static const char *after[] = {
+      "configuration",
+      NULL,
+   };
+
    static const struct plugin_info info = {
       .name = "core-functionality",
       .description = "Core functionality.",
       .version = VERSION,
       .requires = requires,
+      .after = after,
    };
 
    return &info;
