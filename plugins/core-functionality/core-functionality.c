@@ -448,7 +448,7 @@ key_cb_focus_view(wlc_handle view, uint32_t time, intptr_t arg)
    if (!view)
       return;
 
-   wlc_view_focus(view);
+   focus_view(view);
 }
 
 static const struct {
