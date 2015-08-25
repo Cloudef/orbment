@@ -110,7 +110,7 @@ add_hook(plugin_h caller, const char *type, const struct function *hook)
       "v(h,h,h)|1", // HOOK_VIEW_MOVE_TO_OUTPUT
       "v(h,*)|1", // HOOK_VIEW_GEOMETRY_REQUEST
       "v(h,e,b)|1", // HOOK_VIEW_STATE_REQUEST
-      "b(h,u32,*,u32,u32,e)|1", // HOOK_KEYBOARD_KEY
+      "b(h,u32,*,u32,e)|1", // HOOK_KEYBOARD_KEY
       "b(h,u32,*,u32,e,*)|1", // HOOK_POINTER_BUTTON
       "b(h,u32,*,u8,d[2])|1", // HOOK_POINTER_SCROLL
       "b(h,u32,*)|1", // HOOK_POINTER_MOTION
@@ -314,13 +314,13 @@ view_state_request(wlc_handle view, const enum wlc_view_state_bit state, const b
 }
 
 static bool
-keyboard_key(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifiers, uint32_t key, uint32_t sym, enum wlc_key_state state)
+keyboard_key(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifiers, uint32_t key, enum wlc_key_state state)
 {
    struct hook *hook;
    bool handled = false;
    chck_iter_pool_for_each(&hooks[HOOK_KEYBOARD_KEY], hook) {
       bool (*fun)() = hook->function;
-      if (fun(view, time, modifiers, key, sym, state))
+      if (fun(view, time, modifiers, key, state))
          handled = true;
    }
    return handled;

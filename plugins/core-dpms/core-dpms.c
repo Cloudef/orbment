@@ -102,9 +102,9 @@ handle_activity(bool pressed)
  * Handle keyboard.key separately, to pass key state information.
  */
 static bool
-keyboard_key(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifiers, uint32_t key, uint32_t sym, enum wlc_key_state state)
+keyboard_key(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifiers, uint32_t key, enum wlc_key_state state)
 {
-   (void)view, (void)time, (void)modifiers, (void)key, (void)sym;
+   (void)view, (void)time, (void)modifiers, (void)key;
    return handle_activity(state == WLC_KEY_STATE_PRESSED);
 }
 
@@ -192,7 +192,7 @@ plugin_init(plugin_h self)
       if (!add_keybind(self, keybinds[i].name, keybinds[i].syntax, FUN(keybinds[i].function, "v(h,u32,ip)|1"), keybinds[i].arg))
          return false;
 
-   if (!add_hook(self, "keyboard.key", FUN(keyboard_key, "b(h,u32,*,u32,u32,e)|1")) ||
+   if (!add_hook(self, "keyboard.key", FUN(keyboard_key, "b(h,u32,*,u32,e)|1")) ||
        !add_hook(self, "pointer.button", FUN(pointer_button, "b(h,u32,*,u32,e,*)|1")) ||
        !add_hook(self, "pointer.scroll", FUN(activity, "b(h,u32,*,u8,d[2])|1")) ||
        !add_hook(self, "pointer.motion", FUN(activity, "b(h,u32,*)|1")) ||

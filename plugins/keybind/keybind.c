@@ -4,6 +4,7 @@
 #include <chck/pool/pool.h>
 #include <chck/lut/lut.h>
 #include <chck/string/string.h>
+#include <chck/unicode/unicode.h>
 #include "common.h"
 #include "config.h"
 
@@ -319,13 +320,18 @@ out:
 }
 
 static bool
-keyboard_key(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifiers, uint32_t key, uint32_t sym, enum wlc_key_state state)
+keyboard_key(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifiers, uint32_t key, enum wlc_key_state state)
 {
    (void)key;
 
-   char name[64];
-   if (xkb_keysym_get_name(sym, name, sizeof(name)) == -1)
-      return false;
+   const uint32_t sym = wlc_keyboard_get_keysym_for_key(key, NULL);
+   const uint32_t u32 = wlc_keyboard_get_utf32_for_key(key, NULL);
+
+   char name[64] = {0};
+   if (chck_utf32_encode(u32, name) == 1 && (!isprint(name[0]) || isspace(name[0]))) {
+      if (xkb_keysym_get_name(sym, name, sizeof(name)) == -1)
+         return false;
+   }
 
    const bool pressed = (state == WLC_KEY_STATE_PRESSED);
    return pass_key(view, time, modifiers, name, pressed);
@@ -385,7 +391,7 @@ plugin_init(plugin_h self)
    plugin.prefix = parse_prefix(load_prefix(self));
 
    return (add_hook(self, "plugin.deloaded", FUN(plugin_deloaded, "v(h)|1")) &&
-           add_hook(self, "keyboard.key", FUN(keyboard_key, "b(h,u32,*,u32,u32,e)|1")) &&
+           add_hook(self, "keyboard.key", FUN(keyboard_key, "b(h,u32,*,u32,e)|1")) &&
            add_hook(self, "pointer.button", FUN(pointer_button, "b(h,u32,*,u32,e,*)|1")));
 }
 
