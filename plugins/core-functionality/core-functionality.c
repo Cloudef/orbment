@@ -82,15 +82,17 @@ should_focus_on_create(wlc_handle view)
 {
    // Do not allow unmanaged views to steal focus (tooltips, dnds, etc..)
    // Do not allow parented windows to steal focus, if current window wasn't parent.
-   const uint32_t type = wlc_view_get_type(view);
    const wlc_handle parent = wlc_view_get_parent(view);
-   return (!(type & WLC_BIT_UNMANAGED) && (!plugin.active.view || !parent || parent == plugin.active.view));
+   return (is_managed(view) && (!plugin.active.view || !parent || parent == plugin.active.view));
 }
 
 static void
 raise_all(wlc_handle view)
 {
    assert(view);
+
+   if (!is_managed(view))
+      return;
 
    // Raise view and all related views to top honoring the stacking order.
    wlc_handle parent;
@@ -114,6 +116,9 @@ static void
 focus_view(wlc_handle view)
 {
    if (plugin.active.view == view)
+      return;
+
+   if (!is_managed(view))
       return;
 
    // Bemenu should always have focus when open.
@@ -440,15 +445,15 @@ key_cb_focus_next_output(wlc_handle view, uint32_t time, intptr_t arg)
 static void
 key_cb_focus_previous_client(wlc_handle view, uint32_t time, intptr_t arg)
 {
-   (void)time, (void)arg;
-   focus_next_or_previous_view(view, PREV);
+   (void)view, (void)time, (void)arg;
+   focus_next_or_previous_view(plugin.active.view, PREV);
 }
 
 static void
 key_cb_focus_next_client(wlc_handle view, uint32_t time, intptr_t arg)
 {
-   (void)time, (void)arg;
-   focus_next_or_previous_view(view, NEXT);
+   (void)view, (void)time, (void)arg;
+   focus_next_or_previous_view(plugin.active.view, NEXT);
 }
 
 static void
