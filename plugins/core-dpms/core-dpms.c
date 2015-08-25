@@ -14,8 +14,10 @@ static struct {
       struct wlc_event_source *sleep;
    } timers;
 
-   // Sleep delay in seconds
-   uint32_t delay;
+   struct {
+      // Sleep delay in seconds
+      uint32_t delay;
+   } config;
 
    // Force sleep from keybind
    // Skips next activity event
@@ -62,7 +64,7 @@ timer_cb_sleep(void *arg)
 
 restart:
    plog(plugin.self, PLOG_INFO, "Preventing sleep");
-   wlc_event_source_timer_update(plugin.timers.sleep, 1000 * plugin.delay);
+   wlc_event_source_timer_update(plugin.timers.sleep, 1000 * plugin.config.delay);
    return 1;
 }
 
@@ -93,7 +95,7 @@ handle_activity(bool pressed)
       plog(plugin.self, PLOG_INFO, "Woke up");
 
    if (!plugin.force)
-      wlc_event_source_timer_update(plugin.timers.sleep, 1000 * plugin.delay);
+      wlc_event_source_timer_update(plugin.timers.sleep, 1000 * plugin.config.delay);
 
    return was_sleeping;
 }
@@ -137,27 +139,19 @@ static const struct {
    {0},
 };
 
-static uint32_t
-get_dpms_delay(plugin_h self)
+static void
+load_config(plugin_h self)
 {
+   // defaults
+   plugin.config.delay = 60 * 5; // 5 mins;
+
    plugin_h configuration;
    bool (*configuration_get)(const char *key, const char type, void *value_out);
    if (!(configuration = import_plugin(self, "configuration")) ||
        !(configuration_get = import_method(self, configuration, "get", "b(c[],c,v)|1")))
-      goto default_delay;
+      return;
 
-   const char *config;
-   if (!configuration_get("/dpms/delay", 's', &config))
-      goto default_delay;
-
-   uint32_t delay;
-   if (!chck_cstr_to_u32(config, &delay))
-      goto default_delay;
-
-   return delay;
-
-default_delay:
-   return 60 * 5; // 5 mins
+   configuration_get("/dpms/delay", 'i', &plugin.config.delay);
 }
 
 #pragma GCC diagnostic ignored "-Wmissing-prototypes"
@@ -199,8 +193,8 @@ plugin_init(plugin_h self)
        !add_hook(self, "touch.touch", FUN(activity, "b(h,u32,*,e,i32,*)|1")))
       return false;
 
-   plugin.delay = get_dpms_delay(self);
-   return wlc_event_source_timer_update(plugin.timers.sleep, 1000 * plugin.delay);
+   load_config(self);
+   return wlc_event_source_timer_update(plugin.timers.sleep, 1000 * plugin.config.delay);
 }
 
 PCONST const struct plugin_info*
