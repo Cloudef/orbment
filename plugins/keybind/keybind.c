@@ -329,7 +329,8 @@ keyboard_key(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifie
    const uint32_t u32 = wlc_keyboard_get_utf32_for_key(key, NULL);
 
    char name[64] = {0};
-   if (chck_utf32_encode(u32, name) == 1 && (!isprint(name[0]) || isspace(name[0]))) {
+   const uint8_t mb = chck_utf32_encode(u32, name);
+   if (!mb || (mb == 1 && (!isprint(name[0]) || isspace(name[0])))) {
       if (xkb_keysym_get_name(sym, name, sizeof(name)) == -1)
          return false;
    }
