@@ -1,3 +1,3 @@
 add_library(orbment-plugin-autostart MODULE autostart.c)
-target_link_libraries(orbment-plugin-autostart PRIVATE ${ORBMENT_LIBRARIES})
+target_link_libraries(orbment-plugin-autostart PRIVATE ${ORBMENT_LIBRARIES} ${CHCK_LIBRARIES})
 add_plugins(orbment-plugin-autostart)

@@ -1,5 +1,5 @@
 add_library(orbment-plugin-compressor MODULE compressor.c)
-target_link_libraries(orbment-plugin-compressor PRIVATE ${ORBMENT_LIBRARIES})
+target_link_libraries(orbment-plugin-compressor PRIVATE ${ORBMENT_LIBRARIES} ${CHCK_LIBRARIES})
 add_plugins(orbment-plugin-compressor)
 
 set(compressors ppm)

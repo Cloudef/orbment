@@ -1,5 +1,5 @@
 add_library(orbment-plugin-configuration MODULE configuration.c)
-target_link_libraries(orbment-plugin-configuration PRIVATE ${ORBMENT_LIBRARIES})
+target_link_libraries(orbment-plugin-configuration PRIVATE ${ORBMENT_LIBRARIES} ${CHCK_LIBRARIES})
 add_plugins(orbment-plugin-configuration)
 
 add_definitions(${INIHCK_DEFINITIONS})
