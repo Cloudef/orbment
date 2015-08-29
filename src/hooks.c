@@ -304,8 +304,6 @@ view_geometry_request(wlc_handle view, const struct wlc_geometry *geometry)
 static void
 view_state_request(wlc_handle view, const enum wlc_view_state_bit state, const bool toggle)
 {
-   plog(0, PLOG_INFO, "STATE: %d (%d)", state, toggle);
-
    struct hook *hook;
    chck_iter_pool_for_each(&hooks[HOOK_VIEW_STATE_REQUEST], hook) {
       void (*fun)() = hook->function;
