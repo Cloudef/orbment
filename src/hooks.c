@@ -17,6 +17,8 @@ enum hook_type {
    HOOK_VIEW_MOVE_TO_OUTPUT,
    HOOK_VIEW_GEOMETRY_REQUEST,
    HOOK_VIEW_STATE_REQUEST,
+   HOOK_VIEW_MOVE_REQUEST,
+   HOOK_VIEW_RESIZE_REQUEST,
    HOOK_KEYBOARD_KEY,
    HOOK_POINTER_BUTTON,
    HOOK_POINTER_SCROLL,
@@ -52,6 +54,8 @@ hook_type_for_string(const char *type)
       { "view.move_to_output", HOOK_VIEW_MOVE_TO_OUTPUT },
       { "view.geometry_request", HOOK_VIEW_GEOMETRY_REQUEST },
       { "view.state_request", HOOK_VIEW_STATE_REQUEST },
+      { "view.move_request", HOOK_VIEW_MOVE_REQUEST },
+      { "view.resize_request", HOOK_VIEW_RESIZE_REQUEST },
       { "keyboard.key", HOOK_KEYBOARD_KEY },
       { "pointer.button", HOOK_POINTER_BUTTON },
       { "pointer.scroll", HOOK_POINTER_SCROLL },
@@ -110,6 +114,8 @@ add_hook(plugin_h caller, const char *type, const struct function *hook)
       "v(h,h,h)|1", // HOOK_VIEW_MOVE_TO_OUTPUT
       "v(h,*)|1", // HOOK_VIEW_GEOMETRY_REQUEST
       "v(h,e,b)|1", // HOOK_VIEW_STATE_REQUEST
+      "v(h,*)|1", // HOOK_VIEW_MOVE_REQUEST
+      "v(h,u32,*)|1", // HOOK_VIEW_RESIZE_REQUEST
       "b(h,u32,*,u32,e)|1", // HOOK_KEYBOARD_KEY
       "b(h,u32,*,u32,e,*)|1", // HOOK_POINTER_BUTTON
       "b(h,u32,*,u8,d[2])|1", // HOOK_POINTER_SCROLL
@@ -311,6 +317,26 @@ view_state_request(wlc_handle view, const enum wlc_view_state_bit state, const b
    }
 }
 
+static void
+view_move_request(wlc_handle view, const struct wlc_origin *origin)
+{
+   struct hook *hook;
+   chck_iter_pool_for_each(&hooks[HOOK_VIEW_MOVE_REQUEST], hook) {
+      void (*fun)() = hook->function;
+      fun(view, origin);
+   }
+}
+
+static void
+view_resize_request(wlc_handle view, uint32_t edges, const struct wlc_origin *origin)
+{
+   struct hook *hook;
+   chck_iter_pool_for_each(&hooks[HOOK_VIEW_RESIZE_REQUEST], hook) {
+      void (*fun)() = hook->function;
+      fun(view, edges, origin);
+   }
+}
+
 static bool
 keyboard_key(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifiers, uint32_t key, enum wlc_key_state state)
 {
@@ -408,6 +434,8 @@ hooks_get_interface(void)
          .request = {
             .geometry = view_geometry_request,
             .state = view_state_request,
+            .move = view_move_request,
+            .resize = view_resize_request,
          },
       },
 

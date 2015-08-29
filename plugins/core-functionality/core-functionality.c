@@ -19,6 +19,12 @@ static bool (*add_hook)(plugin_h, const char *name, const struct function*);
 static struct {
    struct {
       wlc_handle view;
+      struct wlc_origin grab;
+      uint32_t edges;
+   } action;
+
+   struct {
+      wlc_handle view;
    } active;
 
    struct {
@@ -28,6 +34,52 @@ static struct {
    struct chck_string terminal;
    plugin_h self;
 } plugin;
+
+static bool
+start_interactive_action(wlc_handle view, const struct wlc_origin *origin)
+{
+   if (plugin.action.view)
+      return false;
+
+   plugin.action.view = view;
+   plugin.action.grab = *origin;
+   wlc_view_bring_to_front(view);
+   return true;
+}
+
+static void
+start_interactive_move(wlc_handle view, const struct wlc_origin *origin)
+{
+   start_interactive_action(view, origin);
+}
+
+static void
+start_interactive_resize(wlc_handle view, uint32_t edges, const struct wlc_origin *origin)
+{
+   const struct wlc_geometry *g;
+   if (!(g = wlc_view_get_geometry(view)) || !start_interactive_action(view, origin))
+      return;
+
+   const int32_t halfw = g->origin.x + g->size.w / 2;
+   const int32_t halfh = g->origin.y + g->size.h / 2;
+
+   if (!(plugin.action.edges = edges)) {
+      plugin.action.edges = (origin->x < halfw ? WLC_RESIZE_EDGE_LEFT : (origin->x > halfw ? WLC_RESIZE_EDGE_RIGHT : 0)) |
+                            (origin->y < halfh ? WLC_RESIZE_EDGE_TOP : (origin->y > halfh ? WLC_RESIZE_EDGE_BOTTOM : 0));
+   }
+
+   wlc_view_set_state(view, WLC_BIT_RESIZING, true);
+}
+
+static void
+stop_interactive_action(void)
+{
+   if (!plugin.action.view)
+      return;
+
+   wlc_view_set_state(plugin.action.view, WLC_BIT_RESIZING, false);
+   memset(&plugin.action, 0, sizeof(plugin.action));
+}
 
 static wlc_handle
 get_next_view(wlc_handle view, size_t offset, enum direction dir)
@@ -291,6 +343,18 @@ view_move_to_output(wlc_handle view, wlc_handle from, wlc_handle to)
 }
 
 static void
+view_move_request(wlc_handle view, const struct wlc_origin *origin)
+{
+   start_interactive_move(view, origin);
+}
+
+static void
+view_resize_request(wlc_handle view, uint32_t edges, const struct wlc_origin *origin)
+{
+   start_interactive_resize(view, edges, origin);
+}
+
+static void
 view_focus(wlc_handle view, bool focus)
 {
    if (wlc_view_get_output(view) == wlc_get_focused_output())
@@ -341,11 +405,68 @@ view_destroyed(wlc_handle view)
    relayout(wlc_view_get_output(view));
 }
 
-static void
+static bool
 pointer_motion(wlc_handle view, uint32_t time, const struct wlc_origin *motion)
 {
    (void)time, (void)motion;
-   focus_view(view);
+
+   if (plugin.action.view) {
+      const int32_t dx = motion->x - plugin.action.grab.x;
+      const int32_t dy = motion->y - plugin.action.grab.y;
+      struct wlc_geometry g = *wlc_view_get_geometry(plugin.action.view);
+
+      if (plugin.action.edges) {
+         const struct wlc_size min = { 80, 40 };
+
+         struct wlc_geometry n = g;
+         if (plugin.action.edges & WLC_RESIZE_EDGE_LEFT) {
+            n.size.w -= dx;
+            n.origin.x += dx;
+         } else if (plugin.action.edges & WLC_RESIZE_EDGE_RIGHT) {
+            n.size.w += dx;
+         }
+
+         if (plugin.action.edges & WLC_RESIZE_EDGE_TOP) {
+            n.size.h -= dy;
+            n.origin.y += dy;
+         } else if (plugin.action.edges & WLC_RESIZE_EDGE_BOTTOM) {
+            n.size.h += dy;
+         }
+
+         if (n.size.w >= min.w) {
+            g.origin.x = n.origin.x;
+            g.size.w = n.size.w;
+         }
+
+         if (n.size.h >= min.h) {
+            g.origin.y = n.origin.y;
+            g.size.h = n.size.h;
+         }
+
+         wlc_view_set_geometry(plugin.action.view, plugin.action.edges, &g);
+      } else {
+         g.origin.x += dx;
+         g.origin.y += dy;
+         wlc_view_set_geometry(plugin.action.view, 0, &g);
+      }
+
+      plugin.action.grab = *motion;
+   } else if (plugin.config.follow_focus) {
+      focus_view(view);
+   }
+
+   return (plugin.action.view ? true : false);
+}
+
+static bool
+pointer_button(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifiers, uint32_t button, enum wlc_button_state state, const struct wlc_origin *origin)
+{
+   (void)view, (void)time, (void)modifiers, (void)button, (void)origin;
+
+   if (state == WLC_BUTTON_STATE_RELEASED)
+      stop_interactive_action();
+
+   return (plugin.action.view ? true : false);
 }
 
 static void
@@ -467,6 +588,32 @@ key_cb_focus_view(wlc_handle view, uint32_t time, intptr_t arg)
    focus_view(view);
 }
 
+static void
+key_cb_move_view(wlc_handle view, uint32_t time, intptr_t arg)
+{
+   (void)time, (void)arg;
+
+   if (!view)
+      return;
+
+   struct wlc_origin o;
+   wlc_pointer_get_origin(&o);
+   start_interactive_move(view, &o);
+}
+
+static void
+key_cb_resize_view(wlc_handle view, uint32_t time, intptr_t arg)
+{
+   (void)time, (void)arg;
+
+   if (!view)
+      return;
+
+   struct wlc_origin o;
+   wlc_pointer_get_origin(&o);
+   start_interactive_resize(view, 0, &o);
+}
+
 static const struct {
    const char *name, **syntax;
    keybind_fun_t function;
@@ -506,6 +653,8 @@ static const struct {
    { "move to output 1", (const char*[]){ "<P-x>", NULL }, key_cb_move_to_output, 1 },
    { "move to output 2", (const char*[]){ "<P-c>", NULL }, key_cb_move_to_output, 2 },
    { "focus view", (const char*[]){ "<B0>", NULL }, key_cb_focus_view, 0 },
+   { "move view", (const char*[]){ "<P-B0>", NULL }, key_cb_move_view, 0 },
+   { "resize view", (const char*[]){ "<P-B1>", NULL }, key_cb_resize_view, 0 },
    {0},
 };
 
@@ -532,9 +681,6 @@ load_config(plugin_h self)
       return;
 
    configuration_get("/core/follow-focus", 'b', &plugin.config.follow_focus);
-
-   if (plugin.config.follow_focus)
-      add_hook(self, "pointer.motion", FUN(pointer_motion, "b(h,u32,*)|1"));
 }
 
 #pragma GCC diagnostic ignored "-Wmissing-prototypes"
@@ -569,7 +715,11 @@ plugin_init(plugin_h self)
    return (add_hook(self, "view.created", FUN(view_created, "b(h)|1")) &&
            add_hook(self, "view.destroyed", FUN(view_destroyed, "v(h)|1")) &&
            add_hook(self, "view.focus", FUN(view_focus, "v(h,b)|1")) &&
-           add_hook(self, "view.move_to_output", FUN(view_move_to_output, "v(h,h,h)|1")));
+           add_hook(self, "view.move_to_output", FUN(view_move_to_output, "v(h,h,h)|1")) &&
+           add_hook(self, "view.move_request", FUN(view_move_request, "v(h,*)|1")) &&
+           add_hook(self, "view.resize_request", FUN(view_resize_request, "v(h,u32,*)|1")) &&
+           add_hook(self, "pointer.motion", FUN(pointer_motion, "b(h,u32,*)|1")) &&
+           add_hook(self, "pointer.button", FUN(pointer_button, "b(h,u32,*,u32,e,*)|1")));
 }
 
 PCONST const struct plugin_info*
