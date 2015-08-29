@@ -229,7 +229,7 @@ relayout(wlc_handle output)
       }
 
       wlc_handle parent;
-      if (is_managed(views[i]) && !is_or(views[i]) && (parent = wlc_view_get_parent(views[i])))
+      if (is_managed(views[i]) && !is_popup(views[i]) && !is_or(views[i]) && (parent = wlc_view_get_parent(views[i])))
          layout_parent(views[i], parent, &wlc_view_get_geometry(views[i])->size);
    }
 
@@ -326,7 +326,7 @@ view_geometry_request(wlc_handle view, const struct wlc_geometry *geometry)
       return;
 
    wlc_handle parent;
-   if (is_managed(view) && !is_or(view) && (parent = wlc_view_get_parent(view))) {
+   if (is_managed(view) && !is_popup(view) && !is_or(view) && (parent = wlc_view_get_parent(view))) {
       layout_parent(view, parent, &geometry->size);
    } else {
       wlc_view_set_geometry(view, 0, geometry);

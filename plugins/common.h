@@ -21,10 +21,17 @@ is_or(wlc_handle view)
 }
 
 static inline bool
+is_popup(wlc_handle view)
+{
+   const uint32_t type = wlc_view_get_type(view);
+   return (type & WLC_BIT_POPUP);
+}
+
+static inline bool
 is_managed(wlc_handle view)
 {
    const uint32_t type = wlc_view_get_type(view);
-   return !(type & WLC_BIT_UNMANAGED) && !(type & WLC_BIT_POPUP) && !(type & WLC_BIT_SPLASH);
+   return !(type & WLC_BIT_UNMANAGED) && !(type & WLC_BIT_SPLASH);
 }
 
 static inline bool
@@ -38,7 +45,7 @@ static inline bool
 is_tiled(wlc_handle view)
 {
    const uint32_t state = wlc_view_get_state(view);
-   return !(state & WLC_BIT_FULLSCREEN) && !wlc_view_get_parent(view) && is_managed(view) && !is_or(view) && !is_modal(view);
+   return !(state & WLC_BIT_FULLSCREEN) && !wlc_view_get_parent(view) && is_managed(view) && !is_or(view) && !is_modal(view) && !is_popup(view);
 }
 
 #endif /* __orbment_common_h__ */
