@@ -203,10 +203,7 @@ add_keybind(plugin_h caller, const char *name, const char **syntax, const struct
       chck_string_set_format(&key, "/keybindings/%n%s%n/mappings", &name_start, name, &name_end);
 
       /* Configuration keys may not contain spaces, so replace spaces with underscores */
-      for (int i = name_start; i < name_end; i++) {
-         if (key.data[i] == ' ')
-            key.data[i] = '_';
-      }
+      chck_cstr_replace_char(key.data, ' ', '_');
 
       const char *value;
       if (configuration_get(key.data, 's', &value)) {
