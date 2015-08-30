@@ -151,7 +151,7 @@ load_config(plugin_h self)
        !(configuration_get = import_method(self, configuration, "get", "b(c[],c,v)|1")))
       return;
 
-   configuration_get("/dpms/delay", 'i', &plugin.config.delay);
+   configuration_get("/dpms/delay", 'u', &plugin.config.delay);
 }
 
 #pragma GCC diagnostic ignored "-Wmissing-prototypes"

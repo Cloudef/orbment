@@ -150,7 +150,7 @@ get(const char *key, char type, void *value_out)
       return false;
    }
 
-   if (!type || !strchr("idsb", type)) { /* Integer, Double, String, Boolean */
+   if (!type || !strchr("uidsb", type)) { /* Integer, Unsigned Integer, Double, String, Boolean */
       plog(plugin.self, PLOG_WARN, "Cannot get key '%s': invalid type character '%c'.", key, type);
       return false;
    }
@@ -167,6 +167,7 @@ get(const char *key, char type, void *value_out)
          return true;
          break;
 
+      case 'u': return chck_cstr_to_u32(data, value_out);
       case 'i': return chck_cstr_to_i32(data, value_out);
       case 'd': return chck_cstr_to_d(data, value_out);
       case 'b': return chck_cstr_to_bool(data, value_out);

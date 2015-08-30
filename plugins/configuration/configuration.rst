@@ -17,7 +17,7 @@ configuration-ini is the reference implementation for configuration backend.
 
   * ``key``: refers to a particular configuration value.
   * ``type``: A character representing the required type of the configuration
-    value: ``i`` for an integer, ``d`` for a double, and ``s`` for a string.
+    value: ``i`` for an integer, ``u`` for an unsigned integer, ``d`` for a double, and ``s`` for a string.
   * ``value_out``: The location in which to store the configuration value. This
     parameter can be ``NULL``; this allows testing for the existence of
     configuration keys without requiring the use of a temporary variable.
