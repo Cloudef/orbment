@@ -25,6 +25,8 @@ enum hook_type {
    HOOK_POINTER_MOTION,
    HOOK_TOUCH_TOUCH,
    HOOK_COMPOSITOR_READY,
+   HOOK_INPUT_CREATED,
+   HOOK_INPUT_DESTROYED,
    HOOK_LAST,
 };
 
@@ -62,6 +64,8 @@ hook_type_for_string(const char *type)
       { "pointer.motion", HOOK_POINTER_MOTION },
       { "touch.touch", HOOK_TOUCH_TOUCH },
       { "compositor.ready", HOOK_COMPOSITOR_READY },
+      { "input.created", HOOK_INPUT_CREATED },
+      { "input.destroyed", HOOK_INPUT_DESTROYED },
       { NULL, HOOK_LAST },
    };
 
@@ -122,6 +126,8 @@ add_hook(plugin_h caller, const char *type, const struct function *hook)
       "b(h,u32,*)|1", // HOOK_POINTER_MOTION
       "b(h,u32,*,e,i32,*)|1", // HOOK_TOUCH_TOUCH
       "v(v)|1", // HOOK_COMPOSITOR_READY
+      "b(*)|1", // HOOK_INPUT_CREATED
+      "v(*)|1", // HOOK_INPUT_DESTROYED
    };
 
    if (!chck_cstreq(hook->signature, signatures[t])) {
@@ -414,6 +420,27 @@ compositor_ready(void)
    }
 }
 
+static bool
+input_created(struct libinput_device *device)
+{
+   struct hook *hook;
+   chck_iter_pool_for_each(&hooks[HOOK_INPUT_CREATED], hook) {
+      bool (*fun)() = hook->function;
+      fun(device);
+   }
+   return true;
+}
+
+static void
+input_destroyed(struct libinput_device *device)
+{
+   struct hook *hook;
+   chck_iter_pool_for_each(&hooks[HOOK_INPUT_DESTROYED], hook) {
+      bool (*fun)() = hook->function;
+      fun(device);
+   }
+}
+
 PCONST const struct wlc_interface*
 hooks_get_interface(void)
 {
@@ -455,6 +482,11 @@ hooks_get_interface(void)
 
       .compositor = {
          .ready = compositor_ready,
+      },
+
+      .input = {
+         .created = input_created,
+         .destroyed = input_destroyed,
       },
    };
 

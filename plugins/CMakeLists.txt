@@ -2,6 +2,7 @@ set(plugins
    keybind
    layout
    compressor
+   core-input
    core-functionality
    core-layouts
    core-screenshot
