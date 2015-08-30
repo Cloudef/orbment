@@ -94,6 +94,9 @@ configure_device(struct libinput_device *device)
          }
       }
    }
+
+   chck_string_release(&str);
+   chck_string_release(&id);
 }
 
 static bool
