@@ -211,7 +211,7 @@ plugin_register(void)
    };
 
    static const struct plugin_info info = {
-      .name = "core-dpsm",
+      .name = "core-dpms",
       .description = "Core display power management.",
       .version = VERSION,
       .requires = requires,
