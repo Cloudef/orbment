@@ -14,6 +14,7 @@ set(plugins
 include_directories(
    ${WLC_INCLUDE_DIRS}
    ${CHCK_INCLUDE_DIRS}
+   ${XKBCOMMON_INCLUDE_DIR}
    ${PROJECT_SOURCE_DIR}/include
    ${CMAKE_BINARY_DIR}/src # for config.h
    ${CMAKE_CURRENT_SOURCE_DIR} # for common.h
