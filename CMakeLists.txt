@@ -6,6 +6,15 @@ set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}" "${PROJECT_SOURCE_DIR}/CMake")
 include(subproject)
 add_subdirectory(lib)
 
+# Public depencies of wlc
+find_package(XKBCommon REQUIRED)
+add_definitions(${XKBCOMMON_DEFINTIONS})
+include_directories(${XKBCOMMON_INCLUDE_DIRS})
+
+find_package(LibInput REQUIRED)
+add_definitions(${LIBINPUT_DEFINTIONS})
+include_directories(${LIBINPUT_INCLUDE_DIRS})
+
 # CPack
 set(CPACK_SYSTEM_NAME "${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}")
 set(CPACK_GENERATOR "7Z")
