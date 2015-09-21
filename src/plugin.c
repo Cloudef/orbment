@@ -513,17 +513,18 @@ import_method(plugin_h caller, plugin_h handle, const char *name, const char *si
 
    for (uint32_t i = 0; p->info.methods[i].info.name && p->info.methods[i].info.signature; ++i) {
       const struct method *m = &p->info.methods[i];
-      if (chck_cstreq(m->info.name, name)) {
-         if (!chck_cstreq(m->info.signature, signature)) {
-            plog(0, PLOG_WARN, "%s: Method '%s' '%s' != '%s' signature mismatch in %s (%s)", c->info.name, name, signature, m->info.signature, p->info.name, p->info.version);
-            return NULL;
-         }
+      if (!chck_cstreq(m->info.name, name))
+         continue;
 
-         if (m->deprecated)
-            plog(0, PLOG_WARN, "%s: Method '%s' is deprecated in %s (%s)", c->info.name, name, p->info.name, p->info.version);
-
-         return m->function;
+      if (!chck_cstreq(m->info.signature, signature)) {
+         plog(0, PLOG_WARN, "%s: Method '%s' '%s' != '%s' signature mismatch in %s (%s)", c->info.name, name, signature, m->info.signature, p->info.name, p->info.version);
+         return NULL;
       }
+
+      if (m->deprecated)
+         plog(0, PLOG_WARN, "%s: Method '%s' is deprecated in %s (%s)", c->info.name, name, p->info.name, p->info.version);
+
+      return m->function;
    }
 
    plog(0, PLOG_WARN, "%s: No such method '%s' in %s (%s)", c->info.name, name, p->info.name, p->info.version);
