@@ -17,6 +17,14 @@ write_png(png_structp p, png_bytep data, png_size_t length)
    chck_buffer_write(data, 1, length, buf);
 }
 
+static void
+set_vertically_flipped_rgba_rows(const struct wlc_size *size, uint8_t *rgba, png_bytepp rows)
+{
+   // XXX: At least under OpenGL backend rgba data will be upside down
+   for (size_t y = 0; y < size->h; ++y)
+      rows[y] = rgba + ((size->h - 1) - y) * size->w * 4;
+}
+
 static uint8_t*
 compress_png(const struct wlc_size *size, uint8_t *rgba, size_t *out_size)
 {
@@ -50,8 +58,7 @@ compress_png(const struct wlc_size *size, uint8_t *rgba, size_t *out_size)
                 PNG_COMPRESSION_TYPE_DEFAULT,
                 PNG_FILTER_TYPE_DEFAULT);
 
-   for (size_t y = 0; y < size->h; ++y)
-      rows[y] = rgba + ((size->h - 1) - y) * size->w * 4;
+   set_vertically_flipped_rgba_rows(size, rgba, rows);
 
    png_set_rows(p, info, rows);
    png_set_write_fn(p, &buf, write_png, NULL);

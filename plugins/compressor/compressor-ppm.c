@@ -7,6 +7,21 @@
 
 static bool (*add_compressor)(plugin_h, const char *type, const char *name, const char *ext, const struct function*);
 
+static void
+flip_rgb_vertically(const struct wlc_size *size, uint8_t *rgb)
+{
+   // XXX: At least under OpenGL backend rgba data will be upside down
+   for (uint32_t i = 0; i * 2 < size->h; ++i) {
+      uint32_t o = i * size->w * 3;
+      uint32_t r = (size->h - 1 - i) * size->w * 3;
+      for (uint32_t i2 = size->w * 3; i2 > 0; --i2, ++o, ++r) {
+         uint8_t temp = rgb[o];
+         rgb[o] = rgb[r];
+         rgb[r] = temp;
+      }
+   }
+}
+
 static uint8_t*
 compress_ppm(const struct wlc_size *size, uint8_t *rgba, size_t *out_size)
 {
@@ -24,15 +39,7 @@ compress_ppm(const struct wlc_size *size, uint8_t *rgba, size_t *out_size)
    for (uint32_t i = 0, c = 0; i < size->w * size->h * 4; i += 4, c += 3)
       memcpy(rgb + c, rgba + i, 3);
 
-   for (uint32_t i = 0; i * 2 < size->h; ++i) {
-      uint32_t o = i * size->w * 3;
-      uint32_t r = (size->h - 1 - i) * size->w * 3;
-      for (uint32_t i2 = size->w * 3; i2 > 0; --i2, ++o, ++r) {
-         uint8_t temp = rgb[o];
-         rgb[o] = rgb[r];
-         rgb[r] = temp;
-      }
-   }
+   flip_rgb_vertically(size, rgb);
 
    struct chck_buffer buf;
    if (!chck_buffer(&buf, size->w * size->h * 3, CHCK_ENDIANESS_LITTLE))
