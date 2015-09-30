@@ -1,86 +1,199 @@
-.TH ORBMENT 1 "August 23" ORBMENT
-.SH NAME
-orbment \- Dynamic wayland compositor.
-.SH SYNOPSIS
-\fBorbment\fP [options]
-.SH DESCRIPTION
-\fBOrbment\fP is a dynamic window manager and compositor for Wayland built using the wlc library.
-.SH OPTIONS
-.IP "\fB\-\-log\fR [\fIFILE\fR]"
-File in which the logging output is captured.
-.SH KEYBINDINGS
-N.B. These are a tentative set of keybindings created specifically to provide basic usage until more flexible mechanisms are added.
+.TH ORBMENT 1 2015-09-30
 
-Some plugins can also add their own keybinds.  These additional keybinds are displayed in the log.  (See \fI\-\-log\fR)
-.IP \fBmod-return\fR
-Opens a new terminal emulator client.  (The client can be set via the \fBTERMINAL\fR environment otherwise orbment will fallback on \fBweston-terminal\fR.)
-.IP \fBmod-p\fR
+.SH NAME
+
+orbment \- dynamic wayland compositor
+
+.SH SYNOPSIS
+
+.SY orbment
+[options]
+
+.SH DESCRIPTION
+
+Orbment is a dynamic window manager and compositor for Wayland built using the
+wlc library.
+
+.SH OPTIONS
+
+.B \-\-log 
+.I FILE
+.RS
+File in which the logging output is captured.
+.RE
+
+.SH KEYBINDINGS
+
+N.B. These are a tentative set of keybindings created specifically to provide
+basic usage until more flexible mechanisms are added.
+
+Some plugins can also add their own keybinds.  These additional keybinds are
+displayed in the log.  (See \fI\-\-log)
+
+.B mod-return
+.RS
+Opens a new terminal emulator client.  (The client can be set via the
+\fBTERMINAL\fR environment otherwise orbment will fallback on
+\fBweston-terminal\fR).
+.RE
+
+.B mod-p
+.RS
 Opens \fBbemenu-run\fR (similar to \fBdmenu_run\fR) for starting applications.
-.IP \fBmod-w\fR
+.RE
+
+.B mod-w
+.RS
 Rotates through available layouts.
-.IP \fBmod-l\fR
+.RE
+
+.B mod-l
+.RS
 Rotates focus through available outputs.
-.IP "\fBmod-j, k\fR"
+.RE
+
+.B mod-j, k
+.RS
 Rotates focus through clients.
-.IP \fBmod-f\fR
+.RE
+
+.B mod-f
+.RS
 Toggles fullscreen for the focused client.
-.IP \fBmod-[1..n]\fR
-Selects the \fInth\fP workspace, currently limited to ten.
-.IP \fBmod-F1..F10\fR
+.RE
+
+.B mod-[1..n]
+.RS
+Selects the \fInth\fP workspace, currently limited to 10.
+.RE
+
+.B mod-[F1..F10]
+.RS
 Moves the focused client to the corresponding workspace.
-.IP "\fBmod-z, x, c\fR"
+.RE
+
+.B mod-z, x, c
+.RS
 Moves focused client to outputs 1, 2 and 3 respectively.
-.IP \fBmod-h\fR
+.RE
+
+.B mod-h
+.RS
 Cycles the focused client.
-.IP \fBmod-q\fR
+.RE
+
+.B mod-q
+.RS
 Closes the focused client.
-.IP "\fBmod-i, o\fR"
+.RE
+
+.B mod-i, o
+.RS
 Shifts the cut of the nmaster layout to shrink or expand the view.
-.IP \fBmod-s\fR
-Takes a screenshot in PNG format and stores it in the directory \fBorbment\fR was started from.
-.IP \fBmod-escape\fR
+.RE
+
+.B mod-s
+.RS
+Takes a screenshot in PNG format and stores it in the directory \fBorbment\fR
+was started from.
+.RE
+
+.B mod-escape
+.RS
 Quits \fBorbment\fR.
+.RE
+
 .SH ENVIRONMENT
-.IP \fBTERMINAL\fR
-\fBOrbment\fR will honor this environment variable when starting a new terminal emulator. 
-If this is not set it will fall back on \fBweston-terminal\fR.
-.IP \fBWLC_BG\fR
+
+.TP
+.B TERMINAL
+.RS
+\fBOrbment\fR will honor this environment variable when starting a new terminal
+emulator.  If this is not set it will fall back on \fBweston-terminal\fR.
+.RE
+
+.B WLC_BG
+.RS
 Takes a boolean \fI0\fR or \fI1\fR which disables or enables the background.
 (Default: \fI1\fR)
-.IP \fBWLC_SHM\fR
+.RE
+
+.B WLC_SHM
+.RS
 Takes a boolean \fI0\fR or \fI1\fR, true forces EGL clients to fallback to shm.
 (Default: \fI0\fR)
-.IP \fBWLC_DIM\fR
-Takes an interval between \fI0.0\fR and \fI1.0\fR to define the dullness or brightness of the dimming effect
-on unfocused clients respectively.  (Default: \fI0.5\fR)
-.IP \fBWLC_DEBUG\fR
-Takes a comma-separated list of values which enable corresponding debug section in wlc.
-These include \fIrender\fR, \fIrender-loop\fR, \fIfocus\fR and \fIxwm\fR.
-.IP \fBWLC_DRM_DEVICE\fR
-The DRM device used when running under the DRM backend.  (Default: \fIcard0\fR)
-.IP \fBWLC_XWAYLAND\fR
-Takes a boolean \fI0\fR or \fI1\fR which disables or enables the use of xwayland respectively.  (Default: \fI1\fR)
-.IP \fBWAYLAND_DEBUG\fR
-Enables message tracing in libwayland.
-Possible values are \fI1\fR, \fIclient\fR, \fIserver\fR.
-.IP \fBXKB_DEFAULT_LAYOUT\fR
-This corresponds to the layout you might use in X11 such as \fBgb\fR.  Use this if you want to select a non-us keyboard layout.
-.IP \fBXKB_DEFAULT_OPTIONS\fR
-Sets the keyboard options. The syntax is the same (comma-separated values) as within an \fIxorg.conf\fR or when used via \%\fBsetxkbmap -option\fR.
-For example \%\fBcompose:ralt,ctrl:nocaps\fR would set \fIralt\fR to the compose key and cause the \fICaps Lock\fR key to mimic \fIctrl\fR.
-.IP \fBXKB_DEFAULT_VARIANT\fR
-.IP \fBXKB_DEFAULT_RULES\fR
-.IP \fBXKB_DEFAULT_MODEL\fR
-.SH FILES
-\fBOrbment\fR will seek out any plugins in the following locations:
+.RE
 
-.I \fI$XDG_DATA_HOME/orbment/plugins\fR
-(Fallback: \fI$HOME/.local/share/orbment/plugins\fR)
-.br
+.B WLC_DIM
+.RS
+Takes an interval between \fI0.0\fR and \fI1.0\fR to define the dullness or
+brightness of the dimming effect on unfocused clients respectively.  (Default:
+\fI0.5\fR)
+.RE
+
+.B WLC_DEBUG
+.RS
+Takes a comma-separated list of values which enable corresponding debug section
+in wlc.  These include \fIrender\fR, \fIrender-loop\fR, \fIfocus\fR and
+\fIxwm\fR.
+.RE
+
+.B WLC_DRM_DEVICE
+.RS
+The DRM device used when running under the DRM backend.  (Default: \fIcard0\fR)
+.RE
+
+.B WLC_XWAYLAND
+.RS
+Takes a boolean \fI0\fR or \fI1\fR which disables or enables the use of
+xwayland respectively.  (Default: \fI1\fR)
+.RE
+
+.B WAYLAND_DEBUG
+.RS
+Enables message tracing in libwayland.  Possible values are \fI1\fR,
+\fIclient\fR, \fIserver\fR.
+.RE
+
+.B XKB_DEFAULT_LAYOUT
+.RS
+This corresponds to the layout you might use in X11 such as \fBgb\fR.  Use this
+if you want to select a non-us keyboard layout.
+.RE
+
+.B XKB_DEFAULT_OPTIONS
+.RS
+Sets the keyboard options. The syntax is the same (comma-separated values) as
+within an \fIxorg.conf\fR or when used via \%\fBsetxkbmap -option\fR.  For
+example \%\fBcompose:ralt,ctrl:nocaps\fR would set \fIralt\fR to the compose
+key and cause the \fICaps Lock\fR key to mimic \fIctrl\fR.
+.RE
+
+.B XKB_DEFAULT_VARIANT
+
+.B XKB_DEFAULT_RULES
+
+.B XKB_DEFAULT_MODEL
+
+.SH FILES
+
+.B Orbment
+will seek out any plugins in the following locations:
+.RS
+
+.IR XDG_DATA_HOME/orbment/plugins " (Fallback: "HOME/.local/share/orbment/plugins )
+
 .I \fI@ORBMENT_PLUGINS_FULL_PATH@\fR
+.RE
+
 .SH SEE ALSO
-\fBxkbcommon\fR,
-\fBwayland\fR,
-\fBweston\fR
+
+.BR xkbcommon ,
+.BR wayland ,
+.BR weston
+
 .SH AUTHORS
-.IP "Jari Vetoniemi <http://cloudef.pw/>"
+
+.MT http://cloudef.pw
+Jari Vetoniemi
+.ME
