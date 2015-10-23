@@ -6,7 +6,7 @@
    path = lib/inihck
    url = git://github.com/Cloudef/inihck.git
    branch = master
-[submodule "lib/chck"]
+[submodule "chck"]
    path = lib/chck
    url = git://github.com/Cloudef/chck.git
    branch = master
