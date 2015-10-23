@@ -408,7 +408,9 @@ view_destroyed(wlc_handle view)
 static bool
 pointer_motion(wlc_handle view, uint32_t time, const struct wlc_origin *motion)
 {
-   (void)time, (void)motion;
+   (void)time;
+
+   wlc_pointer_set_origin(motion);
 
    if (plugin.action.view) {
       const int32_t dx = motion->x - plugin.action.grab.x;
