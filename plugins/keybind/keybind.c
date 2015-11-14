@@ -337,9 +337,9 @@ keyboard_key(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifie
 }
 
 static bool
-pointer_button(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifiers, uint32_t button, enum wlc_button_state state, const struct wlc_origin *origin)
+pointer_button(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifiers, uint32_t button, enum wlc_button_state state, const struct wlc_point *point)
 {
-   (void)origin;
+   (void)point;
 
    bool handled = false;
    struct chck_string name = {0};

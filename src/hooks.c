@@ -324,22 +324,22 @@ view_state_request(wlc_handle view, const enum wlc_view_state_bit state, const b
 }
 
 static void
-view_move_request(wlc_handle view, const struct wlc_origin *origin)
+view_move_request(wlc_handle view, const struct wlc_point *point)
 {
    struct hook *hook;
    chck_iter_pool_for_each(&hooks[HOOK_VIEW_MOVE_REQUEST], hook) {
       void (*fun)() = hook->function;
-      fun(view, origin);
+      fun(view, point);
    }
 }
 
 static void
-view_resize_request(wlc_handle view, uint32_t edges, const struct wlc_origin *origin)
+view_resize_request(wlc_handle view, uint32_t edges, const struct wlc_point *point)
 {
    struct hook *hook;
    chck_iter_pool_for_each(&hooks[HOOK_VIEW_RESIZE_REQUEST], hook) {
       void (*fun)() = hook->function;
-      fun(view, edges, origin);
+      fun(view, edges, point);
    }
 }
 
@@ -357,13 +357,13 @@ keyboard_key(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifie
 }
 
 static bool
-pointer_button(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifiers, uint32_t button, enum wlc_button_state state, const struct wlc_origin *origin)
+pointer_button(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifiers, uint32_t button, enum wlc_button_state state, const struct wlc_point *point)
 {
    struct hook *hook;
    bool handled = false;
    chck_iter_pool_for_each(&hooks[HOOK_POINTER_BUTTON], hook) {
       bool (*fun)() = hook->function;
-      if (fun(view, time, modifiers, button, state, origin))
+      if (fun(view, time, modifiers, button, state, point))
          handled = true;
    }
    return handled;
@@ -383,7 +383,7 @@ pointer_scroll(wlc_handle view, uint32_t time, const struct wlc_modifiers *modif
 }
 
 static bool
-pointer_motion(wlc_handle view, uint32_t time, const struct wlc_origin *motion)
+pointer_motion(wlc_handle view, uint32_t time, const struct wlc_point *motion)
 {
    struct hook *hook;
    bool handled = false;
@@ -396,7 +396,7 @@ pointer_motion(wlc_handle view, uint32_t time, const struct wlc_origin *motion)
 }
 
 static bool
-touch_touch(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifiers, enum wlc_touch_type type, int32_t slot, const struct wlc_origin *touch)
+touch_touch(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifiers, enum wlc_touch_type type, int32_t slot, const struct wlc_point *touch)
 {
    struct hook *hook;
    bool handled = false;

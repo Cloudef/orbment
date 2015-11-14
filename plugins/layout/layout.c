@@ -215,7 +215,7 @@ relayout(wlc_handle output)
 
       if (wlc_view_get_type(views[i]) & BIT_BEMENU) {
          struct wlc_geometry g = *wlc_view_get_geometry(views[i]);
-         g.origin = (struct wlc_origin){ 0, 0 };
+         g.origin = (struct wlc_point){ 0, 0 };
          wlc_view_set_geometry(views[i], 0, &g);
       }
 
@@ -224,7 +224,7 @@ relayout(wlc_handle output)
 
       if (wlc_view_get_type(views[i]) & WLC_BIT_SPLASH) {
          struct wlc_geometry g = *wlc_view_get_geometry(views[i]);
-         g.origin = (struct wlc_origin){ r->w * 0.5 - g.size.w * 0.5, r->h * 0.5 - g.size.h * 0.5 };
+         g.origin = (struct wlc_point){ r->w * 0.5 - g.size.w * 0.5, r->h * 0.5 - g.size.h * 0.5 };
          wlc_view_set_geometry(views[i], 0, &g);
       }
 

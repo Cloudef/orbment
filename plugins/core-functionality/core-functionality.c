@@ -19,7 +19,7 @@ static bool (*add_hook)(plugin_h, const char *name, const struct function*);
 static struct {
    struct {
       wlc_handle view;
-      struct wlc_origin grab;
+      struct wlc_point grab;
       uint32_t edges;
    } action;
 
@@ -36,7 +36,7 @@ static struct {
 } plugin;
 
 static bool
-start_interactive_action(wlc_handle view, const struct wlc_origin *origin)
+start_interactive_action(wlc_handle view, const struct wlc_point *origin)
 {
    if (plugin.action.view)
       return false;
@@ -48,13 +48,13 @@ start_interactive_action(wlc_handle view, const struct wlc_origin *origin)
 }
 
 static void
-start_interactive_move(wlc_handle view, const struct wlc_origin *origin)
+start_interactive_move(wlc_handle view, const struct wlc_point *origin)
 {
    start_interactive_action(view, origin);
 }
 
 static void
-start_interactive_resize(wlc_handle view, uint32_t edges, const struct wlc_origin *origin)
+start_interactive_resize(wlc_handle view, uint32_t edges, const struct wlc_point *origin)
 {
    const struct wlc_geometry *g;
    if (!(g = wlc_view_get_geometry(view)) || !start_interactive_action(view, origin))
@@ -343,13 +343,13 @@ view_move_to_output(wlc_handle view, wlc_handle from, wlc_handle to)
 }
 
 static void
-view_move_request(wlc_handle view, const struct wlc_origin *origin)
+view_move_request(wlc_handle view, const struct wlc_point *origin)
 {
    start_interactive_move(view, origin);
 }
 
 static void
-view_resize_request(wlc_handle view, uint32_t edges, const struct wlc_origin *origin)
+view_resize_request(wlc_handle view, uint32_t edges, const struct wlc_point *origin)
 {
    start_interactive_resize(view, edges, origin);
 }
@@ -406,11 +406,11 @@ view_destroyed(wlc_handle view)
 }
 
 static bool
-pointer_motion(wlc_handle view, uint32_t time, const struct wlc_origin *motion)
+pointer_motion(wlc_handle view, uint32_t time, const struct wlc_point *motion)
 {
    (void)time;
 
-   wlc_pointer_set_origin(motion);
+   wlc_pointer_set_position(motion);
 
    if (plugin.action.view) {
       const int32_t dx = motion->x - plugin.action.grab.x;
@@ -461,9 +461,9 @@ pointer_motion(wlc_handle view, uint32_t time, const struct wlc_origin *motion)
 }
 
 static bool
-pointer_button(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifiers, uint32_t button, enum wlc_button_state state, const struct wlc_origin *origin)
+pointer_button(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifiers, uint32_t button, enum wlc_button_state state, const struct wlc_point *position)
 {
-   (void)view, (void)time, (void)modifiers, (void)button, (void)origin;
+   (void)view, (void)time, (void)modifiers, (void)button, (void)position;
 
    if (state == WLC_BUTTON_STATE_RELEASED)
       stop_interactive_action();
@@ -598,8 +598,8 @@ key_cb_move_view(wlc_handle view, uint32_t time, intptr_t arg)
    if (!view)
       return;
 
-   struct wlc_origin o;
-   wlc_pointer_get_origin(&o);
+   struct wlc_point o;
+   wlc_pointer_get_position(&o);
    start_interactive_move(view, &o);
 }
 
@@ -611,8 +611,8 @@ key_cb_resize_view(wlc_handle view, uint32_t time, intptr_t arg)
    if (!view)
       return;
 
-   struct wlc_origin o;
-   wlc_pointer_get_origin(&o);
+   struct wlc_point o;
+   wlc_pointer_get_position(&o);
    start_interactive_resize(view, 0, &o);
 }
 
