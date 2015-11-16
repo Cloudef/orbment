@@ -263,7 +263,8 @@ focus_topmost(wlc_handle output)
 static void
 focus_space(uint32_t index)
 {
-   wlc_output_set_mask(wlc_get_focused_output(), (1<<index));
+   assert(sizeof(index) * CHAR_BIT >= index);
+   wlc_output_set_mask(wlc_get_focused_output(), (1 << index));
    focus_topmost(wlc_get_focused_output());
    relayout(wlc_get_focused_output());
 }
@@ -271,7 +272,8 @@ focus_space(uint32_t index)
 static void
 move_to_space(wlc_handle view, uint32_t index)
 {
-   wlc_view_set_mask(view, (1<<index));
+   assert(sizeof(index) * CHAR_BIT >= index);
+   wlc_view_set_mask(view, (1 << index));
    focus_space(index);
 }
 
