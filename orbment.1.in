@@ -112,12 +112,6 @@ Quits \fBorbment\fR.
 emulator.  If this is not set it will fall back on \fBweston-terminal\fR.
 .RE
 
-.B WLC_BG
-.RS
-Takes a boolean \fI0\fR or \fI1\fR which disables or enables the background.
-(Default: \fI1\fR)
-.RE
-
 .B WLC_SHM
 .RS
 Takes a boolean \fI0\fR or \fI1\fR, true forces EGL clients to fallback to shm.
