@@ -382,6 +382,7 @@ view_created(wlc_handle view)
       }
    }
 
+   wlc_view_set_mask(view, wlc_output_get_mask(wlc_view_get_output(view)));
    relayout(wlc_view_get_output(view));
    return true;
 }
