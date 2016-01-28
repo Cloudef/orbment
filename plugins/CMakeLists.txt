@@ -9,6 +9,7 @@ set(plugins
    core-dpms
    configuration
    autostart
+   crappy-borders
 )
 
 include_directories(
