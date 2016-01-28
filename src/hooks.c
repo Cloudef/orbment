@@ -27,6 +27,10 @@ enum hook_type {
    HOOK_COMPOSITOR_READY,
    HOOK_INPUT_CREATED,
    HOOK_INPUT_DESTROYED,
+   HOOK_OUTPUT_PRE_RENDER,
+   HOOK_OUTPUT_POST_RENDER,
+   HOOK_VIEW_PRE_RENDER,
+   HOOK_VIEW_POST_RENDER,
    HOOK_LAST,
 };
 
@@ -66,6 +70,10 @@ hook_type_for_string(const char *type)
       { "compositor.ready", HOOK_COMPOSITOR_READY },
       { "input.created", HOOK_INPUT_CREATED },
       { "input.destroyed", HOOK_INPUT_DESTROYED },
+      { "output.pre_render", HOOK_OUTPUT_PRE_RENDER },
+      { "output.post_render", HOOK_OUTPUT_POST_RENDER },
+      { "view.pre_render", HOOK_VIEW_PRE_RENDER },
+      { "view.post_render", HOOK_VIEW_POST_RENDER },
       { NULL, HOOK_LAST },
    };
 
@@ -128,6 +136,10 @@ add_hook(plugin_h caller, const char *type, const struct function *hook)
       "v(v)|1", // HOOK_COMPOSITOR_READY
       "b(*)|1", // HOOK_INPUT_CREATED
       "v(*)|1", // HOOK_INPUT_DESTROYED
+      "v(*)|1", // HOOK_OUTPUT_PRE_RENDER
+      "v(*)|1", // HOOK_OUTPUT_POST_RENDER
+      "v(*)|1", // HOOK_VIEW_PRE_RENDER
+      "v(*)|1", // HOOK_VIEW_POST_RENDER
    };
 
    if (!chck_cstreq(hook->signature, signatures[t])) {
@@ -256,6 +268,26 @@ output_resolution(wlc_handle output, const struct wlc_size *from, const struct w
    }
 }
 
+static void
+output_pre_render(wlc_handle output)
+{
+   struct hook *hook;
+   chck_iter_pool_for_each(&hooks[HOOK_OUTPUT_PRE_RENDER], hook) {
+      void (*fun)() = hook->function;
+      fun(output);
+   }
+}
+
+static void
+output_post_render(wlc_handle output)
+{
+   struct hook *hook;
+   chck_iter_pool_for_each(&hooks[HOOK_OUTPUT_POST_RENDER], hook) {
+      void (*fun)() = hook->function;
+      fun(output);
+   }
+}
+
 static bool
 view_created(wlc_handle view)
 {
@@ -340,6 +372,26 @@ view_resize_request(wlc_handle view, uint32_t edges, const struct wlc_point *poi
    chck_iter_pool_for_each(&hooks[HOOK_VIEW_RESIZE_REQUEST], hook) {
       void (*fun)() = hook->function;
       fun(view, edges, point);
+   }
+}
+
+static void
+view_pre_render(wlc_handle view)
+{
+   struct hook *hook;
+   chck_iter_pool_for_each(&hooks[HOOK_VIEW_PRE_RENDER], hook) {
+      void (*fun)() = hook->function;
+      fun(view);
+   }
+}
+
+static void
+view_post_render(wlc_handle view)
+{
+   struct hook *hook;
+   chck_iter_pool_for_each(&hooks[HOOK_VIEW_POST_RENDER], hook) {
+      void (*fun)() = hook->function;
+      fun(view);
    }
 }
 
@@ -450,6 +502,11 @@ hooks_get_interface(void)
          .destroyed = output_destroyed,
          .focus = output_focus,
          .resolution = output_resolution,
+
+         .render = {
+            .pre = output_pre_render,
+            .post = output_post_render,
+         }
       },
 
       .view = {
@@ -463,6 +520,11 @@ hooks_get_interface(void)
             .state = view_state_request,
             .move = view_move_request,
             .resize = view_resize_request,
+         },
+
+         .render = {
+            .pre = view_pre_render,
+            .post = view_post_render,
          },
       },
 
