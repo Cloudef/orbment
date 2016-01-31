@@ -108,8 +108,6 @@ main(int argc, char *argv[])
    plog(0, PLOG_INFO, "-- Orbment started --");
 
    wlc_run();
-   plugin_remove_all();
-   hooks_remove_all();
 
    plog(0, PLOG_INFO, "-- Orbment is gone, bye bye! --");
    log_close();
