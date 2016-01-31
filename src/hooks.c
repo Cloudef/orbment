@@ -41,6 +41,8 @@ struct hook {
 
 static struct chck_iter_pool hooks[HOOK_LAST];
 
+static void hooks_remove_all(void);
+
 static enum hook_type
 hook_type_for_string(const char *type)
 {
@@ -472,6 +474,15 @@ compositor_ready(void)
    }
 }
 
+static void
+compositor_terminate(void)
+{
+   plog(0, PLOG_INFO, "-- Orbment is terminating --");
+
+   plugin_remove_all();
+   hooks_remove_all();
+}
+
 static bool
 input_created(struct libinput_device *device)
 {
@@ -544,6 +555,7 @@ hooks_get_interface(void)
 
       .compositor = {
          .ready = compositor_ready,
+         .terminate = compositor_terminate,
       },
 
       .input = {
@@ -583,7 +595,7 @@ hooks_setup(void)
    return true;
 }
 
-void
+static void
 hooks_remove_all(void)
 {
    for (uint32_t i = 0; i < HOOK_LAST; ++i)
