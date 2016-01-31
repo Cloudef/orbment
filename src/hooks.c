@@ -196,6 +196,13 @@ remove_hooks_for_plugin(plugin_h caller)
 }
 
 static void
+hooks_remove_all(void)
+{
+   for (uint32_t i = 0; i < HOOK_LAST; ++i)
+      chck_iter_pool_release(&hooks[i]);
+}
+
+static void
 plugin_loaded(const struct plugin *plugin)
 {
    assert(plugin);
@@ -472,6 +479,14 @@ compositor_ready(void)
    }
 }
 
+static void
+compositor_terminate(void)
+{
+   plog(0, PLOG_INFO, "-- Orbment is terminating --");
+   plugin_remove_all();
+   hooks_remove_all();
+}
+
 static bool
 input_created(struct libinput_device *device)
 {
@@ -544,6 +559,7 @@ hooks_get_interface(void)
 
       .compositor = {
          .ready = compositor_ready,
+         .terminate = compositor_terminate,
       },
 
       .input = {
@@ -581,11 +597,4 @@ hooks_setup(void)
    }
 
    return true;
-}
-
-void
-hooks_remove_all(void)
-{
-   for (uint32_t i = 0; i < HOOK_LAST; ++i)
-      chck_iter_pool_release(&hooks[i]);
 }
