@@ -23,6 +23,9 @@
 # See the License for more information.
 #=============================================================================
 
+unset(INIHCK_INCLUDE_DIRS CACHE)
+unset(INIHCK_LIBRARIES CACHE)
+
 find_package(PkgConfig)
 pkg_check_modules(PC_INIHCK QUIET inihck)
 find_path(INIHCK_INCLUDE_DIRS NAMES inihck/inihck.h HINTS ${PC_INIHCK_INCLUDE_DIRS})
