@@ -23,6 +23,9 @@
 # See the License for more information.
 #=============================================================================
 
+unset(WLC_INCLUDE_DIRS CACHE)
+unset(WLC_LIBRARIES CACHE)
+
 include(FeatureSummary)
 set_package_properties(wlc PROPERTIES
    URL "https://github.com/Cloudef/wlc/"
