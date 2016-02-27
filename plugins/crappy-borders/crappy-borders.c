@@ -15,7 +15,8 @@ static void
 view_pre_render(wlc_handle view)
 {
    const size_t bsz = 2; // 2px
-   struct wlc_geometry g = *wlc_view_get_geometry(view); // dereference here should never crash
+   struct wlc_geometry g;
+   wlc_view_get_visible_geometry(view, &g);
    g.origin.x -= bsz;
    g.origin.y -= bsz;
    g.size.w += bsz * 2;
