@@ -30,9 +30,9 @@ register_plugins_from_path(void)
 #ifndef NDEBUG
       // allows running without install, as long as you build in debug mode
       // NOTE: $PWD/plugins is first in load order
-      const char *paths[] = { "plugins", PLUGINS_PATH, xdg.data, NULL };
+      const char *paths[] = { "plugins", xdg.data, PLUGINS_PATH, NULL };
 #else
-      const char *paths[] = { PLUGINS_PATH, xdg.data, NULL };
+      const char *paths[] = { xdg.data, PLUGINS_PATH, NULL };
 #endif
 
       // FIXME: add portable directory code to chck/fs/fs.c
