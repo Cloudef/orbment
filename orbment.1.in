@@ -118,13 +118,6 @@ Takes a boolean \fI0\fR or \fI1\fR, true forces EGL clients to fallback to shm.
 (Default: \fI0\fR)
 .RE
 
-.B WLC_DIM
-.RS
-Takes an interval between \fI0.0\fR and \fI1.0\fR to define the dullness or
-brightness of the dimming effect on unfocused clients respectively.  (Default:
-\fI0.5\fR)
-.RE
-
 .B WLC_DEBUG
 .RS
 Takes a comma-separated list of values which enable corresponding debug section
