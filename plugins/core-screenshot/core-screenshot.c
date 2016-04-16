@@ -4,6 +4,7 @@
 #include <time.h>
 #include <orbment/plugin.h>
 #include <wlc/wlc.h>
+#include <wlc/wlc-render.h>
 #include <chck/math/math.h>
 #include <chck/string/string.h>
 #include <chck/thread/queue/queue.h>
@@ -24,8 +25,14 @@ struct compressor* (*list_compressors)(const char *type, const char *stsign, con
 
 typedef void (*keybind_fun_t)(wlc_handle view, uint32_t time, intptr_t arg);
 static bool (*add_keybind)(plugin_h, const char *name, const char **syntax, const struct function*, intptr_t arg);
+static bool (*add_hook)(plugin_h, const char *name, const struct function*);
 
 static struct {
+   struct {
+      wlc_handle output; // if != 0, screenshot will be taken in next frame and reset after to 0
+      size_t compressor;
+   } action;
+
    struct chck_tqueue tqueue;
    plugin_h self;
 } plugin;
@@ -99,47 +106,49 @@ error1:
    chck_string_release(&name);
 }
 
-struct info {
-   size_t index;
-};
-
-static bool
-cb_pixels(const struct wlc_size *dimensions, uint8_t *rgba, void *arg)
+static void
+key_cb_screenshot(wlc_handle view, uint32_t time, intptr_t arg)
 {
-   struct info info;
-   memcpy(&info, arg, sizeof(info));
-   free(arg);
+   (void)view, (void)time;
+   plugin.action.output = wlc_get_focused_output();
+   plugin.action.compressor = arg;
+   wlc_output_schedule_render(wlc_get_focused_output());
+}
+
+static void
+output_post_render(wlc_handle output)
+{
+   if (plugin.action.output != output)
+      return;
+
+   plugin.action.output = 0;
 
    size_t memb;
    struct compressor *compressors = list_compressors("image", struct_signature, compress_signature, &memb);
-   if (!memb || info.index >= memb) {
-      plog(plugin.self, PLOG_ERROR, "Could not find compressor for index (%zu)", info.index);
-      return false;
+   if (!memb || plugin.action.compressor >= memb) {
+      plog(plugin.self, PLOG_ERROR, "Could not find compressor for index (%zu)", plugin.action.compressor);
+      return;
    }
+
+   const struct wlc_geometry g = { .origin = { 0, 0 }, .size = *wlc_output_get_resolution(output) };
+
+   void *rgba;
+   if (!(rgba = calloc(1, g.size.w * g.size.h * 4)))
+      return;
+
+   struct wlc_geometry out;
+   wlc_pixels_read(WLC_RGBA8888, &g, &out, rgba);
 
    struct work work = {
       .image = {
          .data = rgba,
       },
-      .dimensions = *dimensions,
-      .compressor = compressors[info.index],
+      .dimensions = out.size,
+      .compressor = compressors[plugin.action.compressor],
    };
 
-   // if returns true, rgba is not released
-   return chck_tqueue_add_task(&plugin.tqueue, &work, 0);
-}
-
-static void
-key_cb_screenshot(wlc_handle view, uint32_t time, intptr_t arg)
-{
-   (void)view, (void)time;
-
-   struct info *info;
-   if (!(info = calloc(1, sizeof(struct info))))
-      return;
-
-   info->index = arg;
-   wlc_output_get_pixels(wlc_get_focused_output(), cb_pixels, info);
+   if (!chck_tqueue_add_task(&plugin.tqueue, &work, 0))
+      free(rgba);
 }
 
 #pragma GCC diagnostic ignored "-Wmissing-prototypes"
@@ -156,13 +165,18 @@ plugin_init(plugin_h self)
 {
    plugin.self = self;
 
-   plugin_h keybind, compressor;
-   if (!(keybind = import_plugin(self, "keybind")) ||
+   plugin_h orbment, keybind, compressor;
+   if (!(orbment = import_plugin(self, "orbment")) ||
+       !(keybind = import_plugin(self, "keybind")) ||
        !(compressor = import_plugin(self, "compressor")))
       return false;
 
-   if (!(add_keybind = import_method(self, keybind, "add_keybind", "b(h,c[],c*[],fun,ip)|1")) ||
+   if (!(add_hook = import_method(self, orbment, "add_hook", "b(h,c[],fun)|1")) ||
+       !(add_keybind = import_method(self, keybind, "add_keybind", "b(h,c[],c*[],fun,ip)|1")) ||
        !(list_compressors = import_method(self, compressor, "list_compressors", "*(c[],c[],c[],sz*)|1")))
+      return false;
+
+   if (!add_hook(self, "output.post_render", FUN(output_post_render, "v(h)|1")))
       return false;
 
    size_t memb;

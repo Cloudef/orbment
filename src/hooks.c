@@ -23,7 +23,7 @@ enum hook_type {
    HOOK_POINTER_BUTTON,
    HOOK_POINTER_SCROLL,
    HOOK_POINTER_MOTION,
-   HOOK_TOUCH_TOUCH,
+   HOOK_TOUCH,
    HOOK_COMPOSITOR_READY,
    HOOK_INPUT_CREATED,
    HOOK_INPUT_DESTROYED,
@@ -66,7 +66,7 @@ hook_type_for_string(const char *type)
       { "pointer.button", HOOK_POINTER_BUTTON },
       { "pointer.scroll", HOOK_POINTER_SCROLL },
       { "pointer.motion", HOOK_POINTER_MOTION },
-      { "touch.touch", HOOK_TOUCH_TOUCH },
+      { "touch", HOOK_TOUCH },
       { "compositor.ready", HOOK_COMPOSITOR_READY },
       { "input.created", HOOK_INPUT_CREATED },
       { "input.destroyed", HOOK_INPUT_DESTROYED },
@@ -132,14 +132,14 @@ add_hook(plugin_h caller, const char *type, const struct function *hook)
       "b(h,u32,*,u32,e,*)|1", // HOOK_POINTER_BUTTON
       "b(h,u32,*,u8,d[2])|1", // HOOK_POINTER_SCROLL
       "b(h,u32,*)|1", // HOOK_POINTER_MOTION
-      "b(h,u32,*,e,i32,*)|1", // HOOK_TOUCH_TOUCH
+      "b(h,u32,*,e,i32,*)|1", // HOOK_TOUCH
       "v(v)|1", // HOOK_COMPOSITOR_READY
       "b(*)|1", // HOOK_INPUT_CREATED
       "v(*)|1", // HOOK_INPUT_DESTROYED
-      "v(*)|1", // HOOK_OUTPUT_PRE_RENDER
-      "v(*)|1", // HOOK_OUTPUT_POST_RENDER
-      "v(*)|1", // HOOK_VIEW_PRE_RENDER
-      "v(*)|1", // HOOK_VIEW_POST_RENDER
+      "v(h)|1", // HOOK_OUTPUT_PRE_RENDER
+      "v(h)|1", // HOOK_OUTPUT_POST_RENDER
+      "v(h)|1", // HOOK_VIEW_PRE_RENDER
+      "v(h)|1", // HOOK_VIEW_POST_RENDER
    };
 
    if (!chck_cstreq(hook->signature, signatures[t])) {
@@ -455,11 +455,11 @@ pointer_motion(wlc_handle view, uint32_t time, const struct wlc_point *motion)
 }
 
 static bool
-touch_touch(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifiers, enum wlc_touch_type type, int32_t slot, const struct wlc_point *touch)
+touch(wlc_handle view, uint32_t time, const struct wlc_modifiers *modifiers, enum wlc_touch_type type, int32_t slot, const struct wlc_point *touch)
 {
    struct hook *hook;
    bool handled = false;
-   chck_iter_pool_for_each(&hooks[HOOK_TOUCH_TOUCH], hook) {
+   chck_iter_pool_for_each(&hooks[HOOK_TOUCH], hook) {
       bool (*fun)() = hook->function;
       if (fun(view, time, modifiers, type, slot, touch))
          handled = true;
@@ -508,72 +508,35 @@ input_destroyed(struct libinput_device *device)
    }
 }
 
-PCONST const struct wlc_interface*
-hooks_get_interface(void)
-{
-   static const struct wlc_interface interface = {
-      .output = {
-         .created = output_created,
-         .destroyed = output_destroyed,
-         .focus = output_focus,
-         .resolution = output_resolution,
-
-         .render = {
-            .pre = output_pre_render,
-            .post = output_post_render,
-         }
-      },
-
-      .view = {
-         .created = view_created,
-         .destroyed = view_destroyed,
-         .focus = view_focus,
-         .move_to_output = view_move_to_output,
-
-         .request = {
-            .geometry = view_geometry_request,
-            .state = view_state_request,
-            .move = view_move_request,
-            .resize = view_resize_request,
-         },
-
-         .render = {
-            .pre = view_pre_render,
-            .post = view_post_render,
-         },
-      },
-
-      .keyboard = {
-         .key = keyboard_key,
-      },
-
-      .pointer = {
-         .button = pointer_button,
-         .motion = pointer_motion,
-         .scroll = pointer_scroll,
-      },
-
-      .touch = {
-         .touch = touch_touch,
-      },
-
-      .compositor = {
-         .ready = compositor_ready,
-         .terminate = compositor_terminate,
-      },
-
-      .input = {
-         .created = input_created,
-         .destroyed = input_destroyed,
-      },
-   };
-
-   return &interface;
-}
-
 bool
 hooks_setup(void)
 {
+   wlc_set_output_created_cb(output_created);
+   wlc_set_output_destroyed_cb(output_destroyed);
+   wlc_set_output_focus_cb(output_focus);
+   wlc_set_output_resolution_cb(output_resolution);
+   wlc_set_output_render_pre_cb(output_pre_render);
+   wlc_set_output_render_post_cb(output_post_render);
+   wlc_set_view_created_cb(view_created);
+   wlc_set_view_destroyed_cb(view_destroyed);
+   wlc_set_view_focus_cb(view_focus);
+   wlc_set_view_move_to_output_cb(view_move_to_output);
+   wlc_set_view_request_geometry_cb(view_geometry_request);
+   wlc_set_view_request_state_cb(view_state_request);
+   wlc_set_view_request_move_cb(view_move_request);
+   wlc_set_view_request_resize_cb(view_resize_request);
+   wlc_set_view_render_pre_cb(view_pre_render);
+   wlc_set_view_render_post_cb(view_post_render);
+   wlc_set_keyboard_key_cb(keyboard_key);
+   wlc_set_pointer_button_cb(pointer_button);
+   wlc_set_pointer_motion_cb(pointer_motion);
+   wlc_set_pointer_scroll_cb(pointer_scroll);
+   wlc_set_touch_cb(touch);
+   wlc_set_compositor_ready_cb(compositor_ready);
+   wlc_set_compositor_terminate_cb(compositor_terminate);
+   wlc_set_input_created_cb(input_created);
+   wlc_set_input_destroyed_cb(input_destroyed);
+
    plugin_set_callbacks(plugin_loaded, plugin_deloaded);
 
    {

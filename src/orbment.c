@@ -97,7 +97,7 @@ main(int argc, char *argv[])
    handle_arguments(argc, argv);
    log_open();
 
-   if (!wlc_init(hooks_get_interface(), argc, argv))
+   if (!wlc_init())
       return EXIT_FAILURE;
 
    signals_setup();

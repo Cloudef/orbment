@@ -54,7 +54,7 @@ plugin_init(plugin_h self)
    if (!(add_hook = import_method(self, orbment, "add_hook", "b(h,c[],fun)|1")))
       return false;
 
-   if (!add_hook(self, "view.pre_render", FUN(view_pre_render, "v(*)|1")))
+   if (!add_hook(self, "view.pre_render", FUN(view_pre_render, "v(h)|1")))
       return false;
 
    if (!chck_buffer(&plugin.fb, 0, chck_endianess()))
