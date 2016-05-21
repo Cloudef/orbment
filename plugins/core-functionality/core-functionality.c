@@ -366,7 +366,9 @@ view_focus(wlc_handle view, bool focus)
 static bool
 view_created(wlc_handle view)
 {
-   if (wlc_view_get_class(view) && chck_cstreq(wlc_view_get_class(view), "bemenu")) {
+   if (wlc_view_get_class(view) && ((chck_cstreq(wlc_view_get_class(view), "bemenu")) ||
+                                   (chck_cstreq(wlc_view_get_title(view), "bemenu")) ||
+                                   (chck_cstreq(wlc_view_get_app_id(view), "bemenu")))) {
       // Do not allow more than one bemenu instance
       if (plugin.active.view && wlc_view_get_type(plugin.active.view) & BIT_BEMENU)
          return false;
