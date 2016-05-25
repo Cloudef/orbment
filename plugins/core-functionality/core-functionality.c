@@ -503,6 +503,8 @@ static void
 key_cb_spawn_bemenu(wlc_handle view, uint32_t time, intptr_t arg)
 {
    (void)view, (void)time, (void)arg;
+   if (plugin.active.view && wlc_view_get_type(plugin.active.view) & BIT_BEMENU)
+      return;
    wlc_exec(DEFAULT_MENU, (char *const[]){ DEFAULT_MENU, NULL });
 }
 
