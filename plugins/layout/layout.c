@@ -204,7 +204,7 @@ static void
 relayout(wlc_handle output)
 {
    const struct wlc_size *r;
-   if (!(r = wlc_output_get_resolution(output)))
+   if (!(r = wlc_output_get_virtual_resolution(output)))
       return;
 
    size_t memb;
